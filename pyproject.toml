@@ -1,0 +1,23 @@
+[project]
+name = "xenium-cellcycle"
+version = "0.1.0"
+description = "Read 10x Xenium spatial transcriptomics samples and score cells for cell-cycle phase / proliferation activity"
+requires-python = ">=3.9"
+dependencies = [
+    "anndata>=0.10",
+    "scanpy>=1.9",
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+]
+
+[project.optional-dependencies]
+xenium-io = ["spatialdata-io>=0.1"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

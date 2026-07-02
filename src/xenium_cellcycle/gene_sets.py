@@ -1,0 +1,42 @@
+"""Reference gene sets used for cell-cycle / proliferation scoring."""
+
+# Canonical Tirosh et al. (2016) / Regev lab cell-cycle gene lists, as used by
+# the scanpy cell-cycle scoring tutorial. These were derived from full
+# transcriptome scRNA-seq and are frequently a poor match to a targeted
+# Xenium gene panel (which typically covers 300-500 genes chosen for cell
+# typing, not cell-cycle phase resolution) — see `match_gene_set` for the
+# panel-coverage check used before scoring with these.
+TIROSH_S_GENES = (
+    "MCM5", "PCNA", "TYMS", "FEN1", "MCM2", "MCM4", "RRM1", "UNG", "GINS2",
+    "MCM6", "CDCA7", "DTL", "PRIM1", "UHRF1", "MLF1IP", "HELLS", "RFC2",
+    "RPA2", "NASP", "RAD51AP1", "GMNN", "WDR76", "SLBP", "CCNE2", "UBR7",
+    "POLD3", "MSH2", "ATAD2", "RAD51", "RRM2", "CDC45", "CDC6", "EXO1",
+    "TIPIN", "DSCC1", "BLM", "CASP8AP2", "USP1", "CLSPN", "POLA1", "CHAF1B",
+    "BRIP1", "E2F8",
+)
+
+TIROSH_G2M_GENES = (
+    "HMGB2", "CDK1", "NUSAP1", "UBE2C", "BIRC5", "TPX2", "TOP2A", "NDC80",
+    "CKS2", "NUF2", "CKS1B", "MKI67", "TMPO", "CENPF", "TACC3", "FAM64A",
+    "SMC4", "CCNB2", "CKAP2L", "CKAP2", "AURKB", "BUB1", "KIF11", "ANP32E",
+    "TUBB4B", "GTSE1", "KIF20B", "HJURP", "CDCA3", "HN1", "CDC20", "TTK",
+    "CDC25C", "KIF2C", "RANGAP1", "NCAPD2", "DLGAP5", "CDCA2", "CDCA8",
+    "ECT2", "KIF23", "HMMR", "AURKA", "PSRC1", "ANLN", "LBR", "CKAP5",
+    "CENPE", "CTCF", "NEK2", "G2E3", "GAS2L3", "CBX5", "CENPA",
+)
+
+# Small, well-established proliferation markers that tend to survive gene
+# panel curation (used as a fallback single-score when a panel doesn't
+# resolve enough S/G2M genes to separate the two phases reliably).
+CORE_PROLIFERATION_MARKERS = ("MKI67", "TOP2A", "PCNA", "CCNB2", "CDK1", "CENPF")
+
+
+def match_gene_set(genes, var_names):
+    """Intersect a candidate gene list with what's actually in the panel.
+
+    Matching is case-insensitive (Xenium panels are consistently upper-case
+    gene symbols, but this guards against stray casing) and preserves the
+    order of `genes`.
+    """
+    lookup = {name.upper(): name for name in var_names}
+    return [lookup[g.upper()] for g in genes if g.upper() in lookup]
