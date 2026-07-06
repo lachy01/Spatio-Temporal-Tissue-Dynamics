@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Downloaded spatial transcriptomics sample data (large, regenerable via the loader script)
+data/
