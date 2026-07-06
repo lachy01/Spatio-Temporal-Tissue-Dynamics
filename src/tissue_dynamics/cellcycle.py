@@ -4,14 +4,19 @@ import warnings
 
 import numpy as np
 import scanpy as sc
+import scipy.sparse as sp
 
+from ._classification import classify_bimodal
 from .gene_sets import CORE_PROLIFERATION_MARKERS, TIROSH_G2M_GENES, TIROSH_S_GENES, match_gene_set
 
 MIN_GENES_PER_PHASE = 3
 
 
 def _looks_like_raw_counts(X):
-    data = X.data if hasattr(X, "data") else np.asarray(X)
+    # NB: dense numpy arrays also have a `.data` attribute (a memoryview of
+    # the buffer), so `hasattr(X, "data")` is not a valid sparse/dense check
+    # — use scipy's own predicate instead.
+    data = X.data if sp.issparse(X) else np.asarray(X)
     return data.size > 0 and np.all(data >= 0) and np.allclose(data, np.round(data))
 
 
@@ -119,20 +124,6 @@ def score_proliferation(adata, marker_genes=None, score_name="proliferation_scor
         ensure_lognormalized(adata)
 
     sc.tl.score_genes(adata, gene_list=present, score_name=score_name)
-    adata.obs["is_dividing"] = _classify_dividing(adata.obs[score_name], method, threshold)
+    adata.obs["is_dividing"] = classify_bimodal(adata.obs[score_name], method, threshold)
     adata.uns["proliferation_genes"] = present
     return adata
-
-
-def _classify_dividing(scores, method, threshold):
-    if method == "threshold":
-        return scores > threshold
-    if method == "gmm":
-        from sklearn.mixture import GaussianMixture
-
-        values = scores.to_numpy().reshape(-1, 1)
-        gmm = GaussianMixture(n_components=2, random_state=0).fit(values)
-        dividing_component = np.argmax(gmm.means_.ravel())
-        labels = gmm.predict(values)
-        return labels == dividing_component
-    raise ValueError(f"Unknown method {method!r}; expected 'threshold' or 'gmm'")

@@ -1,7 +1,7 @@
 [project]
-name = "xenium-cellcycle"
+name = "tissue-dynamics"
 version = "0.1.0"
-description = "Read 10x Xenium spatial transcriptomics samples and score cells for cell-cycle phase / proliferation activity"
+description = "Infer spatial cell-fate (division/death) dynamics from spatial transcriptomics data and Phi-Space cell-state embeddings"
 requires-python = ">=3.9"
 dependencies = [
     "anndata>=0.10",
@@ -10,10 +10,13 @@ dependencies = [
     "pandas",
     "scipy",
     "scikit-learn",
+    "torch>=2.0",
 ]
 
 [project.optional-dependencies]
 xenium-io = ["spatialdata-io>=0.1"]
+parquet = ["pyarrow"]
+test = ["pytest"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -21,3 +24,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

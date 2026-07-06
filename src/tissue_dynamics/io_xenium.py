@@ -24,7 +24,7 @@ def find_outs_dir(path):
     return matches[0].parent
 
 
-def read_xenium(path, gex_only=True, drop_controls=True):
+def read_xenium(path, gex_only=True, drop_controls=True, sample_id=None):
     """Read a Xenium sample's prebuilt cell x gene matrix into an AnnData.
 
     Parameters
@@ -38,11 +38,19 @@ def read_xenium(path, gex_only=True, drop_controls=True):
     drop_controls : bool
         Drop any remaining negative-control / blank / unassigned-codeword
         features by name, as a safety net regardless of loader path.
+    sample_id : str, optional
+        Section/slide identifier stored in `obs["sample_id"]`, used
+        downstream to keep spatial-neighborhood computations from crossing
+        tissue sections. Defaults to the `outs/` folder's parent directory
+        name (i.e. the sample root folder name) if not given.
 
     Returns
     -------
     AnnData with cells x genes counts, spatial centroids in `obsm["spatial"]`,
-    and `obs["cell_area"]`.
+    `obs["cell_area"]`, `obs["sample_id"]`, and `obs["cell_id"]` (the raw
+    per-section Xenium cell barcode, preserved separately from `obs_names`
+    since `load_samples` may need to suffix `obs_names` to keep them unique
+    across sections).
     """
     outs_dir = find_outs_dir(path)
 
@@ -77,7 +85,43 @@ def read_xenium(path, gex_only=True, drop_controls=True):
         if is_control.any():
             adata = adata[:, ~is_control].copy()
 
+    adata.obs["cell_id"] = adata.obs_names.astype(str)
+    adata.obs["sample_id"] = sample_id if sample_id is not None else outs_dir.parent.name
     return adata
+
+
+def load_samples(paths, sample_ids=None, **read_kwargs):
+    """Read several Xenium sections and concatenate them into one AnnData.
+
+    Parameters
+    ----------
+    paths : sequence of str or Path
+        Sample root directories or their `outs/` folders, one per section.
+    sample_ids : sequence of str, optional
+        Section identifiers, one per entry in `paths` (defaults to each
+        section's own `read_xenium`-derived `sample_id`). Must be unique.
+    **read_kwargs
+        Forwarded to `read_xenium` for every sample.
+
+    Returns
+    -------
+    AnnData with all sections stacked (`anndata.concat`, `join="outer"`),
+    `obs["sample_id"]` distinguishing sections, and `obsm["spatial"]`
+    preserved. Cells keep each section's contiguous block, but downstream
+    code (see `neighbors.build_adjacency`) does not assume this ordering.
+    """
+    if sample_ids is None:
+        sample_ids = [None] * len(paths)
+    if len(sample_ids) != len(paths):
+        raise ValueError("sample_ids must be the same length as paths")
+
+    adatas = [read_xenium(p, sample_id=sid, **read_kwargs) for p, sid in zip(paths, sample_ids)]
+    resolved_ids = [a.obs["sample_id"].iloc[0] for a in adatas]
+    if len(set(resolved_ids)) != len(resolved_ids):
+        raise ValueError(f"sample_id values must be unique; got {resolved_ids}")
+
+    combined = ad.concat(adatas, join="outer", index_unique="-", keys=resolved_ids)
+    return combined
 
 
 def _read_10x_mtx_manual(outs_dir):

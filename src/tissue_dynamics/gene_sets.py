@@ -30,6 +30,16 @@ TIROSH_G2M_GENES = (
 # resolve enough S/G2M genes to separate the two phases reliably).
 CORE_PROLIFERATION_MARKERS = ("MKI67", "TOP2A", "PCNA", "CCNB2", "CDK1", "CENPF")
 
+# Core apoptosis pathway genes: intrinsic/mitochondrial (BAX, BAK1, BID, CYCS,
+# APAF1, CASP9) and extrinsic (CASP8) pathways converging on the common
+# executioner caspase (CASP3). As with the proliferation markers above, these
+# are a coarse mRNA-level proxy for a process that's substantially regulated
+# post-translationally (caspase cleavage/activation) rather than by
+# transcription, and targeted panels frequently cover only a few of them —
+# check panel coverage before trusting the resulting score, or supply a
+# custom marker_genes list.
+CORE_APOPTOSIS_MARKERS = ("CASP3", "CASP8", "CASP9", "BAX", "BAK1", "BID", "CYCS", "APAF1")
+
 
 def match_gene_set(genes, var_names):
     """Intersect a candidate gene list with what's actually in the panel.
