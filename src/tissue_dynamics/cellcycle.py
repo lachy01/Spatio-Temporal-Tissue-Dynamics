@@ -127,3 +127,61 @@ def score_proliferation(adata, marker_genes=None, score_name="proliferation_scor
     adata.obs["is_dividing"] = classify_bimodal(adata.obs[score_name], method, threshold)
     adata.uns["proliferation_genes"] = present
     return adata
+
+
+def score_division(adata, method="auto", score_name="proliferation_score", copy=False, **kwargs):
+    """Score cells for division signal, auto-selecting the best available method.
+
+    Unifies `score_cell_cycle` and `score_proliferation` behind a single
+    continuous `obs[score_name]` column and boolean `obs["is_dividing"]`, so
+    downstream consumers (e.g. `targets.build_fate_targets`) get a
+    consistent division-score column regardless of which underlying method
+    produced it — this is what `pipeline.analyze_sample` and
+    `pipeline.run_static_pipeline` both call, so a panel with good S/G2M
+    coverage actually gets the finer phase-based score instead of always
+    falling back to the single proliferation signature.
+
+    Parameters
+    ----------
+    method : "auto", "cell_cycle", or "proliferation"
+        "auto" (default) picks "cell_cycle" if the panel covers enough of
+        the canonical Tirosh S/G2M gene sets to trust the phase split (see
+        `MIN_GENES_PER_PHASE`), otherwise falls back to "proliferation".
+    score_name : str
+        Column to store the unified continuous division score in. When
+        `method` resolves to "cell_cycle", this is `max(S_score, G2M_score)`
+        per cell — the same score `sc.tl.score_genes_cell_cycle` itself
+        compares to assign phase, so it doubles as "how strongly cycling is
+        this cell" — in addition to the `S_score`/`G2M_score`/`phase`
+        columns `score_cell_cycle` already sets. When `method` resolves to
+        "proliferation", this is just `proliferation_score`.
+    **kwargs
+        Forwarded to whichever underlying scorer is used
+        (`score_cell_cycle` or `score_proliferation`).
+    """
+    if copy:
+        adata = adata.copy()
+
+    if method == "auto":
+        s_genes = kwargs.get("s_genes")
+        g2m_genes = kwargs.get("g2m_genes")
+        s_present = match_gene_set(s_genes or TIROSH_S_GENES, adata.var_names)
+        g2m_present = match_gene_set(g2m_genes or TIROSH_G2M_GENES, adata.var_names)
+        if len(s_present) >= MIN_GENES_PER_PHASE and len(g2m_present) >= MIN_GENES_PER_PHASE:
+            method = "cell_cycle"
+        else:
+            warnings.warn(
+                f"Panel only covers {len(s_present)} S-phase / {len(g2m_present)} "
+                "G2M-phase reference genes; falling back to a single "
+                "proliferation score instead of S/G2M phase assignment.",
+                stacklevel=2,
+            )
+            method = "proliferation"
+
+    if method == "cell_cycle":
+        score_cell_cycle(adata, **kwargs)
+        adata.obs[score_name] = adata.obs[["S_score", "G2M_score"]].max(axis=1)
+        return adata
+    if method == "proliferation":
+        return score_proliferation(adata, score_name=score_name, **kwargs)
+    raise ValueError(f"Unknown method {method!r}; expected 'auto', 'cell_cycle', or 'proliferation'")

@@ -1,10 +1,7 @@
 """End-to-end convenience entrypoints: read/score a sample, and run the full static fate pipeline."""
 
-import warnings
-
-from .cellcycle import MIN_GENES_PER_PHASE, score_cell_cycle, score_proliferation
+from .cellcycle import score_division
 from .death import score_death
-from .gene_sets import TIROSH_G2M_GENES, TIROSH_S_GENES, match_gene_set
 from .io_phi import attach_phi, read_phi_table
 from .io_xenium import read_xenium
 from .models import SpatialMultinomialFateModel, fit_fate_model, predict_fate_proba
@@ -13,53 +10,32 @@ from .targets import build_fate_targets
 
 
 def analyze_sample(path, method="auto", **score_kwargs):
-    """Read a Xenium sample and score its cells for cell-cycle activity.
+    """Read a Xenium sample and score its cells for division/cell-cycle activity.
 
     Parameters
     ----------
     path : str or Path
         Sample root directory or its `outs/` folder.
     method : "auto", "cell_cycle", or "proliferation"
-        "cell_cycle" runs `score_cell_cycle` (S/G2M/G1 phase assignment).
-        "proliferation" runs `score_proliferation` (single signature score).
-        "auto" picks "cell_cycle" if the panel covers enough of the
-        canonical S/G2M gene sets to trust the phase split, otherwise falls
-        back to "proliferation".
+        Forwarded to `cellcycle.score_division` — see there for the
+        panel-coverage-based auto-selection logic.
     **score_kwargs
-        Forwarded to whichever scoring function is used.
+        Forwarded to `score_division` (and from there to whichever
+        underlying scoring function is used).
 
     Returns
     -------
-    Scored AnnData (see `score_cell_cycle` / `score_proliferation` for the
-    obs columns this adds).
+    Scored AnnData (see `cellcycle.score_division` for the obs columns this
+    adds).
     """
     adata = read_xenium(path)
-
-    if method == "auto":
-        s_present = match_gene_set(TIROSH_S_GENES, adata.var_names)
-        g2m_present = match_gene_set(TIROSH_G2M_GENES, adata.var_names)
-        if len(s_present) >= MIN_GENES_PER_PHASE and len(g2m_present) >= MIN_GENES_PER_PHASE:
-            method = "cell_cycle"
-        else:
-            warnings.warn(
-                f"Panel only covers {len(s_present)} S-phase / {len(g2m_present)} "
-                "G2M-phase reference genes; falling back to a single "
-                "proliferation score instead of S/G2M phase assignment.",
-                stacklevel=2,
-            )
-            method = "proliferation"
-
-    if method == "cell_cycle":
-        return score_cell_cycle(adata, **score_kwargs)
-    if method == "proliferation":
-        return score_proliferation(adata, **score_kwargs)
-    raise ValueError(f"Unknown method {method!r}; expected 'auto', 'cell_cycle', or 'proliferation'")
+    return score_division(adata, method=method, **score_kwargs)
 
 
 def run_static_pipeline(adata, phi_path, *, radius=80.0, sample_key="sample_id",
                           target_mode="hard", class_names=("divide", "die", "unchanged"),
                           cell_id_col="cell_id", sample_col=None, phi_prefix="phi_",
-                          proliferation_kwargs=None, death_kwargs=None,
+                          division_kwargs=None, death_kwargs=None,
                           target_kwargs=None, fit_kwargs=None):
     """Run the full static fate-inference pipeline on an already-loaded AnnData.
 
@@ -82,9 +58,11 @@ def run_static_pipeline(adata, phi_path, *, radius=80.0, sample_key="sample_id",
         Forwarded to `targets.build_fate_targets`; determines whether the
         model is fit against discrete class codes or soft target
         distributions.
-    proliferation_kwargs, death_kwargs, target_kwargs, fit_kwargs : dict, optional
-        Forwarded to `score_proliferation`, `score_death`,
-        `build_fate_targets`, and `fit_fate_model` respectively.
+    division_kwargs, death_kwargs, target_kwargs, fit_kwargs : dict, optional
+        Forwarded to `cellcycle.score_division`, `score_death`,
+        `build_fate_targets`, and `fit_fate_model` respectively. E.g. pass
+        `division_kwargs={"method": "cell_cycle"}` to force the Tirosh
+        S/G2M phase split instead of auto-detecting panel coverage.
 
     Returns
     -------
@@ -100,7 +78,7 @@ def run_static_pipeline(adata, phi_path, *, radius=80.0, sample_key="sample_id",
     build_adjacency(adata, radius=radius, sample_key=sample_key)
     average_neighbors(adata)
 
-    score_proliferation(adata, **(proliferation_kwargs or {}))
+    score_division(adata, **(division_kwargs or {}))
     score_death(adata, **(death_kwargs or {}))
 
     build_fate_targets(adata, mode=target_mode, class_names=class_names, sample_key=sample_key,

@@ -1,4 +1,4 @@
-from .cellcycle import ensure_lognormalized, score_cell_cycle, score_proliferation
+from .cellcycle import ensure_lognormalized, score_cell_cycle, score_division, score_proliferation
 from .death import score_death
 from .evaluate import fate_metrics, spatial_group_kfold
 from .io_phi import attach_phi, read_phi_table
@@ -14,6 +14,7 @@ __all__ = [
     "ensure_lognormalized",
     "score_cell_cycle",
     "score_proliferation",
+    "score_division",
     "score_death",
     "read_phi_table",
     "attach_phi",

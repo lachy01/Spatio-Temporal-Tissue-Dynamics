@@ -5,7 +5,12 @@ import pandas as pd
 import pytest
 from anndata import AnnData
 
-from tissue_dynamics.gene_sets import CORE_APOPTOSIS_MARKERS, CORE_PROLIFERATION_MARKERS
+from tissue_dynamics.gene_sets import (
+    CORE_APOPTOSIS_MARKERS,
+    CORE_PROLIFERATION_MARKERS,
+    TIROSH_G2M_GENES,
+    TIROSH_S_GENES,
+)
 
 
 @pytest.fixture
@@ -88,6 +93,41 @@ def counts_adata():
     baseline. `uns["dividing_idx"]`/`uns["dying_idx"]` record which.
     """
     return _make_counts_adata(n_cells=60)
+
+
+@pytest.fixture
+def cell_cycle_adata():
+    """60 cells x panel with 5 Tirosh S-phase + 5 Tirosh G2M-phase genes present
+    (well above MIN_GENES_PER_PHASE=3), so `score_division(method="auto")`
+    resolves to the "cell_cycle" branch instead of falling back to
+    "proliferation". Cells 0..11 have boosted S-phase-gene counts, cells
+    12..23 have boosted G2M-phase-gene counts; the rest are baseline.
+    """
+    rng = np.random.default_rng(2)
+    s_genes = list(TIROSH_S_GENES[:5])
+    g2m_genes = list(TIROSH_G2M_GENES[:5])
+    other_genes = [f"GENE{i}" for i in range(50)]
+    genes = s_genes + g2m_genes + other_genes
+
+    n_cells = 60
+    counts = rng.poisson(2, size=(n_cells, len(genes))).astype(float)
+
+    s_idx = np.arange(0, 12)
+    g2m_idx = np.arange(12, 24)
+    s_cols = [genes.index(g) for g in s_genes]
+    g2m_cols = [genes.index(g) for g in g2m_genes]
+    counts[np.ix_(s_idx, s_cols)] += rng.poisson(30, size=(len(s_idx), len(s_cols)))
+    counts[np.ix_(g2m_idx, g2m_cols)] += rng.poisson(30, size=(len(g2m_idx), len(g2m_cols)))
+
+    obs_names = [f"cell{i}" for i in range(n_cells)]
+    adata = AnnData(
+        X=counts,
+        obs=pd.DataFrame(index=obs_names),
+        var=pd.DataFrame(index=genes),
+    )
+    adata.uns["s_idx"] = s_idx
+    adata.uns["g2m_idx"] = g2m_idx
+    return adata
 
 
 @pytest.fixture

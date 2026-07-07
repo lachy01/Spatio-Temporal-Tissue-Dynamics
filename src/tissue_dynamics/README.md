@@ -79,9 +79,15 @@ neighbor embedding; isolated cells (no neighbors within radius) get
 Ground-truth proxies come from established gene signatures, reusing the
 existing proliferation scorer and a new death/apoptosis one:
 
-- **`score_proliferation`** — `MKI67`, `TOP2A`, `PCNA`, `CCNB2`, `CDK1`,
-  `CENPF` (or `score_cell_cycle` for a full Tirosh et al. S/G2M/G1 split, if
-  the panel covers enough of those 43+54 genes).
+- **`score_division`** — auto-selects between `score_cell_cycle` (a full
+  Tirosh et al. S/G2M/G1 split, used when the panel covers enough of those
+  43+54 genes) and `score_proliferation` (`MKI67`, `TOP2A`, `PCNA`, `CCNB2`,
+  `CDK1`, `CENPF`, used as the fallback for thinner panels), and unifies
+  either behind one continuous `obs["proliferation_score"]` column (in
+  `cell_cycle` mode this is `max(S_score, G2M_score)`) plus a boolean
+  `obs["is_dividing"]`. This is what `run_static_pipeline` and
+  `analyze_sample` both call — pass `division_kwargs={"method": "cell_cycle"}`
+  to `run_static_pipeline` to force the phase split instead of auto-detecting.
 - **`score_death`** — `CASP3`, `CASP8`, `CASP9`, `BAX`, `BAK1`, `BID`,
   `CYCS`, `APAF1` (intrinsic + extrinsic apoptosis pathways). Like the
   proliferation markers, this is a coarse mRNA-level proxy for a process
