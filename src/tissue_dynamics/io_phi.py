@@ -59,7 +59,7 @@ def attach_phi(adata, phi, cell_id_col="cell_id", sample_col=None,
     given — Xenium cell barcodes are only guaranteed unique *within* one
     section, so the composite key guards against silent cross-section
     collisions when `adata` holds multiple sections (e.g. from
-    `load_samples`).
+    `load_xenium_samples`).
 
     Parameters
     ----------

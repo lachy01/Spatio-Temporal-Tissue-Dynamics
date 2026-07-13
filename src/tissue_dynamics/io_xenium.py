@@ -1,5 +1,6 @@
 """Load a 10x Xenium sample's cell x gene matrix into an AnnData object."""
 
+import warnings
 from pathlib import Path
 
 import anndata as ad
@@ -33,8 +34,9 @@ def read_xenium(path, gex_only=True, drop_controls=True, sample_id=None):
         Sample root directory or its `outs/` folder.
     gex_only : bool
         Keep only "Gene Expression" features via spatialdata-io (if
-        installed); has no effect on the manual mtx fallback, where control
-        features are always excluded by name via `drop_controls`.
+        installed and it succeeds); has no effect on the manual fallback
+        reader, where control features are always excluded by name via
+        `drop_controls`.
     drop_controls : bool
         Drop any remaining negative-control / blank / unassigned-codeword
         features by name, as a safety net regardless of loader path.
@@ -49,7 +51,7 @@ def read_xenium(path, gex_only=True, drop_controls=True, sample_id=None):
     AnnData with cells x genes counts, spatial centroids in `obsm["spatial"]`,
     `obs["cell_area"]`, `obs["sample_id"]`, and `obs["cell_id"]` (the raw
     per-section Xenium cell barcode, preserved separately from `obs_names`
-    since `load_samples` may need to suffix `obs_names` to keep them unique
+    since `load_xenium_samples` may need to suffix `obs_names` to keep them unique
     across sections).
     """
     outs_dir = find_outs_dir(path)
@@ -73,6 +75,19 @@ def read_xenium(path, gex_only=True, drop_controls=True, sample_id=None):
         adata = sdata.tables["table"]
     except ImportError:
         adata = _read_10x_mtx_manual(outs_dir)
+    except Exception as exc:
+        # spatialdata-io is installed but failed for some other reason (e.g.
+        # a file its particular version expects -- which has shifted across
+        # versions, such as preferring a zarr-backed cells table over
+        # cells.parquet/cells.csv.gz -- isn't present in this outs/ folder).
+        # The manual reader only needs the matrix + cells.csv.gz, so fall
+        # back to it rather than hard-failing.
+        warnings.warn(
+            f"spatialdata-io failed to read this sample ({exc!r}); falling back "
+            "to the manual cell_feature_matrix reader.",
+            stacklevel=2,
+        )
+        adata = _read_10x_mtx_manual(outs_dir)
 
     if "spatial" not in adata.obsm:
         cells = pd.read_csv(outs_dir / "cells.csv.gz")
@@ -90,7 +105,7 @@ def read_xenium(path, gex_only=True, drop_controls=True, sample_id=None):
     return adata
 
 
-def load_samples(paths, sample_ids=None, **read_kwargs):
+def load_xenium_samples(paths, sample_ids=None, **read_kwargs):
     """Read several Xenium sections and concatenate them into one AnnData.
 
     Parameters
@@ -125,7 +140,20 @@ def load_samples(paths, sample_ids=None, **read_kwargs):
 
 
 def _read_10x_mtx_manual(outs_dir):
-    """Fallback reader if spatialdata-io isn't installed: raw mtx triplet."""
+    """Fallback reader used when spatialdata-io isn't installed, or is
+    installed but fails to read this sample. Prefers the single-file
+    `cell_feature_matrix.h5` (via scanpy, already a core dependency; this is
+    the same CellRanger-style h5 format `sc.read_10x_h5` expects), falling
+    back to the raw mtx triplet if the h5 isn't present.
+    """
+    h5_path = outs_dir / "cell_feature_matrix.h5"
+    if h5_path.exists():
+        import scanpy as sc
+
+        adata = sc.read_10x_h5(h5_path)
+        adata.var_names_make_unique()
+        return adata
+
     mtx_dir = outs_dir / "cell_feature_matrix"
     matrix = sio.mmread(mtx_dir / "matrix.mtx.gz").tocsr().T.tocsr()  # cells x genes
     features = pd.read_csv(

@@ -16,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 xenium-io = ["spatialdata-io>=0.1"]
 parquet = ["pyarrow"]
+download = ["requests"]
 test = ["pytest"]
 
 [build-system]

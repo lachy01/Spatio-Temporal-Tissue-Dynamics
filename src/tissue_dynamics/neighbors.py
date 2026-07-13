@@ -1,4 +1,6 @@
-"""Build a spatial neighborhood graph and average neighbor Phi-Space embeddings."""
+"""Build a spatial neighborhood graph and average neighbor Phi-Space embeddings.
+
+Adapted from """
 
 import warnings
 
@@ -68,7 +70,19 @@ def build_adjacency(adata, radius=80.0, sample_key="sample_id", spatial_key="spa
     degree = np.asarray(A.sum(axis=1)).ravel()
     is_isolated = degree == 0
     n_isolated = int(is_isolated.sum())
-    if n_isolated:
+    if n_isolated == n and n > 0:
+        warnings.warn(
+            f"All {n} cells have no spatial neighbors within radius={radius} -- every "
+            "neighbor-averaged embedding will be the zero vector, silently dropping the "
+            "c^T phi_bar and bilinear interaction terms from the model entirely. This "
+            "usually means radius is mismatched to this data's spatial resolution (e.g. "
+            "the 80um default is tuned for Xenium's single-cell spacing, not Visium's "
+            "~100um spot pitch) rather than a real absence of neighbors -- check the "
+            "typical nearest-neighbor spacing in obsm['spatial'] and raise radius to "
+            "comfortably exceed it.",
+            stacklevel=2,
+        )
+    elif n_isolated:
         warnings.warn(
             f"{n_isolated}/{n} cells have no spatial neighbors within radius={radius} "
             "(isolated); their neighbor-averaged embedding will be the zero vector.",

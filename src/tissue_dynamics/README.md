@@ -1,10 +1,11 @@
 # tissue-dynamics
 
-Infer per-cell probability of division, death, or remaining unchanged from
-spatial transcriptomics data, using externally-trained Phi-Space cell-state
-embeddings and each cell's spatial neighborhood. Built on Xenium today;
-designed to extend to other spatial technologies (e.g. supercellular Visium
-bins) later — see "Extending to other spatial technologies" below.
+Infer per-cell (or per-bin) probability of division, death, or remaining
+unchanged from spatial transcriptomics data, using externally-trained
+Phi-Space cell-state embeddings and each unit's spatial neighborhood. Reads
+both single-cell (Xenium) and cell-free, spatially-binned (Visium / Visium
+HD) data — see "Reading spatial data" below; everything past IO treats a
+Visium spot exactly like a Xenium cell.
 
 This is the **static** (single-timepoint) pipeline: read data → attach
 Phi-Space embeddings → build the spatial neighborhood graph → score
@@ -17,7 +18,7 @@ stub for now, not implemented).
 From the repo root:
 
 ```
-pip install -e ".[xenium-io,parquet,test]"
+pip install -e ".[xenium-io,parquet,download,test]"
 ```
 
 ## Pipeline overview
@@ -34,14 +35,82 @@ adata.obsm["fate_proba"]   # (n_cells, 3) P(divide, die, unchanged) per cell
 `run_static_pipeline` wires together every step below; each is also usable
 standalone.
 
+### 0. Download a sample (optional)
+
+```python
+from tissue_dynamics import download_xenium_sample
+
+outs_dir = download_xenium_sample("GSM7990532", dest_dir="data")
+```
+
+A full Xenium GEO deposit is typically 4-5GB, almost all of it morphology
+images, per-molecule transcripts, segmentation boundaries, and 10x's own
+analysis/report outputs that `read_xenium` never reads. `download_xenium_sample`
+fetches only the handful of files it actually needs (the cell x gene matrix,
+cell centroid table, and run/panel metadata — usually well under 100MB),
+downloading each individually where GEO lists it that way, and otherwise
+streaming whatever combined archive GEO does provide and extracting just the
+matching members without ever writing the huge unwanted ones to disk. Pass
+`include_mtx_fallback=True` if you don't have `spatialdata-io` installed, or
+`include_transcripts=True` if you want `transcripts.csv.gz` for the manual
+per-transcript QC path in `xenium_gse250346_loader.py`.
+
 ### 1. Read spatial data
 
 `read_xenium(path)` reads a 10x Xenium `outs/` folder into an AnnData with
 cell x gene counts, `obsm["spatial"]` centroids, `obs["cell_area"]`,
 `obs["cell_id"]` (raw per-section barcode), and `obs["sample_id"]` (section
 identity — pass `sample_id=` explicitly, or it defaults to the sample root
-folder name). `load_samples(paths)` reads and concatenates several sections
+folder name). `load_xenium_samples(paths)` reads and concatenates several sections
 into one AnnData, keeping `obs_names` unique across sections.
+
+`read_visium(path)` reads a Visium or Visium HD sample into the same
+contract — bins x genes counts, `obsm["spatial"]` in real micrometers,
+`obs["cell_id"]` (the spot/bin barcode), `obs["sample_id"]`. This is the
+"cell-free" path: each spatial bin gets an id and is treated exactly like a
+Xenium cell by everything downstream (`neighbors`/`targets`/`models` never
+know or care whether a row is a segmented cell or a spot). Accepts either a
+raw Space Ranger output folder (classic Visium, or Visium HD's
+`binned_outputs/square_XXXum/` — point at the specific resolution you want)
+or an already-assembled `.h5ad` following the scanpy/squidpy spatial
+convention (e.g. exported from CELLxGENE). `load_visium_samples(paths)`
+mirrors `load_xenium_samples`.
+
+```python
+from tissue_dynamics import read_visium
+
+adata = read_visium("GSM.../outs")            # raw Space Ranger folder, or
+adata = read_visium("cellxgene_sample.h5ad")  # a pre-assembled spatial AnnData
+```
+
+Two Visium-specific details worth knowing:
+
+- **Pixel-to-micron conversion.** Visium spot/bin coordinates are recorded
+  in image-pixel space, not micrometers, so `read_visium` converts them
+  using a `microns_per_pixel` factor. The obvious approach —
+  `55um / scalefactors_json["spot_diameter_fullres"]`, since standard Visium
+  spots are 55µm — turned out to be wrong by ~18% when checked against a
+  real sample (GSE176078): `spot_diameter_fullres` doesn't sit in the
+  expected ratio to the hardware-fixed 100µm center-to-center hex spacing.
+  So `read_visium` self-calibrates instead, measuring the median
+  nearest-neighbor spot/bin spacing in pixels and dividing the known fixed
+  physical spacing (100µm for classic Visium's hex grid; auto-detected from
+  a `square_XXXum` path, or pass `spot_spacing_um`, for Visium HD's square
+  grid) by that. Pass `microns_per_pixel` directly to skip this entirely.
+- **`radius=80.0` is tuned for Xenium, not Visium.** Classic Visium spots
+  sit ~100µm apart center-to-center, so an 80µm neighborhood radius finds
+  *zero* neighbors for every spot — `build_adjacency` will warn loudly
+  ("all cells isolated") if this happens, but you need to pass a larger
+  `radius` (e.g. 150–200µm to reach the 6 immediate hex neighbors) for
+  Visium data; there's no single default that's correct for both
+  resolutions. Visium HD's finer bins may need a radius closer to Xenium's.
+
+Also worth knowing for CELLxGENE-sourced `.h5ad` files specifically:
+`var_names` there are typically Ensembl gene ids (with the symbol in
+`var["feature_name"]`) — `read_visium` remaps `var_names` to symbols
+automatically (preserving the Ensembl id in `var["gene_ids"]`) so gene-set
+matching (`score_division`, `score_death`, ...) works the same way it does
+for Xenium.
 
 ### 2. Attach Phi-Space embeddings
 
@@ -58,7 +127,8 @@ attach_phi(adata, phi, sample_col="sample")   # -> adata.obsm["phi"]
 ```
 
 Joins on `(cell_id, sample)` rather than `obs_names` directly, since Xenium
-cell barcodes are only unique within one section.
+cell barcodes (and Visium spot/bin barcodes) are only unique within one
+section.
 
 ### 3. Spatial neighborhood graph
 
@@ -139,10 +209,12 @@ term.
 ## Extending to other spatial technologies
 
 Every stage past IO (`neighbors`, `targets`, `models`) only assumes an
-AnnData with `obsm["spatial"]` coordinates and an `obs["sample_id"]` grouping
-— it never assumes a row is a single segmented cell. A future loader for
-supercellular/binned data (e.g. Visium) just needs to emit an AnnData with
-that same contract; nothing downstream needs to change.
+AnnData with `obsm["spatial"]` coordinates (in real physical units) and an
+`obs["sample_id"]` grouping — it never assumes a row is a single segmented
+cell. `read_visium` is the existence proof: it's a completely separate
+module from `read_xenium`, and nothing in `neighbors.py`/`targets.py`/
+`models.py`/`pipeline.py` changed to support it. A loader for another
+technology just needs to emit an AnnData with that same contract.
 
 ## Note on the example panel
 
