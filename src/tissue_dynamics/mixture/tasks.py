@@ -51,9 +51,20 @@ def _load(cfg):
 
     from .basis import build_basis
 
-    df = pd.read_parquet(cfg["data"]["table_parquet"])
-    df.attrs["phi_names"] = list(
-        pd.read_csv(cfg["data"]["phi_csv"], index_col=0, nrows=1).columns)
+    import json
+    import os
+
+    path = cfg["data"]["table_parquet"]
+    df = pd.read_parquet(path)
+    # Prefer the sidecar written by run/build_table.py; fall back to the source
+    # CSV only if it is absent, so a cluster run needs the parquet alone.
+    side = os.path.splitext(path)[0] + ".phi_names.json"
+    if os.path.exists(side):
+        with open(side) as fh:
+            df.attrs["phi_names"] = json.load(fh)
+    else:
+        df.attrs["phi_names"] = list(
+            pd.read_csv(cfg["data"]["phi_csv"], index_col=0, nrows=1).columns)
     return df, build_basis(df, cfg, verbose=False)
 
 
