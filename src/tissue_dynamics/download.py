@@ -53,7 +53,7 @@ MTX_FALLBACK_FILES = (
     "cell_feature_matrix/barcodes.tsv.gz",
 )
 # Only needed for the manual per-transcript QC path in
-# xenium_gse250346_loader.py, not by read_xenium() itself.
+# scripts/xenium_gse250346_loader.py, not by read_xenium() itself.
 TRANSCRIPT_FILES = ("transcripts.csv.gz",)
 
 _ARCHIVE_SUFFIXES = (".tar.gz", ".tgz", ".tar")
@@ -226,7 +226,7 @@ def download_xenium_sample(gsm_id, dest_dir=".", *, include_mtx_fallback=False,
         covers the primary (spatialdata-io) path and is much smaller.
     include_transcripts : bool
         Also fetch `transcripts.csv.gz` (can be hundreds of MB to GB) for
-        the manual per-transcript QC path in `xenium_gse250346_loader.py`;
+        the manual per-transcript QC path in `scripts/xenium_gse250346_loader.py`;
         not needed by `read_xenium` itself. Off by default.
     extra_files : list of str, optional
         Additional relative filenames (e.g. `"cell_boundaries.parquet"`) to

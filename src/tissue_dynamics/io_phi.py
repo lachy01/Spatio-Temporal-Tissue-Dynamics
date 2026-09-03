@@ -1,31 +1,43 @@
 """Read externally-trained Phi-Space cell-state embeddings and attach them to an AnnData."""
 
+import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 
-def read_phi_table(path, cell_id_col="cell_id", sample_col=None, phi_prefix="phi_"):
+def read_phi_table(path, cell_id_col="cell_id", sample_col=None, phi_prefix="phi_", phi_cols=None):
     """Read a Phi-Space embedding table (CSV/CSV.gz/Parquet) into a DataFrame.
 
     Parameters
     ----------
     path : str or Path
         Table with one row per cell: a `cell_id_col` column, an optional
-        `sample_col` column (section/slide identifier), and one column per
-        embedding dimension named `{phi_prefix}0`, `{phi_prefix}1`, ...
+        `sample_col` column (section/slide identifier), and either columns
+        named `{phi_prefix}0`, `{phi_prefix}1`, ... or the columns given by
+        `phi_cols`.
     cell_id_col, sample_col : str
         Column names identifying the cell (and, if given, its section).
     phi_prefix : str
         Prefix shared by every embedding-dimension column; all columns
         starting with this prefix are taken as phi coordinates, in the
-        order they appear in the file.
+        order they appear in the file. Ignored if `phi_cols` is given.
+    phi_cols : list of str, "all", or None
+        Explicit embedding columns to use, in order — for tables whose
+        dimensions are meaningfully named rather than sharing a `phi_`
+        prefix (e.g. PhiSpace's per-reference-cell-type projection scores,
+        one named column per reference class). Pass `"all"` to use every
+        column except `cell_id_col`/`sample_col`. If None (default), falls
+        back to matching `phi_prefix`.
 
     Returns
     -------
     DataFrame indexed by `cell_id_col` (and carrying `sample_col`, if any),
     with only the matched phi columns retained, renamed `phi_0..phi_{k-1}`.
+    The original column names are kept in `.attrs["phi_names"]` (propagated
+    to `adata.uns[f"{phi_key}_names"]` by `attach_phi`) since they may carry
+    meaning (e.g. which reference cell type each dimension corresponds to).
     """
     path = Path(path)
     suffix = "".join(path.suffixes)
@@ -41,13 +53,27 @@ def read_phi_table(path, cell_id_col="cell_id", sample_col=None, phi_prefix="phi
     if sample_col is not None and sample_col not in table.columns:
         raise ValueError(f"sample_col={sample_col!r} not found in Phi-Space table columns: {list(table.columns)}")
 
-    phi_cols = [c for c in table.columns if c.startswith(phi_prefix)]
-    if not phi_cols:
-        raise ValueError(f"No columns starting with phi_prefix={phi_prefix!r} found in {list(table.columns)}")
+    if phi_cols == "all":
+        matched = [c for c in table.columns if c not in {cell_id_col, sample_col}]
+    elif phi_cols is not None:
+        missing = [c for c in phi_cols if c not in table.columns]
+        if missing:
+            raise ValueError(f"phi_cols {missing} not found in Phi-Space table columns: {list(table.columns)}")
+        matched = list(phi_cols)
+    else:
+        matched = [c for c in table.columns if c.startswith(phi_prefix)]
+        if not matched:
+            raise ValueError(
+                f"No columns starting with phi_prefix={phi_prefix!r} found in {list(table.columns)}. "
+                "For a table with meaningfully-named embedding columns instead of a shared prefix "
+                "(e.g. PhiSpace per-cell-type scores), pass phi_cols explicitly, or phi_cols=\"all\"."
+            )
 
-    keep_cols = [cell_id_col] + ([sample_col] if sample_col else []) + phi_cols
-    table = table[keep_cols].rename(columns={c: f"phi_{i}" for i, c in enumerate(phi_cols)})
-    return table.set_index(cell_id_col)
+    keep_cols = [cell_id_col] + ([sample_col] if sample_col else []) + matched
+    table = table[keep_cols].rename(columns={c: f"phi_{i}" for i, c in enumerate(matched)})
+    table = table.set_index(cell_id_col)
+    table.attrs["phi_names"] = matched
+    return table
 
 
 def attach_phi(adata, phi, cell_id_col="cell_id", sample_col=None,
@@ -73,7 +99,9 @@ def attach_phi(adata, phi, cell_id_col="cell_id", sample_col=None,
     Returns
     -------
     `adata`, modified in place, with `obsm[phi_key]` set (float array,
-    n_obs x k) and `uns[f"{phi_key}_dim"]` recording k.
+    n_obs x k) and `uns[f"{phi_key}_dim"]` recording k. If `phi` carries
+    `.attrs["phi_names"]` (set by `read_phi_table`), also records
+    `uns[f"{phi_key}_names"]` with the original per-dimension names.
     """
     if "cell_id" not in adata.obs.columns:
         raise ValueError('adata.obs["cell_id"] not found; read the sample with read_xenium (or set it manually) before attaching phi')
@@ -102,6 +130,21 @@ def attach_phi(adata, phi, cell_id_col="cell_id", sample_col=None,
         )
 
     aligned = phi_lookup.loc[adata_key_index]
-    adata.obsm[phi_key] = aligned.to_numpy(dtype=np.float64)
+    values = aligned.to_numpy(dtype=np.float64)
+
+    n_nan_rows = int(np.isnan(values).any(axis=1).sum())
+    if n_nan_rows:
+        warnings.warn(
+            f"{n_nan_rows}/{adata.n_obs} cells have a NaN {phi_key} embedding (a matched row "
+            "exists, but with missing values -- typically near-empty segmentation artifacts "
+            "the embedding method couldn't score). These will propagate NaNs into "
+            "neighbor-averaging and model fitting; filter them out first, e.g. "
+            f"`adata = adata[~np.isnan(adata.obsm[{phi_key!r}]).any(axis=1)].copy()`.",
+            stacklevel=2,
+        )
+
+    adata.obsm[phi_key] = values
     adata.uns[f"{phi_key}_dim"] = len(phi_cols)
+    if "phi_names" in phi.attrs:
+        adata.uns[f"{phi_key}_names"] = list(phi.attrs["phi_names"])
     return adata

@@ -35,7 +35,8 @@ def ensure_lognormalized(adata):
     return adata
 
 
-def score_cell_cycle(adata, s_genes=None, g2m_genes=None, preprocess=True, copy=False):
+def score_cell_cycle(adata, s_genes=None, g2m_genes=None, preprocess=True,
+                       threshold=0.0, method="gmm", copy=False):
     """Assign S/G2M/G1 phase per cell using the Tirosh et al. gene sets.
 
     Xenium panels are curated for cell typing and often cover only a
@@ -43,8 +44,21 @@ def score_cell_cycle(adata, s_genes=None, g2m_genes=None, preprocess=True, copy=
     warns loudly if coverage is too thin for the phase split to be
     trustworthy; consider `score_proliferation` instead in that case.
 
-    Adds `adata.obs["S_score"]`, `["G2M_score"]`, `["phase"]`, and a boolean
-    `["is_dividing"]` (True for S or G2M phase).
+    Adds `adata.obs["S_score"]`, `["G2M_score"]`, `["phase"]` (scanpy's own
+    `phase != "G1"` categorical call, untouched), and a boolean
+    `["is_dividing"]`.
+
+    Parameters
+    ----------
+    method : "gmm" or "threshold"
+        How `is_dividing` is derived from `max(S_score, G2M_score)` — via
+        `classify_bimodal`, the same data-driven-by-default cutoff used by
+        `score_proliferation`/`score_death`, rather than
+        `sc.tl.score_genes_cell_cycle`'s own `phase` gate (a fixed
+        score > 0 threshold per phase) that `is_dividing` used to mirror.
+        That fixed gate tends to over-call cycling cells for the same
+        reason `score_proliferation(method="threshold")` does — see its
+        docstring. `phase` itself is left as scanpy computes it either way.
     """
     if copy:
         adata = adata.copy()
@@ -75,7 +89,8 @@ def score_cell_cycle(adata, s_genes=None, g2m_genes=None, preprocess=True, copy=
         ensure_lognormalized(adata)
 
     sc.tl.score_genes_cell_cycle(adata, s_genes=s_present, g2m_genes=g2m_present)
-    adata.obs["is_dividing"] = adata.obs["phase"].isin(["S", "G2M"])
+    combined_score = adata.obs[["S_score", "G2M_score"]].max(axis=1)
+    adata.obs["is_dividing"] = classify_bimodal(combined_score, method, threshold)
     adata.uns["cell_cycle_genes"] = {"s_genes": s_present, "g2m_genes": g2m_present}
     return adata
 

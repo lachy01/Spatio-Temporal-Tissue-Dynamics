@@ -66,6 +66,23 @@ def test_score_division_forced_cell_cycle_matches_score_cell_cycle(cell_cycle_ad
     )
 
 
+def test_score_cell_cycle_is_dividing_uses_classify_bimodal_threshold(cell_cycle_adata):
+    score_cell_cycle(cell_cycle_adata, method="threshold", threshold=0.0)
+    combined = cell_cycle_adata.obs[["S_score", "G2M_score"]].max(axis=1)
+    expected = (combined > 0.0).to_numpy()
+    np.testing.assert_array_equal(cell_cycle_adata.obs["is_dividing"].to_numpy(), expected)
+
+
+def test_score_cell_cycle_is_dividing_gmm_default_favors_boosted_cells(cell_cycle_adata):
+    score_cell_cycle(cell_cycle_adata)
+    assert cell_cycle_adata.obs["is_dividing"].dtype == bool
+
+    boosted_idx = np.concatenate([cell_cycle_adata.uns["s_idx"], cell_cycle_adata.uns["g2m_idx"]])
+    other_idx = np.setdiff1d(np.arange(cell_cycle_adata.n_obs), boosted_idx)
+    is_dividing = cell_cycle_adata.obs["is_dividing"].to_numpy()
+    assert is_dividing[boosted_idx].mean() > is_dividing[other_idx].mean()
+
+
 def test_score_division_unknown_method_raises(counts_adata):
     with pytest.raises(ValueError):
         score_division(counts_adata, method="nonsense")

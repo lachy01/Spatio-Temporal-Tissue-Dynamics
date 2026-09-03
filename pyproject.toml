@@ -11,13 +11,15 @@ dependencies = [
     "scipy",
     "scikit-learn",
     "torch>=2.0",
+    "matplotlib",
 ]
 
 [project.optional-dependencies]
 xenium-io = ["spatialdata-io>=0.1"]
 parquet = ["pyarrow"]
 download = ["requests"]
-test = ["pytest"]
+stats = ["statsmodels"]
+test = ["pytest", "statsmodels"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -27,5 +29,6 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "tests"]
 testpaths = ["tests"]
+markers = ["slow: long-running mixture validation tests (spec section 6)"]

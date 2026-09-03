@@ -40,6 +40,24 @@ CORE_PROLIFERATION_MARKERS = ("MKI67", "TOP2A", "PCNA", "CCNB2", "CDK1", "CENPF"
 # custom marker_genes list.
 CORE_APOPTOSIS_MARKERS = ("CASP3", "CASP8", "CASP9", "BAX", "BAK1", "BID", "CYCS", "APAF1")
 
+# A fuller pro-apoptotic signature for a death *count* response (the analogue of
+# the S+G2M set for division): the intrinsic and extrinsic apoptosis machinery
+# expressed *in the dying/targeted cell* — initiator and executioner caspases,
+# pro-apoptotic Bcl-2 effectors and BH3-only sensitizers, the mitochondrial
+# apoptosome, death receptors/adaptors, and the p53 axis. It deliberately
+# EXCLUDES death ligands (FASLG, TNF, TNFSF10) and cytotoxic-effector genes
+# (GZMB, PRF1): those mark the aggressor/killer cell, not the dying one, and
+# would confound a death-count response with immune-killer identity. Same
+# post-translational-regulation caveat as CORE_APOPTOSIS_MARKERS applies — check
+# panel coverage (match_gene_set) before trusting the resulting count.
+APOPTOSIS_SIGNATURE = (
+    "CASP2", "CASP3", "CASP6", "CASP7", "CASP8", "CASP9", "CASP10",
+    "BAX", "BAK1", "BID", "BAD", "BBC3", "PMAIP1", "BIK", "BOK", "HRK", "BMF", "BCL2L11",
+    "APAF1", "CYCS", "DIABLO", "AIFM1", "ENDOG",
+    "FAS", "TNFRSF10A", "TNFRSF10B", "TNFRSF1A", "FADD", "TRADD",
+    "TP53",
+)
+
 
 def match_gene_set(genes, var_names):
     """Intersect a candidate gene list with what's actually in the panel.

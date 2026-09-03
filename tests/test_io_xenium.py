@@ -3,7 +3,6 @@
 ImportError -- see download.py's REQUIRED_FILES for why that matters)."""
 
 import gzip
-from pathlib import Path
 
 import h5py
 import numpy as np
@@ -11,7 +10,12 @@ import pandas as pd
 import pytest
 from scipy.sparse import csc_matrix
 
-from tissue_dynamics.io_xenium import _read_10x_mtx_manual, find_outs_dir, read_xenium
+from tissue_dynamics.io_xenium import (
+    _read_10x_mtx_manual,
+    attach_control_counts,
+    find_outs_dir,
+    read_xenium,
+)
 
 
 def _write_cell_feature_matrix_h5(path, n_genes=5, n_cells=4):
@@ -167,3 +171,40 @@ def test_read_xenium_sets_sample_id_and_cell_id(outs_dir_h5, monkeypatch):
     adata = read_xenium(outs_dir_h5, sample_id="my_section")
     assert (adata.obs["sample_id"] == "my_section").all()
     assert set(adata.obs["cell_id"]) == {f"cell{i}" for i in range(4)}
+
+
+def _write_cells_csv_with_controls(outs_dir, cell_ids):
+    n = len(cell_ids)
+    pd.DataFrame({
+        "cell_id": cell_ids,
+        "x_centroid": np.arange(n, dtype=float),
+        "y_centroid": np.arange(n, dtype=float),
+        "transcript_counts": np.full(n, 100.0),
+        "control_probe_counts": np.arange(n, dtype=float),
+        "genomic_control_counts": np.ones(n, dtype=float),
+    }).to_csv(outs_dir / "cells.csv.gz", index=False, compression="gzip")
+
+
+def test_attach_control_counts_sums_and_aligns(tmp_path):
+    from anndata import AnnData
+
+    d = tmp_path / "s" / "outs"; d.mkdir(parents=True)
+    _write_cells_csv_with_controls(d, [f"cell{i}" for i in range(4)])
+    # adata in a shuffled cell order to exercise the cell_id join
+    order = [2, 0, 3, 1]
+    adata = AnnData(np.zeros((4, 2)), obs=pd.DataFrame({"cell_id": [f"cell{i}" for i in order]}))
+
+    attach_control_counts(adata, d, control_cols=("control_probe_counts", "genomic_control_counts"))
+    np.testing.assert_allclose(adata.obs["control_counts"], [c + 1.0 for c in order])   # probe(i)+genomic(1)
+    np.testing.assert_allclose(adata.obs["gene_counts"], 100.0)
+    assert adata.uns["control_count_columns"] == ["control_probe_counts", "genomic_control_counts"]
+
+
+def test_attach_control_counts_missing_column_raises(tmp_path):
+    from anndata import AnnData
+
+    d = tmp_path / "s" / "outs"; d.mkdir(parents=True)
+    _write_cells_csv_with_controls(d, ["cell0", "cell1"])
+    adata = AnnData(np.zeros((2, 2)), obs=pd.DataFrame({"cell_id": ["cell0", "cell1"]}))
+    with pytest.raises(ValueError, match="nonexistent_control"):
+        attach_control_counts(adata, d, control_cols=("nonexistent_control",))

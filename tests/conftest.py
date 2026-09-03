@@ -140,3 +140,25 @@ def pipeline_adata():
     adata.obs["sample_id"] = ["S1"] * 20 + ["S2"] * 20
     adata.obsm["spatial"] = rng.uniform(0, 300, size=(adata.n_obs, 2))
     return adata
+
+
+@pytest.fixture
+def write_phi_csv(tmp_path):
+    """Return a helper that writes a synthetic Phi-Space CSV for an AnnData.
+
+    The written table has `cell_id`, `sample_id`, and `phi_0..phi_{k-1}`
+    columns matching `adata`, ready for `read_phi_table` / `run_static_pipeline`.
+    """
+    def _write(adata, phi_dim=5, seed=0):
+        rng = np.random.default_rng(seed)
+        phi_df = pd.DataFrame(
+            rng.normal(size=(adata.n_obs, phi_dim)),
+            columns=[f"phi_{i}" for i in range(phi_dim)],
+        )
+        phi_df.insert(0, "sample_id", adata.obs["sample_id"].to_numpy())
+        phi_df.insert(0, "cell_id", adata.obs["cell_id"].to_numpy())
+        path = tmp_path / "phi.csv"
+        phi_df.to_csv(path, index=False)
+        return path
+
+    return _write

@@ -105,6 +105,45 @@ def read_xenium(path, gex_only=True, drop_controls=True, sample_id=None):
     return adata
 
 
+def attach_control_counts(adata, path, control_cols=("control_probe_counts",),
+                           gene_col="transcript_counts", cell_id_col="cell_id",
+                           control_key="control_counts", gene_key="gene_counts"):
+    """Attach per-cell negative-control and gene counts from `cells.csv.gz`.
+
+    Xenium's `cell_feature_matrix.h5` may carry only Gene Expression features,
+    but `cells.csv.gz` records the per-cell control-probe QC counts. This reads
+    that table, sums `control_cols` into `obs[control_key]` (u_j) and copies
+    `gene_col` into `obs[gene_key]` (m_j = total gene expression), aligned to
+    `adata` on the raw per-section `cell_id`. Used to build the ambient-background
+    covariate (see `covariates.compute_ambient_background`).
+
+    Parameters
+    ----------
+    control_cols : sequence of str
+        `cells.csv.gz` columns summed into the control total. Default is the
+        negative-control probes; the broader background set is e.g.
+        `("control_probe_counts", "genomic_control_counts", "control_codeword_counts")`.
+    """
+    outs_dir = find_outs_dir(path)
+    cells = pd.read_csv(outs_dir / "cells.csv.gz").set_index(cell_id_col)
+
+    missing = [c for c in list(control_cols) + [gene_col] if c not in cells.columns]
+    if missing:
+        raise ValueError(f"columns {missing} not in {outs_dir/'cells.csv.gz'}; "
+                         f"available: {list(cells.columns)}")
+
+    key = adata.obs[cell_id_col] if cell_id_col in adata.obs.columns else adata.obs_names
+    not_found = ~pd.Index(key).isin(cells.index)
+    if not_found.any():
+        raise ValueError(f"{int(not_found.sum())}/{adata.n_obs} cells have no row in cells.csv.gz "
+                         "(joined on cell_id)")
+    aligned = cells.loc[key]
+    adata.obs[control_key] = aligned[list(control_cols)].sum(axis=1).to_numpy(dtype=float)
+    adata.obs[gene_key] = aligned[gene_col].to_numpy(dtype=float)
+    adata.uns["control_count_columns"] = list(control_cols)
+    return adata
+
+
 def load_xenium_samples(paths, sample_ids=None, **read_kwargs):
     """Read several Xenium sections and concatenate them into one AnnData.
 

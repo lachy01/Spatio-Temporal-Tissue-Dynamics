@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from tissue_dynamics.io_phi import attach_phi, read_phi_table
@@ -62,13 +63,85 @@ def test_attach_phi_raises_on_missing_rows(tmp_path, small_adata, phi_frame):
         attach_phi(small_adata, table, sample_col="sample")
 
 
+def test_read_phi_table_phi_cols_all_uses_named_columns(tmp_path):
+    df = pd.DataFrame({
+        "cell_id": ["a", "b", "c"],
+        "Cancer Cycling": [0.1, 0.2, 0.3],
+        "T cells CD8+": [0.4, 0.5, 0.6],
+    })
+    path = tmp_path / "phispace.csv"
+    df.to_csv(path, index=False)
+
+    table = read_phi_table(path, phi_cols="all")
+
+    assert list(table.columns) == ["phi_0", "phi_1"]
+    assert table.attrs["phi_names"] == ["Cancer Cycling", "T cells CD8+"]
+
+
+def test_read_phi_table_phi_cols_explicit_list(tmp_path):
+    df = pd.DataFrame({
+        "cell_id": ["a", "b"],
+        "keep_me": [1.0, 2.0],
+        "and_me": [3.0, 4.0],
+        "not_this": [5.0, 6.0],
+    })
+    path = tmp_path / "phispace.csv"
+    df.to_csv(path, index=False)
+
+    table = read_phi_table(path, phi_cols=["keep_me", "and_me"])
+
+    assert list(table.columns) == ["phi_0", "phi_1"]
+    assert table.attrs["phi_names"] == ["keep_me", "and_me"]
+
+
+def test_read_phi_table_no_prefix_match_raises_with_hint(tmp_path):
+    df = pd.DataFrame({"cell_id": ["a", "b"], "Cancer Cycling": [0.1, 0.2]})
+    path = tmp_path / "phispace.csv"
+    df.to_csv(path, index=False)
+
+    with pytest.raises(ValueError, match="phi_cols"):
+        read_phi_table(path)
+
+
+def test_attach_phi_records_phi_names(small_adata, tmp_path):
+    df = pd.DataFrame({
+        "cell_id": small_adata.obs["cell_id"].unique(),
+    })
+    df["Cancer Cycling"] = np.arange(len(df), dtype=float)
+    path = tmp_path / "phispace.csv"
+    df.to_csv(path, index=False)
+
+    table = read_phi_table(path, phi_cols="all")
+    attach_phi(small_adata, table)
+
+    assert small_adata.uns["phi_names"] == ["Cancer Cycling"]
+
+
+def test_attach_phi_warns_on_nan_rows(small_adata, tmp_path):
+    n = small_adata.n_obs
+    unique_ids = small_adata.obs["cell_id"].unique()
+    df = pd.DataFrame({
+        "cell_id": list(unique_ids) * 2,
+        "sample": ["A"] * len(unique_ids) + ["B"] * len(unique_ids),
+        "phi_0": np.arange(n, dtype=float),
+    })
+    df.loc[0, "phi_0"] = np.nan  # one row (sample A's first cell_id) has a missing embedding
+    path = tmp_path / "phi.csv"
+    df.to_csv(path, index=False)
+    table = read_phi_table(path, sample_col="sample")
+
+    with pytest.warns(UserWarning, match="NaN"):
+        attach_phi(small_adata, table, sample_col="sample")
+
+    assert np.isnan(small_adata.obsm["phi"]).any()
+
+
 def test_attach_phi_without_sample_col_uses_cell_id_only(small_adata):
     # cell_id is duplicated across sections in small_adata; without sample_col
     # the join key collapses to cell_id alone, so distinct sections sharing a
     # cell_id necessarily can't both align correctly -- attach_phi should
     # still run (no error) since only unique cell_ids need representation.
     unique_cell_ids = small_adata.obs["cell_id"].unique()
-    import pandas as pd
     table = pd.DataFrame(
         {"phi_0": np.arange(len(unique_cell_ids), dtype=float)},
         index=pd.Index(unique_cell_ids, name="cell_id"),

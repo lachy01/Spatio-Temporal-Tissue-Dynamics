@@ -219,3 +219,12 @@ __marimo__/
 
 # Downloaded spatial transcriptomics sample data (large, regenerable via the loader script)
 data/
+
+# macOS
+.DS_Store
+
+# Cluster run artifacts: per-task JSON from SLURM arrays, regenerable by
+# resubmitting the array, and hundreds of files after a bootstrap run.
+outputs/hpc/
+logs/
+.venv-spartan/

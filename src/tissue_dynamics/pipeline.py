@@ -1,6 +1,7 @@
 """End-to-end convenience entrypoints: read/score a sample, and run the full static fate pipeline."""
 
 from .cellcycle import score_division
+from .covariates import build_covariate_matrix
 from .death import score_death
 from .io_phi import attach_phi, read_phi_table
 from .io_xenium import read_xenium
@@ -35,6 +36,7 @@ def analyze_sample(path, method="auto", **score_kwargs):
 def run_static_pipeline(adata, phi_path, *, radius=80.0, sample_key="sample_id",
                           target_mode="hard", class_names=("divide", "die", "unchanged"),
                           cell_id_col="cell_id", sample_col=None, phi_prefix="phi_",
+                          covariate_keys=None, model_kwargs=None,
                           division_kwargs=None, death_kwargs=None,
                           target_kwargs=None, fit_kwargs=None):
     """Run the full static fate-inference pipeline on an already-loaded AnnData.
@@ -58,6 +60,16 @@ def run_static_pipeline(adata, phi_path, *, radius=80.0, sample_key="sample_id",
         Forwarded to `targets.build_fate_targets`; determines whether the
         model is fit against discrete class codes or soft target
         distributions.
+    covariate_keys : sequence of str, optional
+        `obs` columns to include as per-cell technical covariates (e.g.
+        `("log_total_counts", "local_density")`). They must already be
+        computed (see `covariates.compute_library_size` /
+        `compute_local_density`); the pipeline standardizes them into
+        `obsm["covariates"]` and adds them to the model as linear
+        confounder-control terms.
+    model_kwargs : dict, optional
+        Extra keyword arguments for `SpatialMultinomialFateModel` (e.g.
+        `{"interaction_rank": 0}`).
     division_kwargs, death_kwargs, target_kwargs, fit_kwargs : dict, optional
         Forwarded to `cellcycle.score_division`, `score_death`,
         `build_fate_targets`, and `fit_fate_model` respectively. E.g. pass
@@ -69,8 +81,9 @@ def run_static_pipeline(adata, phi_path, *, radius=80.0, sample_key="sample_id",
     (adata, model, history) — `adata` modified in place with all
     intermediate results attached (`obsm["phi"]`, `obsm["phi_bar"]`,
     `obsp["spatial_connectivity"]`, signature scores, fate targets,
-    `obsm["fate_proba"]`); `model` the fitted `SpatialMultinomialFateModel`;
-    `history` the per-epoch training loss from `fit_fate_model`.
+    `obsm["fate_proba"]`, and `obsm["covariates"]` if used); `model` the
+    fitted `SpatialMultinomialFateModel`; `history` the per-epoch training
+    loss from `fit_fate_model`.
     """
     phi = read_phi_table(phi_path, cell_id_col=cell_id_col, sample_col=sample_col, phi_prefix=phi_prefix)
     attach_phi(adata, phi, cell_id_col=cell_id_col, sample_col=sample_col, sample_key=sample_key)
@@ -84,9 +97,18 @@ def run_static_pipeline(adata, phi_path, *, radius=80.0, sample_key="sample_id",
     build_fate_targets(adata, mode=target_mode, class_names=class_names, sample_key=sample_key,
                         **(target_kwargs or {}))
 
-    model = SpatialMultinomialFateModel(phi_dim=adata.obsm["phi"].shape[1], class_names=class_names)
-    target = adata.obs["fate_code"].to_numpy() if target_mode == "hard" else adata.obsm["fate_target"]
-    history = fit_fate_model(model, adata.obsm["phi"], adata.obsm["phi_bar"], target, **(fit_kwargs or {}))
+    covariates = None
+    n_covariates = 0
+    if covariate_keys is not None:
+        covariates, _ = build_covariate_matrix(adata, covariate_keys=covariate_keys)
+        n_covariates = covariates.shape[1]
 
-    adata.obsm["fate_proba"] = predict_fate_proba(model, adata.obsm["phi"], adata.obsm["phi_bar"])
+    model = SpatialMultinomialFateModel(phi_dim=adata.obsm["phi"].shape[1], class_names=class_names,
+                                         n_covariates=n_covariates, **(model_kwargs or {}))
+    target = adata.obs["fate_code"].to_numpy() if target_mode == "hard" else adata.obsm["fate_target"]
+    history = fit_fate_model(model, adata.obsm["phi"], adata.obsm["phi_bar"], target,
+                             covariates=covariates, **(fit_kwargs or {}))
+
+    adata.obsm["fate_proba"] = predict_fate_proba(model, adata.obsm["phi"], adata.obsm["phi_bar"],
+                                                   covariates=covariates)
     return adata, model, history
