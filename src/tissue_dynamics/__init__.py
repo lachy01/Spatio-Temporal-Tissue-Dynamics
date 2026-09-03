@@ -1,60 +1,87 @@
-from .annulus import (
-    DEFAULT_RINGS,
-    annulus_neighbor_stats,
-    annulus_scan,
-    spillover_chi2,
-)
-from .oxygen import (
-    OxygenFieldResult,
-    attach_oxygen_field,
-    build_oxygen_field,
-    calibrate_cutoff,
-    sample_at_cells,
-    solve_oxygen,
-    sweep_parameters,
-)
-from .baseline import build_mlp_features, fit_mlp_baseline, predict_mlp_proba
-from .cellcycle import ensure_lognormalized, score_cell_cycle, score_division, score_proliferation
-from .count_glm import (
-    build_predictors,
-    compare_count_glms,
-    fit_count_glm,
-    fit_death_nb,
-    fit_division_nb,
-    fit_neighbourhood_count_glm,
-    get_gene_counts,
-    get_signature_counts,
-    stepwise_division_nb,
-)
-from .covariates import (
-    build_covariate_matrix,
-    compute_ambient_background,
-    compute_library_size,
-    compute_local_density,
-)
-from .death import score_death
-from .download import download_xenium_sample
-from .evaluate import fate_metrics, morans_i, spatial_group_kfold
-from .inference import fate_parameter_stats, interaction_modes, likelihood_ratio_test
-from .io_phi import attach_phi, read_phi_table
-from .io_visium import find_visium_path, load_visium_samples, read_visium
-from .io_xenium import attach_control_counts, load_xenium_samples, read_xenium
-from .models import SpatialMultinomialFateModel, fate_loss, fit_fate_model, predict_fate_proba
-from .neighbors import average_neighbors, build_adjacency
-from .pipeline import analyze_sample, run_static_pipeline
-from .plotting import (
-    plot_binned_conditional_mean,
-    plot_coefficients,
-    plot_fate_spatial,
-    plot_annulus_profile,
-    plot_interaction_modes,
-    plot_pit_histogram,
-    plot_rootogram,
-    plot_tile_field,
-    plot_training_loss,
-)
-from .targets import build_fate_targets
-from .tiles import aggregate_tiles, assign_tiles, binned_conditional_mean
+"""Spatial cell-fate dynamics from spatial transcriptomics + Phi-Space embeddings.
+
+Exports are resolved **lazily** (PEP 562). Importing this package used to pull in
+torch, scanpy, anndata and matplotlib eagerly, which meant that anything reaching
+the mixture code -- `tissue_dynamics.mixture.tasks`, the entry point for every
+SLURM array task -- dragged the whole stack with it. A cluster environment then
+had to carry ~2 GB of torch to run a model that never touches it.
+
+`from tissue_dynamics import read_xenium` behaves exactly as before; the
+submodule is imported on first attribute access instead of at package import.
+"""
+
+import importlib
+
+_LAZY = {
+    "DEFAULT_RINGS": "annulus",
+    "OxygenFieldResult": "oxygen",
+    "SpatialMultinomialFateModel": "models",
+    "aggregate_tiles": "tiles",
+    "analyze_sample": "pipeline",
+    "annulus_neighbor_stats": "annulus",
+    "annulus_scan": "annulus",
+    "assign_tiles": "tiles",
+    "attach_control_counts": "io_xenium",
+    "attach_oxygen_field": "oxygen",
+    "attach_phi": "io_phi",
+    "average_neighbors": "neighbors",
+    "binned_conditional_mean": "tiles",
+    "build_adjacency": "neighbors",
+    "build_covariate_matrix": "covariates",
+    "build_fate_targets": "targets",
+    "build_mlp_features": "baseline",
+    "build_oxygen_field": "oxygen",
+    "build_predictors": "count_glm",
+    "calibrate_cutoff": "oxygen",
+    "compare_count_glms": "count_glm",
+    "compute_ambient_background": "covariates",
+    "compute_library_size": "covariates",
+    "compute_local_density": "covariates",
+    "download_xenium_sample": "download",
+    "ensure_lognormalized": "cellcycle",
+    "fate_loss": "models",
+    "fate_metrics": "evaluate",
+    "fate_parameter_stats": "inference",
+    "find_visium_path": "io_visium",
+    "fit_count_glm": "count_glm",
+    "fit_death_nb": "count_glm",
+    "fit_division_nb": "count_glm",
+    "fit_fate_model": "models",
+    "fit_mlp_baseline": "baseline",
+    "fit_neighbourhood_count_glm": "count_glm",
+    "get_gene_counts": "count_glm",
+    "get_signature_counts": "count_glm",
+    "interaction_modes": "inference",
+    "likelihood_ratio_test": "inference",
+    "load_visium_samples": "io_visium",
+    "load_xenium_samples": "io_xenium",
+    "morans_i": "evaluate",
+    "plot_annulus_profile": "plotting",
+    "plot_binned_conditional_mean": "plotting",
+    "plot_coefficients": "plotting",
+    "plot_fate_spatial": "plotting",
+    "plot_interaction_modes": "plotting",
+    "plot_pit_histogram": "plotting",
+    "plot_rootogram": "plotting",
+    "plot_tile_field": "plotting",
+    "plot_training_loss": "plotting",
+    "predict_fate_proba": "models",
+    "predict_mlp_proba": "baseline",
+    "read_phi_table": "io_phi",
+    "read_visium": "io_visium",
+    "read_xenium": "io_xenium",
+    "run_static_pipeline": "pipeline",
+    "sample_at_cells": "oxygen",
+    "score_cell_cycle": "cellcycle",
+    "score_death": "death",
+    "score_division": "cellcycle",
+    "score_proliferation": "cellcycle",
+    "solve_oxygen": "oxygen",
+    "spatial_group_kfold": "evaluate",
+    "spillover_chi2": "annulus",
+    "stepwise_division_nb": "count_glm",
+    "sweep_parameters": "oxygen",
+}
 
 __all__ = [
     "read_xenium",
@@ -126,3 +153,17 @@ __all__ = [
     "compute_local_density",
     "build_covariate_matrix",
 ]
+
+
+def __getattr__(name):
+    """Import the owning submodule on first access (PEP 562)."""
+    module = _LAZY.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(importlib.import_module(f".{module}", __name__), name)
+    globals()[name] = value          # cache, so later access is a plain lookup
+    return value
+
+
+def __dir__():
+    return sorted(set(__all__) | set(_LAZY) | set(globals()))

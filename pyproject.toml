@@ -15,11 +15,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# The Poisson mixture (src/tissue_dynamics/mixture) and its SLURM array jobs.
+# Deliberately excludes torch, scanpy, anndata and matplotlib: the package
+# resolves its exports lazily, so nothing in this path imports them. This is
+# the only extra a cluster environment needs.
+mixture = ["jax", "optax", "patsy", "pyarrow", "scikit-learn", "pyyaml"]
 xenium-io = ["spatialdata-io>=0.1"]
 parquet = ["pyarrow"]
 download = ["requests"]
 stats = ["statsmodels"]
-test = ["pytest", "statsmodels"]
+oxygen = ["pyamg"]
+test = ["pytest", "statsmodels", "patsy"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
