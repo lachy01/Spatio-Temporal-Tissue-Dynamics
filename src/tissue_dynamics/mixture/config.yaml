@@ -1,0 +1,112 @@
+# All hyperparameters for the concomitant-variable Poisson mixture.
+# No magic numbers in code -- everything tunable lives here.
+
+data:
+  xenium_dir: data/Xenium_Prime_Breast_Cancer_FFPE
+  # celltype_major, 9 components -- the CURRENT table (regenerated after the
+  # normalisation was updated). Rowsums are constant at -7, so spec 3.1
+  # branch (a) applies: sum-to-zero projection to 8 dimensions.
+  phi_csv: data/phispace_normalised.csv
+  # celltype_minor, 29 components, same normalisation as the major table
+  # (compositional, rowsums constant at -27). Used only as the blood-endothelium
+  # source for the oxygen field: the major table's single "Endothelial" column
+  # would fold in lymphatic endothelium, which is deliberately excluded.
+  phi_minor_csv: data/phispace_minor_normalised.csv
+  table_parquet: data/mixture_cells_major.parquet
+  # Density and neighbourhood keep the definitions every earlier model uses
+  # (radius-based), so results stay comparable with notebook sections 9-24.
+  # Spec 1.3 prefers fixed-k kNN; recorded as a deviation, tested in Stage D.
+  density_radius_um: 50.0
+  neighbour_radius_um: 80.0
+  # Spec 1.2 item 2: N must exclude the outcome genes AND the blocklist. The
+  # blocklist is the set of panel genes correlated with the Tirosh set, removed
+  # from the PhiSpace input so the cell-state covariates cannot carry cell-cycle
+  # signal into the mixing weight. It is a superset of the Tirosh genes (all 53
+  # are on it) and covers 13.47% of the total library -- far from negligible,
+  # which is why the spec insists on it.
+  blocklist_csv: data/blocklist.csv
+  corr_logN_logarea_orthogonalise_above: 0.9
+
+state:
+  # Spec 1.1 phi_00..phi_28 = the 29-component celltype_minor PhiSpace.
+  # The four explicitly cycling archetypes are dropped from the cell's OWN
+  # state: their reference centroids are defined by cell-cycle genes, they
+  # correlate 0.47-0.57 with log1p(y_count), and putting them in the mixing
+  # weight would predict P(cycling) from a cycling score built on the
+  # outcome's own transcripts. They are KEPT in the neighbourhood state,
+  # where "how many of my neighbours are cycling" is a real biological
+  # predictor and phi_bar excludes the cell itself.
+  # celltype_major has no cycling archetypes at all, so this list is empty and
+  # the own/neighbour blocks are identical in width. It matters only for the
+  # celltype_minor table, where "Cancer Cycling" and friends are defined by
+  # cell-cycle genes and would leak the outcome into the mixing weight.
+  cycling_archetypes: []
+  drop_cycling_from_own: true
+  drop_cycling_from_neighbour: false
+  condition_number_max: 1.0e6      # spec 3.1 branch (b) PCA fallback trigger
+  pca_variance_keep: 0.999
+
+oxygen:
+  blood_endothelium:
+    - "Endothelial ACKR1"
+    - "Endothelial RGS5"
+    - "Endothelial CXCL12"
+  h_um: 5.0
+  L0_um: 100.0
+  beta: 1.0
+  # The source score is now built from a COMPOSITIONAL table, where summing the
+  # three blood-endothelial columns is invalid: their rowsum constraint makes
+  # them fight (the summed score correlates -0.95 with ACKR1 but +1.00 with
+  # RGS5). The max z-score across the three is the compositional-safe analogue.
+  # `cutoff` is then a quantile, not an absolute level, so it is scale-free:
+  # keep the top `source_quantile` of cells as sources, matching the ~2.6% the
+  # field was originally validated with.
+  source_quantile: 0.026
+
+model:
+  # s(log area) in the component rates. Raised from the spec's 4 on evidence:
+  # the Test 07 confound floor -- the fold change the model invents from pure
+  # size misspecification -- falls from 2.84 at df=4 to 1.84 at df=8, while the
+  # real-data fold change is invariant (5.581 / 5.577 / 5.581 / 5.579 at
+  # df = 4 / 8 / 12 / 16). df=8 therefore maximises the ratio of real signal to
+  # artefact (3.03) at no cost to the estimate.
+  area_spline_df: 8
+  background_spline_df: 3          # g(log density), Stage C
+  weight_density_spline_df: 3      # h(log density); spec 9.10 forbids raising
+  rank: 2                          # bilinear B = U V^T, swept in Test 11
+  ridge_tau: 1.0e-4                # spec 3.2 conditioning term on U, V
+  ridge_tau_sensitivity: [0.0, 1.0e-4, 1.0e-3]
+  # Ridge on EVERY weight coefficient (a, c, h, psi, U, V). Added to the spec:
+  # without it the concomitant logistic model separates on null data (||a||=57.5,
+  # sd(eta)=203, pi at 0/1 for 98.6% of cells), which is the Test 03 / Test 07
+  # failure. Selected by held-out log-likelihood on contiguous spatial blocks,
+  # for the reason spec 6.11 gives for rank selection.
+  weight_ridge: null               # null => select by spatial CV
+  weight_ridge_grid: [0.0, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0]
+  cv_folds: 5
+  theta_config: both               # F (theta=1) and V (theta free); a bracket
+
+init:
+  delta: 0.0940                    # e^delta = log(3): threefold rate in cycling
+  a0_cycling_fraction: 0.10
+  random_scale: 0.01
+  n_restarts: 20
+
+optim:
+  maxiter: 2000
+  rel_tol_loglik: 1.0e-9
+  grad_inf_tol: 1.0e-5
+  em_max_iter: 500
+  em_monotonicity_tol: 1.0e-8
+
+prototype:
+  n_cells: 50000
+  archetype: "Cancer Epithelial"
+  seed: 0
+
+inference:
+  n_blocks_target: 250
+  n_bootstrap: 300
+  n_bootstrap_prototype: 50
+  bootstrap_maxiter: 300
+  max_failure_rate: 0.05

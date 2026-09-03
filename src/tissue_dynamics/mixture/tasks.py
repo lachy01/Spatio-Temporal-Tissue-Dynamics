@@ -1,0 +1,200 @@
+"""Work-unit enumeration for SLURM array jobs.
+
+Every expensive part of this model is a set of *independent* fits: bootstrap
+replicates, cross-validation folds, multi-start restarts, simulation replicates.
+This module turns each into a flat list of self-describing tasks, so a SLURM
+array index maps to exactly one unit of work with no coordination between them.
+
+The contract is deliberately narrow: `enumerate_tasks(job, cfg)` returns a list
+of plain dicts, `run_task(task, cfg, ...)` executes one and returns a plain dict
+of results, and `hpc/worker.py` is the thin wrapper that writes it to disk. That
+keeps the parallel layer testable locally -- you can run any task on this laptop
+by index and get the same answer the cluster would.
+
+Seeds are derived from the task index, so a replicate is reproducible whether it
+runs as array element 173 or on its own.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+
+import numpy as np
+
+
+def enumerate_tasks(job, cfg):
+    """All work units for `job`, as a list of dicts. Index in the list is the
+    SLURM array index."""
+    mc, ic, nc = cfg["model"], cfg["init"], cfg["inference"]
+    if job == "bootstrap":
+        return [{"job": job, "rep": r} for r in range(int(nc["n_bootstrap"]))]
+    if job == "cv_penalty":
+        return [{"job": job, "lam": float(lam), "fold": f}
+                for lam in mc["weight_ridge_grid"]
+                for f in range(int(mc.get("cv_folds", 5)))]
+    if job == "cv_rank":
+        return [{"job": job, "rank": int(r), "fold": f}
+                for r in cfg.get("rank_grid", [1, 2, 3, 5])
+                for f in range(int(mc.get("cv_folds", 5)))]
+    if job == "multistart":
+        return [{"job": job, "restart": r} for r in range(int(ic["n_restarts"]))]
+    if job in ("sim_recovery", "sim_null_bilinear", "sim_single_component",
+               "sim_size_confound"):
+        return [{"job": job, "rep": r} for r in range(int(cfg.get("sim_reps", 20)))]
+    raise ValueError(f"unknown job {job!r}")
+
+
+def _load(cfg):
+    """Table + frozen basis. Both are read-only, so every task builds them the
+    same way and no task can perturb another's parameterisation (spec 3.1)."""
+    import pandas as pd
+
+    from .basis import build_basis
+
+    df = pd.read_parquet(cfg["data"]["table_parquet"])
+    df.attrs["phi_names"] = list(
+        pd.read_csv(cfg["data"]["phi_csv"], index_col=0, nrows=1).columns)
+    return df, build_basis(df, cfg, verbose=False)
+
+
+def run_task(task, cfg, verbose=False):
+    """Execute one work unit. Returns a JSON-serialisable dict.
+
+    A specification that cannot be fit at all (every restart diverging, which
+    happens on the real data whenever `weight_ridge` is 0) is **recorded as a
+    failed task**, not raised. An array element that crashes looks identical to
+    one that was never scheduled, and `gather.py` would then report it as
+    missing rather than as the finding it is.
+    """
+    job = task["job"]
+    try:
+        return _run_sim(task, cfg) if job.startswith("sim_") else _run_real(
+            task, cfg, verbose=verbose)
+    except RuntimeError as exc:
+        return {**task, "failed": str(exc), "converged": False, "diverged": True}
+
+
+def _summarise(res, data, spec, extra=None, include_params=False):
+    from .model import (B_matrix, normalised_entropy, responsibilities,
+                        singular_values)
+
+    D = data.as_jax()
+    w = np.asarray(responsibilities(res.params, D, spec))
+    sv = singular_values(res.params)
+    out = {
+        # provenance: the settings this fit actually used, so a collector never
+        # has to infer them by re-reading a config that may have moved on
+        "weight_ridge": float(spec.weight_ridge), "rank": int(spec.rank),
+        "df_area": int(spec.df_area), "stage": spec.stage,
+        "theta_free": bool(spec.theta_free),
+        "loglik": float(res.loglik), "grad_inf": float(res.grad_inf),
+        "n_iter": int(res.n_iter), "converged": bool(res.converged),
+        "diverged": bool(res.diverged), "wall_time": float(res.wall_time),
+        "e_delta": float(np.exp(np.asarray(res.params["delta"]))),
+        "mean_w": float(w.mean()), "entropy": float(normalised_entropy(w)),
+        "sigma": [float(v) for v in np.atleast_1d(sv)],
+        # spec 3.2: B is the identified object, never U or V
+        "B": B_matrix(res.params).tolist() if spec.has_state else None,
+    }
+    for k in ("a", "c", "psi", "b0", "theta", "h"):
+        if k in res.params:
+            out[k] = np.asarray(res.params[k]).tolist()
+    if include_params:
+        # the FULL pytree, including U, V, delta, a0, s -- the bootstrap
+        # warm-starts from it, and the summary fields above are not enough to
+        # reconstruct a starting point
+        out["params"] = {k: np.asarray(v).tolist() for k, v in res.params.items()}
+    out.update(extra or {})
+    return out
+
+
+def _run_real(task, cfg, verbose=False):
+    from .basis import spec_from_basis
+    from .fit import fit_lbfgs, multistart, poisson_start
+    from .inference import block_folds, spatial_blocks
+    from .model import build_data, init_params
+
+    job = task["job"]
+    df, basis = _load(cfg)
+    mc = cfg["model"]
+    lam = task.get("lam", mc.get("weight_ridge") or 0.0)
+    spec = spec_from_basis(basis, cfg, stage=cfg.get("stage", "B"),
+                           weight_ridge=float(lam), rank=task.get("rank"))
+    data = build_data(df, basis, cfg, spec)
+    xy = df[["x", "y"]].to_numpy(float)
+
+    if job in ("cv_penalty", "cv_rank"):
+        labels = spatial_blocks(xy, int(cfg["inference"]["n_blocks_target"]))
+        folds = block_folds(labels, int(mc.get("cv_folds", 5)))
+        f = int(task["fold"])
+        tr, te = np.where(folds != f)[0], np.where(folds == f)[0]
+        best, _ = multistart(data.subset(tr), spec, cfg, n_restarts=2,
+                             seed=1000 * f, verbose=verbose)
+        import jax.numpy as jnp
+
+        from .model import loglik_terms
+        held = float(jnp.sum(loglik_terms(best.params, data.subset(te).as_jax(), spec)))
+        return {**task, **_summarise(best, data.subset(tr), spec,
+                                     {"heldout_loglik_per_cell": held / len(te),
+                                      "n_train": len(tr), "n_test": len(te)})}
+
+    if job == "multistart":
+        r = int(task["restart"])
+        ps = poisson_start(data, spec)
+        rng = None if r == 0 else np.random.default_rng(r)
+        p0 = init_params(spec, cfg, data=data, rng=rng, poisson_start=ps)
+        res = fit_lbfgs(data, spec, p0, maxiter=int(cfg["optim"]["maxiter"]),
+                        rel_tol=float(cfg["optim"]["rel_tol_loglik"]),
+                        grad_tol=float(cfg["optim"]["grad_inf_tol"]))
+        return {**task, **_summarise(res, data, spec, include_params=True)}
+
+    if job == "bootstrap":
+        # the point estimate this replicate warm-starts from must already exist
+        import json
+        import os
+
+        pt = os.path.join(cfg.get("hpc_dir", "outputs/hpc"), "point_estimate.json")
+        with open(pt) as fh:
+            hat = json.load(fh)
+        import jax.numpy as jnp
+        params_hat = {k: jnp.asarray(np.asarray(v))
+                      for k, v in hat["params"].items()}
+        labels = spatial_blocks(xy, int(cfg["inference"]["n_blocks_target"]))
+        rng = np.random.default_rng(int(task["rep"]))
+        blocks = np.unique(labels)
+        idx_of = {b: np.where(labels == b)[0] for b in blocks}
+        pick = rng.choice(blocks, size=len(blocks), replace=True)
+        idx = np.concatenate([idx_of[b] for b in pick])
+        sub = data.subset(idx)
+        res = fit_lbfgs(sub, spec, params_hat,
+                        maxiter=int(cfg["inference"]["bootstrap_maxiter"]))
+        return {**task, **_summarise(res, sub, spec, {"n_cells": len(idx)})}
+
+    raise ValueError(f"unhandled job {job!r}")
+
+
+def _run_sim(task, cfg):
+    from .fit import multistart
+    from .simulate import simulate_stage_b
+
+    rep = int(task["rep"])
+    n = int(cfg.get("sim_n", 100_000))
+    lam = float(cfg["model"].get("weight_ridge") or 0.0)
+    kw = {"sim_recovery": {},
+          "sim_null_bilinear": {"b_scale": 0.0},
+          "sim_single_component": {"single_component": True},
+          "sim_size_confound": {"wiggly_area_df": 10}}[task["job"]]
+    data, truth, spec = simulate_stage_b(n=n, seed=rep, d_own=8, d_nbr=8,
+                                         fit_area_df=int(cfg["model"]["area_spline_df"]),
+                                         **kw)
+    spec = dataclasses.replace(spec, weight_ridge=lam)
+    best, _ = multistart(data, spec, cfg, n_restarts=int(cfg.get("sim_restarts", 4)),
+                         seed=100 * rep, verbose=False,
+                         maxiter=int(cfg["optim"]["maxiter"]))
+    out = _summarise(best, data, spec)
+    out["truth"] = {k: (np.asarray(v).tolist() if np.ndim(v) else float(v))
+                    for k, v in truth.items()
+                    if k in ("b0", "theta", "delta", "a0", "psi", "a", "c", "B")}
+    out["truth_sigma1"] = float(np.linalg.svd(np.asarray(truth["B"]),
+                                              compute_uv=False)[0]) if np.any(truth["B"]) else 0.0
+    return {**task, **out}
