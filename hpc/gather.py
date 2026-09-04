@@ -58,11 +58,44 @@ def main():
 
     if a.job in ("cv_penalty", "cv_rank"):
         key = "lam" if a.job == "cv_penalty" else "rank"
-        g = (df.groupby(key)["heldout_loglik_per_cell"]
-               .agg(["mean", "std", "count"]).sort_values("mean", ascending=False))
-        print("\nheld-out log-likelihood per cell (higher is better):")
+        df["sigma1"] = [s[0] if s else np.nan for s in df.get("sigma", [])]
+        g = df.groupby(key).agg(
+            heldout=("heldout_loglik_per_cell", "mean"),
+            n_converged=("converged", "sum"), n=("converged", "size"),
+            grad=("grad_inf", "median"), sigma1=("sigma1", "median"),
+            entropy=("entropy", "median"), e_delta=("e_delta", "median"))
+        print("\nper-%s summary:" % key)
         print(g.round(6).to_string())
-        print(f"\nselected {key} = {g.index[0]}")
+
+        # Paired comparison. Every value of `key` is fit on the SAME folds, so
+        # the between-fold variance -- which is several times larger than the
+        # effect -- cancels. Comparing group means hides the signal entirely.
+        piv = df.pivot(index="fold", columns=key, values="heldout_loglik_per_cell")
+        base = piv[piv.columns[0]]
+        print("\npaired difference vs %s=%g, per cell (x1e6):" % (key, piv.columns[0]))
+        for k in piv.columns:
+            d_ = (piv[k] - base) * 1e6
+            sd = d_.std(ddof=1)
+            t = d_.mean() / (sd / np.sqrt(len(d_))) if sd > 0 else float("nan")
+            print(f"  {key} {k:<8g} {d_.mean():+10.2f}  paired t = "
+                  + (f"{t:+.1f}" if np.isfinite(t) else "-"))
+
+        # Selection is restricted to settings that actually converged. A held-out
+        # score from a fit that stopped at the iteration cap is not an estimate
+        # of that setting's predictive performance.
+        ok = g[g["n_converged"] == g["n"]]
+        if ok.empty:
+            print(f"\n** No {key} value converged on every fold, so none can be "
+                  "selected on held-out likelihood. Raise `optim.maxiter` and "
+                  "re-run before reading anything from the table above. **")
+        else:
+            best = ok["heldout"].idxmax()
+            print(f"\nselected {key} = {best} "
+                  f"(best held-out score among settings that converged on all "
+                  f"{int(g['n'].iloc[0])} folds)")
+            if best != g["heldout"].idxmax():
+                print(f"  note: {key}={g['heldout'].idxmax()} scores higher but did "
+                      "not converge, so it is not eligible.")
 
     elif a.job == "bootstrap":
         print("\npercentile CIs (spec 7.1):")

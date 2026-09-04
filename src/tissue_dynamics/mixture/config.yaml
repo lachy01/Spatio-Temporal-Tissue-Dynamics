@@ -81,7 +81,16 @@ model:
   # sd(eta)=203, pi at 0/1 for 98.6% of cells), which is the Test 03 / Test 07
   # failure. Selected by held-out log-likelihood on contiguous spatial blocks,
   # for the reason spec 6.11 gives for rank selection.
-  weight_ridge: null               # null => select by spatial CV
+  # null => select by CV. NOTE on the selection rule: held-out log-likelihood
+  # cannot score this parameter. pi is a prior on a LATENT class, so errors in
+  # it are heavily damped in the marginal density, which the count model
+  # dominates. The first CV array showed held-out likelihood monotonically
+  # preferring lambda=0 (paired t = -3.1 to -17.3, perfectly ordered) -- i.e.
+  # preferring the specification where sigma_1(B) = 30 and the weight model is
+  # diverging. The penalty is not a bias-variance knob here; it is what makes
+  # the estimator well posed. Select the SMALLEST lambda giving a converged,
+  # non-degenerate fit, and use held-out likelihood only to break ties.
+  weight_ridge: null
   weight_ridge_grid: [0.0, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0]
   cv_folds: 5
   theta_config: both               # F (theta=1) and V (theta free); a bracket
@@ -93,7 +102,15 @@ init:
   n_restarts: 20
 
 optim:
-  maxiter: 2000
+  # Raised from the spec's 2000 on evidence from the first Spartan cv_penalty
+  # array: at 2000 iterations NOTHING converged below weight_ridge=100 (median
+  # ||grad||inf 142 at lambda=0, 0.63 at lambda=10, 0.0053 at lambda=30 against
+  # a 1e-5 threshold). Those fits stopped at the cap, so their held-out scores
+  # were not estimates of anything. lambda=10 and 30 are close and should settle
+  # with more iterations; lambda=0 looks to be diverging rather than converging
+  # slowly, which is itself the evidence that it is not a valid specification.
+  # A task ran 2000 iterations in ~8 minutes on 4 Spartan cores.
+  maxiter: 20000
   rel_tol_loglik: 1.0e-9
   grad_inf_tol: 1.0e-5
   em_max_iter: 500
