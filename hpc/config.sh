@@ -27,15 +27,15 @@ export MIX_CPUS="${MIX_CPUS:-4}"
 
 export MIX_ROOT="${MIX_ROOT:-$HOME/Spatio-Temporal-Tissue-Dynamics}"
 export MIX_OUT="${MIX_OUT:-$MIX_ROOT/outputs/hpc}"
-export MIX_VENV="${MIX_VENV:-$MIX_ROOT/.venv-spartan}"
+export MIX_VENV="${MIX_VENV:-$MIX_ROOT/../venvs/3.12.3}"
 
 # Spartan uses lmod. `module purge` first is the documented habit; Python/3.10.4
 # is the default under the foss/2022a toolchain. JAX and optax are not site
 # modules, so they live in a venv built on top of it (see hpc/setup_env.sh).
 mix_activate_python() {
   module purge
-  module load foss/2022a
-  module load Python/3.10.4
+  module load GCCcore/13.3.0
+  module load Python/3.12.3
   # shellcheck disable=SC1091
   [ -f "$MIX_VENV/bin/activate" ] && source "$MIX_VENV/bin/activate"
 }
