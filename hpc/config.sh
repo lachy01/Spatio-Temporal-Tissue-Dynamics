@@ -25,7 +25,11 @@ export MIX_TIME="${MIX_TIME:-0-02:00:00}"
 export MIX_MEM="${MIX_MEM:-16000}"
 export MIX_CPUS="${MIX_CPUS:-4}"
 
-export MIX_ROOT="${MIX_ROOT:-$HOME/Spatio-Temporal-Tissue-Dynamics}"
+# Derived from this file's own location, so the harness works wherever the repo
+# is checked out -- a project filesystem such as /data/gpfs/projects/<code>/...
+# rather than $HOME, which was the old default and simply wrong there.
+_MIX_CONFIG_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export MIX_ROOT="${MIX_ROOT:-$(dirname "$_MIX_CONFIG_DIR")}"
 export MIX_OUT="${MIX_OUT:-$MIX_ROOT/outputs/hpc}"
 export MIX_VENV="${MIX_VENV:-$MIX_ROOT/../venvs/3.12.3}"
 
@@ -33,11 +37,17 @@ export MIX_VENV="${MIX_VENV:-$MIX_ROOT/../venvs/3.12.3}"
 # is the default under the foss/2022a toolchain. JAX and optax are not site
 # modules, so they live in a venv built on top of it (see hpc/setup_env.sh).
 mix_activate_python() {
-  module purge
-  module load GCCcore/13.3.0
-  module load Python/3.12.3
+  # Tolerant of a machine without lmod, so these scripts can be dry-run locally.
+  # Under `set -e` a bare `module purge` aborts the whole script on any box that
+  # has no modules, which also swallows the preflight checks in submit.sh.
+  if command -v module >/dev/null 2>&1; then
+    module purge || true
+    module load GCCcore/13.3.0 || true
+    module load Python/3.12.3 || true
+  fi
   # shellcheck disable=SC1091
   [ -f "$MIX_VENV/bin/activate" ] && source "$MIX_VENV/bin/activate"
+  return 0
 }
 
 # Keep JAX inside its allocation. Spartan's docs set OMP_NUM_THREADS from

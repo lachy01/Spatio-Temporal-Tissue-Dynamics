@@ -45,6 +45,28 @@ PY
   exit 1
 fi
 
+# multistart and bootstrap fit at the chosen penalty; with weight_ridge unset
+# they would silently run at 0, which is the specification known to diverge.
+# Catch that before burning a full-n array on it.
+case "$JOB" in
+  multistart|bootstrap)
+    WR=$(python - <<'PY'
+import sys; sys.path.insert(0,"src")
+from tissue_dynamics.mixture.data import load_config
+print(load_config()["model"].get("weight_ridge"))
+PY
+)
+    if [ "$WR" = "None" ] || [ -z "$WR" ]; then
+      echo "error: model.weight_ridge is unset in config.yaml, so '$JOB' would fit" >&2
+      echo "       at weight_ridge=0 -- the setting that diverges. Run cv_penalty," >&2
+      echo "       pick the smallest lambda that converged, set it in config.yaml," >&2
+      echo "       and resubmit. Nothing was submitted." >&2
+      exit 1
+    fi
+    echo "using weight_ridge=$WR from config.yaml" >&2
+    ;;
+esac
+
 N=$(python hpc/worker.py --job "$JOB" --index 0 --count)
 ARRAY="${RANGE:-0-$((N-1))}%${THROTTLE}"
 echo "job '$JOB': $N tasks, submitting --array=$ARRAY, ${MIX_CPUS} cpus / ${MIX_MEM}MB / ${MIX_TIME} each" >&2
