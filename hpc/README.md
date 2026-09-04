@@ -69,13 +69,25 @@ sbatch --export=ALL,MIX_JOB=bootstrap  --array=0-299%50 hpc/mixture.slurm
 Array sizes: `cv_penalty` 0-39, `cv_rank` 0-19, `multistart` 0-19,
 `bootstrap` 0-299, each `sim_*` 0-19.
 
-`bootstrap` warm-starts from `outputs/hpc/point_estimate.json`, so run
-`multistart` first and chain on it:
+### Order matters: bootstrap comes last
+
+`bootstrap` warm-starts from `outputs/hpc/point_estimate.json`, which does not
+exist until the `multistart` array has run **and** been collected. Submitting it
+early fails every task. `./hpc/submit.sh bootstrap` now refuses to submit in
+that case; submitting `hpc/mixture.slurm` directly does not check, so use the
+chain:
 
 ```bash
 JID=$(./hpc/submit.sh multistart)
-sbatch --dependency=afterok:$JID ...
+sbatch --dependency=afterok:$JID \
+       --wrap="cd $MIX_ROOT && python run/collect_point_estimate.py"
+# then, once that has run:
+./hpc/submit.sh bootstrap 50
 ```
+
+The full order is: `cv_penalty` (choose the penalty) -> set `weight_ridge` in
+`config.yaml` -> `cv_rank` -> `multistart` -> `collect_point_estimate.py` ->
+`bootstrap`.
 
 ## Collecting
 

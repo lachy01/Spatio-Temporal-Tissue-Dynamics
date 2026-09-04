@@ -45,7 +45,7 @@ def main():
         return
 
     t0 = time.time()
-    res = run_task(tasks[a.index], cfg)
+    res = run_task(tasks[a.index], cfg, out_dir=a.out)
     res["index"] = a.index
     res["elapsed"] = time.time() - t0
     res["slurm_job"] = os.environ.get("SLURM_JOB_ID")

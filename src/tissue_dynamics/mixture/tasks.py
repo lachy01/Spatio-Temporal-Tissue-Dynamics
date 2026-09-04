@@ -68,7 +68,7 @@ def _load(cfg):
     return df, build_basis(df, cfg, verbose=False)
 
 
-def run_task(task, cfg, verbose=False):
+def run_task(task, cfg, verbose=False, out_dir=None):
     """Execute one work unit. Returns a JSON-serialisable dict.
 
     A specification that cannot be fit at all (every restart diverging, which
@@ -80,7 +80,7 @@ def run_task(task, cfg, verbose=False):
     job = task["job"]
     try:
         return _run_sim(task, cfg) if job.startswith("sim_") else _run_real(
-            task, cfg, verbose=verbose)
+            task, cfg, verbose=verbose, out_dir=out_dir)
     except RuntimeError as exc:
         return {**task, "failed": str(exc), "converged": False, "diverged": True}
 
@@ -119,7 +119,7 @@ def _summarise(res, data, spec, extra=None, include_params=False):
     return out
 
 
-def _run_real(task, cfg, verbose=False):
+def _run_real(task, cfg, verbose=False, out_dir=None):
     from .basis import spec_from_basis
     from .fit import fit_lbfgs, multistart, poisson_start
     from .inference import block_folds, spatial_blocks
@@ -160,11 +160,23 @@ def _run_real(task, cfg, verbose=False):
         return {**task, **_summarise(res, data, spec, include_params=True)}
 
     if job == "bootstrap":
-        # the point estimate this replicate warm-starts from must already exist
         import json
         import os
 
-        pt = os.path.join(cfg.get("hpc_dir", "outputs/hpc"), "point_estimate.json")
+        # The point estimate this replicate warm-starts from must already exist.
+        # Fail with an instruction rather than a bare FileNotFoundError: a
+        # missing prerequisite otherwise reappears identically in all 300 array
+        # tasks with nothing in the message to say what to do about it.
+        base = out_dir or cfg.get("hpc_dir") or "outputs/hpc"
+        pt = os.path.join(base, "point_estimate.json")
+        if not os.path.exists(pt):
+            raise FileNotFoundError(
+                f"{pt} not found. The bootstrap warm-starts from the point "
+                "estimate, so it has to run after the multistart array:\n"
+                "    ./hpc/submit.sh multistart\n"
+                "    python run/collect_point_estimate.py\n"
+                "    ./hpc/submit.sh bootstrap 50\n"
+                "Chain them with --dependency=afterok:<jobid> to avoid the wait.")
         with open(pt) as fh:
             hat = json.load(fh)
         import jax.numpy as jnp

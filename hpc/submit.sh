@@ -17,6 +17,34 @@ mix_set_threads
 cd "$MIX_ROOT"
 mkdir -p logs "$MIX_OUT"
 
+# Preflight: check a job's prerequisites once, here, rather than discovering a
+# missing file identically in all 300 array tasks.
+if [ "$JOB" = "bootstrap" ] && [ ! -f "$MIX_OUT/point_estimate.json" ]; then
+  cat >&2 <<MSG
+error: $MIX_OUT/point_estimate.json not found.
+
+  The bootstrap warm-starts from the point estimate, so it runs after the
+  multistart array:
+
+    JID=\$(./hpc/submit.sh multistart)
+    sbatch --dependency=afterok:\$JID --wrap="cd $MIX_ROOT && python run/collect_point_estimate.py"
+    ./hpc/submit.sh bootstrap 50
+
+  Nothing was submitted.
+MSG
+  exit 1
+fi
+if [ ! -f "$(python - <<'PY'
+import sys; sys.path.insert(0,"src")
+from tissue_dynamics.mixture.data import load_config
+print(load_config()["data"]["table_parquet"])
+PY
+)" ]; then
+  echo "error: the table parquet named in config.yaml is missing. Copy it and its" >&2
+  echo "       .phi_names.json sidecar into data/ before submitting." >&2
+  exit 1
+fi
+
 N=$(python hpc/worker.py --job "$JOB" --index 0 --count)
 ARRAY="${RANGE:-0-$((N-1))}%${THROTTLE}"
 echo "job '$JOB': $N tasks, submitting --array=$ARRAY, ${MIX_CPUS} cpus / ${MIX_MEM}MB / ${MIX_TIME} each" >&2
