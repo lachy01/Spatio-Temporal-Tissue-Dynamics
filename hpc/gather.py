@@ -111,15 +111,41 @@ def main():
                   "selected on held-out likelihood. Raise `optim.maxiter` and "
                   "re-run before reading anything from the table above. **")
         else:
-            # smallest eligible setting, not the best-scoring one: held-out
-            # likelihood is monotone in lambda toward 0 and cannot score this
-            # parameter (see config.yaml), so it only breaks ties.
-            best = ok.index.min()
-            print(f"\nselected {key} = {best} (smallest setting that both "
-                  f"converged on all folds and has a stable sigma_1)")
-            if best != g["heldout"].idxmax():
-                print(f"  note: {key}={g['heldout'].idxmax()} scores higher but did "
-                      "not converge, so it is not eligible.")
+            if key == "rank":
+                # Spec 6.11 selects the rank by held-out log-likelihood on
+                # spatial blocks. Take the smallest rank that is not
+                # significantly worse than the best -- the parsimonious end of
+                # the plateau, which is what "a clear maximum or plateau" means.
+                top = ok["heldout"].idxmax()
+                best = top
+                for k in sorted(ok.index):
+                    d_ = (piv[k] - piv[top]) * 1e6
+                    sd = d_.std(ddof=1)
+                    t = d_.mean() / (sd / np.sqrt(len(d_))) if sd > 0 else 0.0
+                    if not np.isfinite(t) or t > -2.0:      # indistinguishable
+                        best = k
+                        break
+                print(f"\nselected {key} = {best} (smallest rank not significantly "
+                      f"worse than the best-scoring rank {top}; spec 6.11 selects "
+                      "the rank on held-out log-likelihood)")
+                ties = [k for k in ok.index
+                        if k != best and abs(ok.loc[k, "heldout"]
+                                             - ok.loc[best, "heldout"]) < 1e-12]
+                if ties:
+                    print(f"  ranks {ties} are numerically identical to {best}: the "
+                          "extra components carry no weight, so B is effectively "
+                          f"rank {best}.")
+            else:
+                # For the penalty, held-out likelihood is monotone toward
+                # lambda=0 and cannot score the parameter (see config.yaml), so
+                # take the smallest eligible setting instead.
+                best = ok.index.min()
+                print(f"\nselected {key} = {best} (smallest setting that both "
+                      f"converged on all folds and has a stable sigma_1)")
+                top = g["heldout"].idxmax()
+                if best != top and int(g.loc[top, "n_converged"]) < int(g.loc[top, "n"]):
+                    print(f"  note: {key}={top} scores higher but did not converge "
+                          "on every fold, so it is not eligible.")
 
     elif a.job == "bootstrap":
         print("\npercentile CIs (spec 7.1):")
@@ -134,6 +160,28 @@ def main():
             print(f"  {'sigma_1(B)':<12} {s1.mean():+.4f}  [{lo:+.4f}, {hi:+.4f}]")
 
     elif a.job.startswith("sim_"):
+        # the pass/fail criteria the spec names, which the recovery table alone
+        # does not cover
+        if "B" in df.columns and df["B"].notna().any():
+            sig = np.array([s[0] for s in df["sigma"] if s])
+            print(f"\n  sigma_1(B_hat): median {np.median(sig):.4f} "
+                  f"[{np.percentile(sig, 5):.4f}, {np.percentile(sig, 95):.4f}]")
+            if a.job == "sim_recovery":
+                fro = np.array([
+                    np.linalg.norm(np.array(b) - np.array(t["B"]))
+                    / np.linalg.norm(np.array(t["B"]))
+                    for b, t in zip(df["B"], df["truth"])])
+                ok = fro.mean() < 0.15
+                print(f"  spec 6.1  ||B_hat-B||_F/||B||_F = {fro.mean():.4f} "
+                      f"(max {fro.max():.4f}, threshold 0.15) -> "
+                      f"{'PASS' if ok else 'FAIL'}")
+            if a.job == "sim_size_confound":
+                fold = np.exp(df["e_delta"].to_numpy(float))
+                ent = df["entropy"].to_numpy(float)
+                print(f"  spec 6.7  fold change median {np.median(fold):.3f} "
+                      f"(threshold 1.5) -> {'PASS' if np.median(fold) < 1.5 else 'FAIL'}")
+                print(f"  spec 6.7  entropy median {np.median(ent):.4f} "
+                      f"(threshold 0.25) -> {'PASS' if np.median(ent) < 0.25 else 'FAIL'}")
         if "truth" in df.columns:
             print("\nrecovery against truth:")
             print("| parameter | truth | mean est | MC SE | bias/SE |")

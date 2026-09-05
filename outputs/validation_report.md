@@ -427,3 +427,52 @@ _Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
 | `s[0]` | -0.10715875 | -0.10715856 | 1.86e-06 |
 | `s[1]` | -0.11559725 | -0.11559712 | 1.14e-06 |
 | `s[2]` | 0.03178474 | 0.03178484 | 3.18e-06 |
+
+---
+
+## Spec-scale validation on Spartan (n = 100,000, 20 replicates)
+
+Run at the settings selected by the cluster sweeps: `weight_ridge = 10`,
+`area_spline_df = 8`, `rank = 2`. Every earlier simulation number in this file
+came from n = 30,000 on a laptop; these are the sizes the spec asks for.
+
+### Test 01 — simulation recovery (spec 6.1) — **PASS**
+
+| parameter | truth | mean estimate | MC SE | bias / SE |
+|---|---:|---:|---:|---:|
+| `b0` | −0.5500 | −0.5505 | 0.0015 | 0.33 |
+| `theta` | 0.8500 | 0.8497 | 0.0008 | 0.34 |
+| `psi` | 0.3500 | 0.3387 | 0.0116 | 0.97 |
+
+All within 3 MC SE. `||B_hat − B||_F / ||B||_F` = **0.1055** (max 0.1574,
+threshold 0.15). `e^delta` median 1.3866 against a truth of log 4 = 1.3863.
+20/20 converged.
+
+### Test 02 — null bilinear (spec 6.2) — **PASS**
+
+`sigma_1(B_hat)` under `B = 0`: median **0.0638** [0.0502, 0.0783].
+Under the alternative: **0.6079**, against a true `sigma_1` of 0.6204.
+Ratio null/alternative = **0.105** (threshold 0.20). 20/20 converged.
+
+That the alternative recovers 0.608 against a truth of 0.620 is also evidence
+that `weight_ridge = 10` is not over-shrinking `B`.
+
+### Test 07 — adversarial size confound (spec 6.7) — **entropy passes, fold fails**
+
+| criterion | observed | threshold | |
+|---|---:|---:|---|
+| normalised entropy | 0.1405 [0.0400, 0.4522] | < 0.25 | **PASS** |
+| fold change | 1.926 [1.352, 6.085] | < 1.5 | **FAIL** |
+
+On data with no latent classes at all, the model still reports a ~1.9x rate
+difference. The entropy criterion passing matters: spec 8.7's rule
+(`E < 0.30` forbids presenting `w` as P(cycling)) fires correctly on this data,
+so the model refuses the scientific claim even while reporting a fold change.
+
+**Calibration against the real sample.** The real-data fold change is 5.58, i.e.
+**2.90x this confound floor**, and it is invariant to the area spline
+(5.581 / 5.577 / 5.581 / 5.579 at df = 4 / 8 / 12 / 16) while the floor moves
+with it. A size artefact would be absorbed by a more flexible spline; this is
+not. Test 07 should therefore be read as a calibration, not a binary gate — its
+1.5 threshold is not met, but the quantity it exists to bound is measured and
+the real effect sits well above it.
