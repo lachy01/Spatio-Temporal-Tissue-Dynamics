@@ -83,16 +83,40 @@ def main():
         # Selection is restricted to settings that actually converged. A held-out
         # score from a fit that stopped at the iteration cap is not an estimate
         # of that setting's predictive performance.
+        # Convergence alone is not enough. On the real data lambda=0.3 converged
+        # on every fold yet returned sigma_1(B) = 26.6 -- 60x the true value in
+        # the Test 01 simulation (0.440) -- because a converged fit of an
+        # overfit weight model is still an overfit weight model. A genuine
+        # interaction is stable against the penalty; a variance-dominated one
+        # tracks it. So require sigma_1 to have entered its plateau: the change
+        # to the next-larger setting must be modest.
+        if key == "lam" and "sigma1" in g:
+            sig = g["sigma1"]
+            rel = (sig / sig.shift(-1) - 1.0).abs()      # change vs next lambda up
+            g["sigma1_drift"] = rel
+            stable = rel < 0.5
+            print("\nsigma_1(B) stability (|change| to the next setting up; a real"
+                  "\ninteraction plateaus, an overfit one keeps falling):")
+            for k in g.index:
+                mark = "plateau" if bool(stable.get(k, False)) else "still falling"
+                print(f"  {key} {k:<8g} sigma_1 {sig[k]:8.3f}   {mark}")
+            g = g[stable.fillna(True)]
+            if g.empty:
+                print("\n** sigma_1 never stabilises across this grid; extend it "
+                      "upward before selecting. **")
+
         ok = g[g["n_converged"] == g["n"]]
         if ok.empty:
             print(f"\n** No {key} value converged on every fold, so none can be "
                   "selected on held-out likelihood. Raise `optim.maxiter` and "
                   "re-run before reading anything from the table above. **")
         else:
-            best = ok["heldout"].idxmax()
-            print(f"\nselected {key} = {best} "
-                  f"(best held-out score among settings that converged on all "
-                  f"{int(g['n'].iloc[0])} folds)")
+            # smallest eligible setting, not the best-scoring one: held-out
+            # likelihood is monotone in lambda toward 0 and cannot score this
+            # parameter (see config.yaml), so it only breaks ties.
+            best = ok.index.min()
+            print(f"\nselected {key} = {best} (smallest setting that both "
+                  f"converged on all folds and has a stable sigma_1)")
             if best != g["heldout"].idxmax():
                 print(f"  note: {key}={g['heldout'].idxmax()} scores higher but did "
                       "not converge, so it is not eligible.")

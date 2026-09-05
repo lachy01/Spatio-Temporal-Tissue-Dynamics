@@ -90,7 +90,14 @@ model:
   # diverging. The penalty is not a bias-variance knob here; it is what makes
   # the estimator well posed. Select the SMALLEST lambda giving a converged,
   # non-degenerate fit, and use held-out likelihood only to break ties.
-  weight_ridge: null
+  # 10, from the second Spartan cv_penalty array. Two independent lines agree:
+  # sigma_1(B) plateaus at ~1.0 for lambda in [10, 100] (1.24 / 1.05 / 0.99) and
+  # explodes below (3.60 at lambda=3, 26.6 at 0.3, 38.3 at 0), which is the
+  # signature of a variance-dominated estimate rather than a real interaction;
+  # and the Test 03 null only collapses at lambda >= 10. Convergence alone was
+  # not a sufficient criterion -- lambda=0.3 converged on all five folds and
+  # still returned sigma_1 = 26.6, sixty times the true value in Test 01 (0.440).
+  weight_ridge: 10
   weight_ridge_grid: [0.0, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0]
   cv_folds: 5
   theta_config: both               # F (theta=1) and V (theta free); a bracket
