@@ -151,3 +151,11 @@ inference:
 # derived from the summed y_count.
 n_gene_splits: 5
 n_permutations: 100
+
+# Spec 2.2 / 6.12: theta as a BRACKET. Configuration F pins the log-library-size
+# coefficient at 1 (a pure rate model, blocking the path from cycling to count);
+# V estimates it, partly unblocking that path by an amount chosen by likelihood
+# rather than by causal argument. Spec 9.11 forbids selecting between them by
+# fit -- both are reported.
+bracket_restarts: 5
+stage_d_restarts: 3

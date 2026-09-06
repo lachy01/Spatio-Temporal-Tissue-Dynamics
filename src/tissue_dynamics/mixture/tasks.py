@@ -40,6 +40,21 @@ def enumerate_tasks(job, cfg):
         return [{"job": job, "restart": r} for r in range(int(ic["n_restarts"]))]
     if job == "heldout_genes":
         return [{"job": job, "split": s} for s in range(int(cfg.get("n_gene_splits", 5)))]
+    if job == "theta_bracket":
+        # Spec 2.2 / 6.12: F and V are a BRACKET, reported side by side. They are
+        # not competing models to be selected between, and spec 9.11 forbids
+        # picking one by fit.
+        return [{"job": job, "theta_free": tf, "restart": r}
+                for tf in (False, True) for r in range(int(cfg.get("bracket_restarts", 5)))]
+    if job == "stage_c":
+        # Additive background. EM does not apply (spec 4.3), so direct only.
+        return [{"job": job, "restart": r}
+                for r in range(int(cfg["init"]["n_restarts"]))]
+    if job == "stage_d":
+        return [{"job": job, "variant": v, "restart": r}
+                for v in ("free_theta_per_component", "rank_sweep_1", "rank_sweep_3",
+                          "rank_sweep_5", "kNN_density")
+                for r in range(int(cfg.get("stage_d_restarts", 3)))]
     if job in ("sim_recovery", "sim_null_bilinear", "sim_single_component",
                "sim_size_confound"):
         return [{"job": job, "rep": r} for r in range(int(cfg.get("sim_reps", 20)))]
@@ -166,6 +181,41 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
         # "not usable", so they travel with the estimate rather than on request
         out.update(confound_diagnostic(
             np.asarray(responsibilities(res.params, data.as_jax(), spec)), df, basis))
+        return out
+
+    if job in ("theta_bracket", "stage_c", "stage_d"):
+        import dataclasses
+
+        from .diagnostics import confound_diagnostic
+        from .model import responsibilities
+
+        sp_ = spec
+        if job == "theta_bracket":
+            sp_ = dataclasses.replace(spec, theta_free=bool(task["theta_free"]))
+        elif job == "stage_c":
+            sp_ = dataclasses.replace(spec, stage="C")
+        elif job == "stage_d":
+            v = task["variant"]
+            if v.startswith("rank_sweep_"):
+                sp_ = dataclasses.replace(spec, rank=int(v.rsplit("_", 1)[1]))
+            elif v == "free_theta_per_component":
+                raise NotImplementedError(
+                    "relaxing the proportional-rates restriction needs a second "
+                    "theta in the model, which model.py does not carry. Spec 2.2 "
+                    "makes that restriction load-bearing for identifiability, so "
+                    "it is a deliberate change, not a config flag.")
+        data = build_data(df, basis, cfg, sp_)
+        r_ = int(task.get("restart", 0))
+        ps = poisson_start(data, sp_)
+        p0 = init_params(sp_, cfg, data=data,
+                         rng=None if r_ == 0 else np.random.default_rng(r_),
+                         poisson_start=ps)
+        res = fit_lbfgs(data, sp_, p0, maxiter=int(cfg["optim"]["maxiter"]),
+                        rel_tol=float(cfg["optim"]["rel_tol_loglik"]),
+                        grad_tol=float(cfg["optim"]["grad_inf_tol"]))
+        out = {**task, **_summarise(res, data, sp_, include_params=True)}
+        out.update(confound_diagnostic(
+            np.asarray(responsibilities(res.params, data.as_jax(), sp_)), df, basis))
         return out
 
     if job == "heldout_genes":
