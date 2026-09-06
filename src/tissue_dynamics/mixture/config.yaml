@@ -132,5 +132,12 @@ inference:
   n_blocks_target: 250
   n_bootstrap: 300
   n_bootstrap_prototype: 50
-  bootstrap_maxiter: 300
+  # Spec 7.1 says to cap replicates at 300 L-BFGS iterations. That was written
+  # before we knew a full-n fit needs ~5,650 iterations cold: at 300, all 300
+  # replicates stopped at the cap with ||grad||inf median 105 (the point
+  # estimate reached 1.3e-05). Warm-starting helps but not enough, and
+  # under-iterating from a COMMON warm start shrinks the spread toward it, so
+  # the percentile intervals come out too narrow. Raised; compare interval
+  # widths against the 300-iteration run to confirm they have stabilised.
+  bootstrap_maxiter: 5000
   max_failure_rate: 0.05
