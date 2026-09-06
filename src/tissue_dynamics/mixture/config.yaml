@@ -123,6 +123,10 @@ optim:
   em_max_iter: 500
   em_monotonicity_tol: 1.0e-8
 
+# Test 08 (spec 6.8), the held-out gene validation
+n_gene_splits: 5
+n_permutations: 100
+
 prototype:
   n_cells: 50000
   archetype: "Cancer Epithelial"
@@ -141,3 +145,9 @@ inference:
   # widths against the 300-iteration run to confirm they have stabilised.
   bootstrap_maxiter: 5000
   max_failure_rate: 0.05
+
+# Test 08 (spec 6.8), the held-out gene validation. The half-set counts must
+# already be in the table -- run/add_gene_splits.py adds them; they cannot be
+# derived from the summed y_count.
+n_gene_splits: 5
+n_permutations: 100

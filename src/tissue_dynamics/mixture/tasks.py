@@ -38,6 +38,8 @@ def enumerate_tasks(job, cfg):
                 for f in range(int(mc.get("cv_folds", 5)))]
     if job == "multistart":
         return [{"job": job, "restart": r} for r in range(int(ic["n_restarts"]))]
+    if job == "heldout_genes":
+        return [{"job": job, "split": s} for s in range(int(cfg.get("n_gene_splits", 5)))]
     if job in ("sim_recovery", "sim_null_bilinear", "sim_single_component",
                "sim_size_confound"):
         return [{"job": job, "rep": r} for r in range(int(cfg.get("sim_reps", 20)))]
@@ -158,6 +160,35 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
                         rel_tol=float(cfg["optim"]["rel_tol_loglik"]),
                         grad_tol=float(cfg["optim"]["grad_inf_tol"]))
         return {**task, **_summarise(res, data, spec, include_params=True)}
+
+    if job == "heldout_genes":
+        # Spec 6.8. Refit the mixture using only half A of the signature, then
+        # ask whether the responsibilities predict half B beyond the nuisance
+        # covariates -- against a spatially block-permuted null.
+        from .heldout import heldout_gene_test
+        from .model import responsibilities
+
+        sp_ = int(task["split"])
+        for col in (f"y_A{sp_}", f"y_B{sp_}"):
+            if col not in df.columns:
+                raise KeyError(
+                    f"{col} missing from the table. Run run/add_gene_splits.py "
+                    "locally and re-copy the parquet: the half-set counts are "
+                    "not derivable from the summed y_count.")
+        data.y = df[f"y_A{sp_}"].to_numpy(np.float64)     # fit on half A only
+        best, _ = multistart(data, spec, cfg, n_restarts=3, seed=7 * sp_,
+                             verbose=verbose)
+        w = np.asarray(responsibilities(best.params, data.as_jax(), spec))
+        labels = spatial_blocks(xy, int(cfg["inference"]["n_blocks_target"]))
+        res = heldout_gene_test(
+            y_a=df[f"y_A{sp_}"].to_numpy(float), y_b=df[f"y_B{sp_}"].to_numpy(float),
+            w=w, log_n=basis.log_N(df), area_basis=basis.log_area_basis(df),
+            density_basis=basis.density_weight_basis(df), labels=labels,
+            n_perm=int(cfg.get("n_permutations", 100)), seed=sp_, verbose=verbose)
+        out = {**task, **_summarise(best, data, spec), **res}
+        out["mean_y_A"] = float(df[f"y_A{sp_}"].mean())
+        out["mean_y_B"] = float(df[f"y_B{sp_}"].mean())
+        return out
 
     if job == "bootstrap":
         import json

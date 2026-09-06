@@ -159,6 +159,23 @@ def main():
             lo, hi = np.percentile(s1, [2.5, 97.5])
             print(f"  {'sigma_1(B)':<12} {s1.mean():+.4f}  [{lo:+.4f}, {hi:+.4f}]")
 
+    elif a.job == "heldout_genes":
+        print("\nspec 6.8: does w predict the held-out half of the signature,")
+        print("beyond depth/area/density, against a spatially-permuted null?\n")
+        print("| split | coef w | delta-dev | permuted mean | ratio | p |")
+        print("|---|---:|---:|---:|---:|---:|")
+        for _i, r in df.sort_values("split").iterrows():
+            print(f"| {int(r['split'])} | {r['coef_w']:+.4f} | "
+                  f"{r['delta_deviance']:.1f} | {r['null_mean']:.1f} | "
+                  f"{r['ratio_to_null_mean']:.1f}x | {r['perm_p_value']:.3f} |")
+        ratio, coef = df["ratio_to_null_mean"], df["coef_w"]
+        ok = bool((ratio > 10).all() and (coef > 0).all())
+        print(f"\nratio to permuted null: median {ratio.median():.1f}x, "
+              f"min {ratio.min():.1f}x (spec 6.8 wants >= 10x on every split)")
+        print(f"coefficient on w: median {coef.median():+.4f}, "
+              f"all positive: {bool((coef > 0).all())}")
+        print(f"-> {'PASS' if ok else 'FAIL'}")
+
     elif a.job.startswith("sim_"):
         # the pass/fail criteria the spec names, which the recovery table alone
         # does not cover

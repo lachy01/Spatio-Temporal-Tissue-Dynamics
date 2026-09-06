@@ -476,3 +476,14 @@ with it. A size artefact would be absorbed by a more flexible spline; this is
 not. Test 07 should therefore be read as a calibration, not a binary gate — its
 1.5 threshold is not met, but the quantity it exists to bound is measured and
 the real effect sits well above it.
+
+## Test 08 -- held-out gene machinery (spec 6.8)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+- real `w`: coef **+1.4145**, delta-deviance **2491.7** vs permuted mean 35.2 (ratio **70.8x**, p = 0.032)
+- unrelated `w`: delta-deviance 41.2 vs permuted mean 20.7 (ratio 2.0x, p = 0.161)
+
+Verifies the statistic separates a `w` that drives the held-out counts from one that does not, using the same spatially-blocked permutation null the real-data job uses.
