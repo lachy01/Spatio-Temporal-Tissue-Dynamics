@@ -159,7 +159,14 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
         res = fit_lbfgs(data, spec, p0, maxiter=int(cfg["optim"]["maxiter"]),
                         rel_tol=float(cfg["optim"]["rel_tol_loglik"]),
                         grad_tol=float(cfg["optim"]["grad_inf_tol"]))
-        return {**task, **_summarise(res, data, spec, include_params=True)}
+        from .diagnostics import confound_diagnostic
+        from .model import responsibilities
+        out = {**task, **_summarise(res, data, spec, include_params=True)}
+        # spec 10: a fit reported without the entropy and the confound R^2 is
+        # "not usable", so they travel with the estimate rather than on request
+        out.update(confound_diagnostic(
+            np.asarray(responsibilities(res.params, data.as_jax(), spec)), df, basis))
+        return out
 
     if job == "heldout_genes":
         # Spec 6.8. Refit the mixture using only half A of the signature, then
