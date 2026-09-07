@@ -8,6 +8,7 @@ than left to the reader to request.
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 
 
 def _r2(X, y):
@@ -166,3 +167,46 @@ def correlogram(values, xy, max_dist=500.0, n_bands=10, subsample=60000, seed=0)
         out.append((0.5 * (lo + hi), float(len(v) * num / (2 * len(band) * denom)),
                     int(len(band))))
     return out
+
+
+def density_tradeoff_check(h_stage_b, h_stage_c, df, basis):
+    """Spec 3.4: does `h()` survive adding the additive background?
+
+    Density enters the mixing weight (biological) and the background
+    (technical). They are formally distinguishable -- different channels -- but
+    spec 3.4 warns the separation is fragile, and prescribes the test: if the
+    fitted curve changes sign, or changes by more than a factor of two over the
+    interquartile range of density, the two terms are trading off and the
+    background must be anchored externally rather than freely estimated.
+
+    Compare the fitted CURVE, not the coefficients: a spline's coefficients are
+    basis-dependent and individually meaningless. And "a factor of two" is
+    two-sided -- a curve that *shrinks* by 2.4x has traded off just as surely as
+    one that grows.
+    """
+    d = df["density"].to_numpy(float)
+    lo, hi = np.quantile(d, [0.25, 0.75])
+    grid = pd.DataFrame({"density": np.linspace(lo, hi, 25)})
+    H = basis.density_weight_basis(grid)
+    cb, cc = H @ np.asarray(h_stage_b), H @ np.asarray(h_stage_c)
+    swing_b, swing_c = float(cb.max() - cb.min()), float(cc.max() - cc.min())
+    ratio = swing_c / max(swing_b, 1e-12)
+    flipped = bool(np.sign(cb[-1] - cb[0]) != np.sign(cc[-1] - cc[0]))
+    return {
+        "iqr": (float(lo), float(hi)),
+        "swing_stage_b": swing_b, "swing_stage_c": swing_c, "ratio": ratio,
+        "sign_flipped": flipped,
+        "trading_off": bool(flipped or not (0.5 <= ratio <= 2.0)),
+    }
+
+
+def anchored_background(df, n_signature_genes, n_control_features):
+    """Spec 3.4 fallback: the background implied by the control probes.
+
+    `rho_i = ctrl_count_i * (signature genes / control features)`. If the freely
+    estimated background is far above this, it is not modelling contamination.
+    """
+    ctrl = df["ctrl_count"].to_numpy(float)
+    rho = ctrl * (float(n_signature_genes) / float(n_control_features))
+    return {"rho": rho, "mean": float(rho.mean()),
+            "share_of_mean_count": float(rho.mean() / max(df["y_count"].mean(), 1e-12))}

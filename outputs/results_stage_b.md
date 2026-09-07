@@ -102,3 +102,85 @@ replicate cap from 300 to 5,000 iterations changed the widths of `e^delta`,
   spatial autocorrelation.
 - Per-coefficient CIs for `a`, `c` and the archetype-conditional table of spec
   8.2 are not yet extracted from the bootstrap replicates.
+
+---
+
+# Configuration bracket, Stage C and Stage D
+
+## The theta bracket (spec 2.2 / 6.12) — the two configurations agree
+
+Reported side by side, never selected between (spec 9.11). 10/10 converged.
+
+| | log-likelihood | theta | fold change | cycling fraction | entropy | sigma_1 |
+|---|---:|---:|---:|---:|---:|---:|
+| **F** (theta fixed at 1) | −625,150.8 | 1.0000 | 5.668 | 10.50% | 0.712 | 1.329 |
+| **V** (theta free) | −625,110.4 | **1.0362** | 5.630 | 11.60% | 0.683 | 1.364 |
+
+**The bracket is narrow.** The fold change differs by 0.7% and the cycling
+fraction by 9.5%, so the causal ambiguity spec 2.2 raises — library size being
+simultaneously mediator and confounder — does not materially change the answer.
+Configuration F works essentially as well as V, so the fixed offset is a
+defensible simplification here.
+
+The reason is visible in `theta` itself: freed, it estimates **1.0362**, almost
+exactly the 1.0 the offset assumes. Note this differs sharply from the NB
+division model of notebook section 21, where the implied depth exponent was
+**0.70**. The difference is `N`: here it excludes the full blocklist, so the
+outcome genes and everything correlated with them are outside the offset. In
+section 21 `log_total_counts` included them, which is itself a route by which
+the outcome inflates its own offset — the definitional dependence spec 1.2
+item 2 exists to prevent. The sub-proportional scaling found there was at least
+partly that artefact.
+
+## Stage C — the free background fails spec 3.4's own check
+
+Adding the additive background gains **+475 log-likelihood** for 3 parameters,
+and the estimands barely move (fold 5.630 → 5.683, cycling fraction 11.60% →
+11.63%). That looks like an improvement. It is not one that can be interpreted.
+
+**The spec 3.4 stability test fails.** The fitted `h(density)` curve in the
+mixing weight, measured across the density interquartile range (61 to 122 cells
+per (100um)^2), has its swing cut from **+0.147 to +0.062 log-odds, a factor of
+2.35**. Spec 3.4's condition — sign change, or a change of more than a factor of
+two — is met, so the biological and technical density terms are trading off
+rather than being separately identified.
+
+**And the control probes say the background should be negligible.** Anchoring it
+externally as spec 3.4 prescribes, `rho_i = ctrl_count_i * (53 Tirosh / 649
+control features)`:
+
+| | rho per cell | share of the mean count |
+|---|---:|---:|
+| freely estimated | 0.0211 | 2.4% |
+| control-anchored | 0.000119 | 0.014% |
+
+The free background is **177x larger than the controls justify**. Control counts
+are zero in 99.9% of cells, so there is almost no probe contamination in this
+sample to model. The +475 log-likelihood is therefore not contamination being
+captured; it is the background absorbing density signal from the mixing weight.
+
+**Conclusion: report Stage B.** Anchored to the controls the background is
+0.014% of the signal, which makes Stage C numerically indistinguishable from
+Stage B; freely estimated it is not identifiable as contamination and degrades
+the density term we care about.
+
+## Stage D — sensitivity
+
+| variant | log-likelihood | fold change | sigma_1 | vs Stage B |
+|---|---:|---:|---:|---|
+| rank 1 | −625,379.9 | 5.634 | 1.259 | worse by 269 |
+| **rank 2 (reference)** | −625,110.4 | 5.630 | 1.364 | — |
+| rank 3 | −625,110.4 | 5.630 | 1.364 | identical |
+| rank 5 | −625,110.4 | 5.630 | 1.364 | identical |
+
+Ranks 3 and 5 are numerically identical to rank 2 — the extra components carry
+no weight — which confirms the rank-2 selection for a third time, independently
+of the cross-validation and of the point estimate's singular values.
+
+**Two Stage D variants did not produce usable results.** The
+proportional-rates relaxation raises deliberately: giving each component its own
+`theta` needs a second parameter in the model, and spec 2.2 makes that
+restriction load-bearing for identifiability, so it is a modelling change rather
+than a config flag. And the fixed-k kNN density variant was, in the run above, a
+silent no-op — it returned Stage B unchanged. That is now implemented and needs
+re-running; its "agreement" with Stage B in the table above means nothing.

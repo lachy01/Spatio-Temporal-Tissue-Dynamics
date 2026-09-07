@@ -137,7 +137,7 @@ def _summarise(res, data, spec, extra=None, include_params=False):
 
 
 def _run_real(task, cfg, verbose=False, out_dir=None):
-    from .basis import spec_from_basis
+    from .basis import build_basis, spec_from_basis
     from .fit import fit_lbfgs, multistart, poisson_start
     from .inference import block_folds, spatial_blocks
     from .model import build_data, init_params
@@ -198,6 +198,18 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
             v = task["variant"]
             if v.startswith("rank_sweep_"):
                 sp_ = dataclasses.replace(spec, rank=int(v.rsplit("_", 1)[1]))
+            elif v == "kNN_density":
+                # Spec 1.3 prefers fixed-k kNN density to the radius definition
+                # this project uses. Recompute the column here rather than
+                # leaving the variant a silent no-op returning Stage B.
+                from scipy.spatial import cKDTree
+                k = int(cfg.get("knn_density_k", 30))
+                dist, _ = cKDTree(xy).query(xy, k=k + 1)
+                df = df.copy()
+                df["density"] = k / (np.pi * np.maximum(dist[:, -1], 1e-9) ** 2) * 1e4
+                basis = build_basis(df, cfg, verbose=False)
+                sp_ = spec_from_basis(basis, cfg, stage=cfg.get("stage", "B"),
+                                      weight_ridge=float(lam))
             elif v == "free_theta_per_component":
                 raise NotImplementedError(
                     "relaxing the proportional-rates restriction needs a second "
