@@ -177,10 +177,28 @@ Ranks 3 and 5 are numerically identical to rank 2 — the extra components carry
 no weight — which confirms the rank-2 selection for a third time, independently
 of the cross-validation and of the point estimate's singular values.
 
-**Two Stage D variants did not produce usable results.** The
-proportional-rates relaxation raises deliberately: giving each component its own
-`theta` needs a second parameter in the model, and spec 2.2 makes that
-restriction load-bearing for identifiability, so it is a modelling change rather
-than a config flag. And the fixed-k kNN density variant was, in the run above, a
-silent no-op — it returned Stage B unchanged. That is now implemented and needs
-re-running; its "agreement" with Stage B in the table above means nothing.
+**The density definition does not matter.** The fixed-k kNN density spec 1.3
+prefers, re-run after the no-op was fixed, moves nothing that matters:
+
+| | radius 50 um (used) | fixed-k kNN (k=30) | change |
+|---|---:|---:|---:|
+| log-likelihood | −625,110.4 | −625,109.9 | +0.5 |
+| fold change | 5.6295 | 5.6302 | +0.0% |
+| cycling fraction | 11.60% | 11.56% | −0.3% |
+| normalised entropy | 0.6832 | 0.6842 | +0.2% |
+| `psi` (oxygen) | +0.840 | +0.862 | +2.7% |
+| `sigma_1(B)` | 1.364 | 1.406 | +3.1% |
+
+The density covariate itself changes substantially — the weight spline goes from
+`h = [−1.566, +0.086]` to `[−0.949, +0.502]` — so this is a real perturbation
+that the estimands simply absorb. The deviation taken in the data contract
+(radius-based density, for comparability with the notebook's NB models) is
+therefore not load-bearing for any conclusion.
+
+**One Stage D variant is deliberately unavailable.** Relaxing the
+proportional-rates restriction (`theta_1 != theta_0`) raises
+`NotImplementedError` rather than silently doing something else: giving each
+component its own theta needs a second parameter in the model, and spec 2.2
+makes that restriction load-bearing for identifiability at this count depth, so
+it is a modelling change rather than a config flag. It remains the one assumption
+in the specification that has not been tested.
