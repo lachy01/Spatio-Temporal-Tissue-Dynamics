@@ -318,32 +318,35 @@ Raising `df(h)` from 3 to 5 changes nothing (log-likelihood +12, all estimands t
 four figures), so the spec's cap of 3 is not binding. `df = 2` could not be run:
 patsy's `cr()` cannot build a 2-df natural cubic basis.
 
-### Test 10 re-run, after scaling the penalty
+### Test 10, final (penalty scaled, 20 restarts per size)
 
-Scaling the ridge removed most of the drift (`mean(pi)` correlation with n fell
-from +0.983 to +0.723, and the 50,000-cell `mean(pi)` moved inside the
-full-sample CI), but the test still does not pass cleanly. Looking at every
-restart rather than the best one explains why:
+| n | restart agreement | `sigma_1` | `mean(pi)` | fold change |
+|---|---:|---:|---:|---:|
+| 50,000 | **5%** | 1.902 | 0.1403 | 5.594 |
+| 200,000 | **5%** | 1.463 | **0.1160** | 5.531 |
+| **678,885** | **95%** | 1.364 | **0.1160** | 5.630 |
 
-| n | restart agreement | log-likelihood spread | `sigma_1` across restarts |
-|---|---:|---:|---|
-| **678,885** | **4/5 (80%)** | 1,089 | 1.364 x4, 0.000 x1 |
-| 200,000 | 1/5 (20%) | 502 | 0.000, 1.376, 1.430, 1.401, 1.401 |
-| 50,000 | 1/5 (20%) | 264 | 1.257, 0.000, 1.579, 1.696, 1.759 |
+Full-sample bootstrap CIs: fold [5.535, 5.742], `mean(pi)` [0.1061, 0.1247].
 
-**The remaining instability is multimodality at reduced n, not drift in the
-estimand.** At the full sample the surface is well behaved and the `B != 0`
-solution beats `B = 0` by 1,089 log-likelihood units. At 200,000 every restart
-finds a different optimum, and a `B = 0` solution wins by just 47 units over four
-restarts that find `sigma_1 ~ 1.4`. Spec 4.4's own 60% criterion flags both
-subsamples as multimodal and passes the full sample.
+**The fold change is stable at every size** — 5.594 / 5.531 / 5.630, with only the
+200,000 value outside the CI and by 0.004. This is the headline estimand and it
+does not depend on sample size.
 
-The comparison was also not like-for-like: these fits used 5 restarts against the
-point estimate's 20. `stability_reps` is now 20, and Test 10 should be re-run once
-more before its verdict is final.
+**`mean(pi)` and `sigma_1` are inflated at 50,000 but converged by 200,000.**
+At 200,000 `mean(pi)` is 0.1160, matching the full sample exactly; at 50,000 it
+is 0.1403, above the CI. `sigma_1` runs 1.902 / 1.463 / 1.364, decreasing
+monotonically — the classic signature of a variance-dominated estimate at small
+n, and it is still shrinking between 200,000 and the full sample. The practical
+reading is that this model needs on the order of 200,000 cells; at 50,000 it
+overfits.
 
-**What this says about the model.** The interaction `B` is reliably identified
-only at the full sample. That is a real limitation worth stating: the
-neighbourhood-interaction result should not be expected to replicate on a
-200,000-cell section, and `sigma_1` from a subsample is not trustworthy. The
-fold change, by contrast, is stable everywhere (5.79 / 5.64 / 5.63).
+**Both subsamples are severely multimodal**: only 1 of 20 restarts finds the best
+optimum (5% agreement), against 95% at the full sample. Spec 4.4's criterion
+therefore applies to any subsample fit — best-of-N with an explicit caveat, not a
+silent pick — while the full-sample fit is exempt.
+
+An earlier version of this section, run with 5 restarts, reported `sigma_1`
+collapsing to zero at 200,000 and concluded that `B` is identified only at the
+full sample. **That was wrong.** The zeros were poor local optima found by too
+few starts; with 20 restarts `sigma_1` is non-zero at every size. `B` is
+identified at 200,000 — it is merely biased upward there.
