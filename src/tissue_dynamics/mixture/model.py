@@ -56,7 +56,8 @@ class ModelSpec:
     df_weight: int = 3
     df_bg: int = 3
     ridge_tau: float = 1e-4
-    weight_ridge: float = 0.0     # ridge on a, c, h, psi -- see loglik()
+    weight_ridge: float = 0.0     # ridge on a, c, h, psi, U, V -- see loglik()
+    n_reference: int = 0          # sample size weight_ridge was calibrated at
 
     @property
     def has_state(self):
@@ -244,7 +245,18 @@ def loglik(p, d, spec):
             pen = jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2) + p["psi"] ** 2 + uv
             if spec.df_weight > 0:
                 pen = pen + jnp.sum(p["h"] ** 2)
-            ll = ll - spec.weight_ridge * pen
+            # Scale the penalty with the sample size it is applied to. The
+            # log-likelihood grows with n while an absolute ridge does not, so a
+            # fixed lambda shrinks a subsample far harder: at n = 50,000 it is
+            # 13.6x stronger per observation than at n = 678,885, which made
+            # mean(pi) drift monotonically with n (0.0865 -> 0.1024 -> 0.1160,
+            # correlation +0.98) and Test 10 fail. Scaled, the drift disappears
+            # (0.1141 -> 0.1094 -> 0.1160). At n == n_reference this is exactly
+            # `weight_ridge`, so full-sample results are unchanged.
+            lam = spec.weight_ridge
+            if spec.n_reference > 0:
+                lam = lam * (d["y"].shape[0] / spec.n_reference)
+            ll = ll - lam * pen
     return ll
 
 

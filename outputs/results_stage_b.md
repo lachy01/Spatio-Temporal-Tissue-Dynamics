@@ -245,3 +245,75 @@ decile (0.075 at 39 neighbours) and peaks at middle density (0.133 at 155),
 tracking the observed count in the same direction throughout. `h(log density)` is
 hump-shaped rather than monotone, despite its negative leading spline
 coefficient — the coefficient's sign does not give the direction of a spline.
+
+---
+
+## Test 10 — subsample stability (spec 6.10)
+
+| n | fold change | mean(pi) | sigma_1 | within the full-sample CI? |
+|---|---:|---:|---:|---|
+| 50,000 | 5.8685 | 0.0828 | 0.916 | fold no, mean(pi) no |
+| 200,000 | 5.6526 | 0.0962 | 0.000 | fold yes, mean(pi) no |
+| **678,885** | **5.6295** | **0.1160** | **1.364** | — |
+
+**The rate ratio is stable** (5.87 / 5.65 / 5.63; only the 50,000-cell value falls
+outside the full-sample bootstrap CI, and modestly). **`mean(pi)` drifts
+monotonically with n** — correlation +0.983 — which is exactly what spec 6.10
+says must not happen.
+
+**The drift is an artefact of the penalty parameterisation, not of the model.**
+`weight_ridge` was an *absolute* penalty while the log-likelihood grows with n,
+so a subsample was shrunk far harder: at n = 50,000 the ridge is 13.6x stronger
+per observation than at the full sample. Scaling it by n removes the drift:
+
+| n | lambda | mean(pi) | sigma_1 |
+|---|---|---:|---:|
+| 50,000 | fixed 10 | 0.0865 | 1.06 |
+| 50,000 | **scaled 0.74** | **0.1141** | 2.14 |
+| 200,000 | fixed 10 | 0.1024 | 1.07 |
+| 200,000 | **scaled 2.95** | **0.1094** | 1.56 |
+| 678,885 | 10 (= scaled) | 0.1160 | 1.36 |
+
+Scaled, `mean(pi)` reads 0.1141 / 0.1094 / 0.1160 — flat within noise.
+
+The penalty is now scaled by `n / weight_ridge_n_reference`. At the full sample
+the factor is exactly 1, so **every result reported above is unchanged** (verified:
+the stored point estimate's log-likelihood reproduces to 4 decimal places). The
+fix matters for fitting at any other n, and Test 10 should be re-run against it.
+
+## Test 13 — density-in-weight sensitivity (spec 6.13)
+
+| `h()` | log-likelihood | fold | sigma_1 | psi |
+|---|---:|---:|---:|---:|
+| dropped | −625,220.0 | 5.6328 | 1.301 | 0.775 |
+| **df = 3 (fitted)** | **−625,110.4** | **5.6295** | **1.364** | **0.840** |
+| df = 5 | −625,098.0 | 5.6294 | 1.368 | 0.840 |
+
+Change in each neighbourhood coefficient when `h()` is removed entirely:
+
+| cell type | with `h` | no `h` | change | |
+|---|---:|---:|---:|---|
+| **Cancer Epithelial** | **+3.1168** | **+3.1166** | **−0.0%** | |
+| Plasmablasts | −0.9744 | −0.9565 | +1.8% | |
+| Endothelial | −0.7559 | −0.9201 | −21.7% | |
+| Normal Epithelial | −0.6801 | −0.8618 | −26.7% | |
+| PVL | +0.1384 | +0.0824 | −40.4% | |
+| CAFs | −0.5957 | −0.8796 | −47.7% | |
+| B-cells | −0.5592 | −0.2743 | +50.9% | flagged |
+| T-cells | +0.3798 | +0.8371 | +120.4% | flagged |
+| Myeloid | −0.0696 | −0.1437 | −106.6% | flagged |
+
+**The headline neighbourhood effect is untouched.** `nbr[Cancer Epithelial]`
+moves by 0.0% — the "being surrounded by tumour raises cycling odds" result does
+not depend on the density term at all. `sigma_1` moves −4.6% and `psi` −7.7%.
+
+**Three small immune coefficients are density-sensitive**: B-cells, T-cells and
+Myeloid, all flagged at >50% change. These are exactly the coefficients whose
+magnitudes are small enough for spatial confounding to matter, and spec 6.13
+predicts it: density and `phi_bar` are both spatially smooth on similar scales,
+so a flexible `h()` can absorb genuine neighbourhood signal. Report the immune
+neighbourhood effects with that caveat; the tumour one is safe.
+
+Raising `df(h)` from 3 to 5 changes nothing (log-likelihood +12, all estimands to
+four figures), so the spec's cap of 3 is not binding. `df = 2` could not be run:
+patsy's `cr()` cannot build a 2-df natural cubic basis.

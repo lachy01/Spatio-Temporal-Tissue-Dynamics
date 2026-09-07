@@ -241,7 +241,7 @@ def build_basis(df, cfg, verbose=True):
 
 
 def spec_from_basis(basis, cfg, stage="B", theta_free=True, weight_ridge=0.0,
-                    rank=None):
+                    rank=None, n_reference=None):
     """Build a `ModelSpec` whose column counts match this basis.
 
     The spline bases carry `df - 1` columns each (the constant is projected out,
@@ -255,4 +255,6 @@ def spec_from_basis(basis, cfg, stage="B", theta_free=True, weight_ridge=0.0,
         stage=stage, rank=int(mc["rank"] if rank is None else rank),
         theta_free=bool(theta_free), d_own=basis.d_own, d_nbr=basis.d_nbr,
         df_area=basis.n_area, df_weight=basis.n_weight, df_bg=basis.n_bg,
-        ridge_tau=float(mc["ridge_tau"]), weight_ridge=float(weight_ridge))
+        ridge_tau=float(mc["ridge_tau"]), weight_ridge=float(weight_ridge),
+        n_reference=int(mc.get("weight_ridge_n_reference", 0)
+                        if n_reference is None else n_reference))

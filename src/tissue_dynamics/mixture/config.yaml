@@ -97,6 +97,12 @@ model:
   # and the Test 03 null only collapses at lambda >= 10. Convergence alone was
   # not a sufficient criterion -- lambda=0.3 converged on all five folds and
   # still returned sigma_1 = 26.6, sixty times the true value in Test 01 (0.440).
+  # The sample size weight_ridge was calibrated at. The penalty is scaled by
+  # n / weight_ridge_n_reference, so it stays constant PER OBSERVATION. Without
+  # this a fixed lambda shrinks a subsample much harder than the full sample and
+  # mean(pi) drifts with n (spec 6.10). At the full sample the scaling is 1, so
+  # every result reported so far is unchanged.
+  weight_ridge_n_reference: 678885
   weight_ridge: 10
   weight_ridge_grid: [0.0, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0]
   cv_folds: 5
