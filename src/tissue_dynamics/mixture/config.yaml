@@ -167,11 +167,13 @@ bracket_restarts: 5
 stage_d_restarts: 3
 knn_density_k: 30      # spec 1.3's fixed-k density, tested as a Stage D variant
 stability_sizes: [50000, 200000, 0]   # 0 = the full sample (spec 6.10)
-# 5, not 3. The deterministic Poisson start lands in a local optimum 1,089
-# log-likelihood units worse than the global one (in the 20-restart multistart,
-# 19 of 20 found the good optimum and only the deterministic start did not), so
-# a job needs several perturbed starts to be trusted.
-stability_reps: 5
+# 20, matching spec 4.4's multi-start requirement. 5 was not enough: at reduced
+# n the surface is genuinely multimodal -- at 200,000 cells all five restarts
+# found DIFFERENT optima spanning 502 log-likelihood units, and the winner was a
+# B = 0 solution beating four B != 0 solutions by 47 units. At the full sample
+# 4 of 5 agree and B != 0 wins by 1,089. Comparing a 5-restart subsample fit
+# against a 20-restart full-sample fit is not a like-for-like stability test.
+stability_reps: 20
 # 0 = h() dropped entirely (spec 6.13). df=2 is omitted: patsy's cr() cannot
 # build a 2-df natural cubic basis (it raises before the fit starts), so those
 # tasks produced no output at all in the first run. Spec 6.13 asks for

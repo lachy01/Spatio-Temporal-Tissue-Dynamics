@@ -317,3 +317,33 @@ neighbourhood effects with that caveat; the tumour one is safe.
 Raising `df(h)` from 3 to 5 changes nothing (log-likelihood +12, all estimands to
 four figures), so the spec's cap of 3 is not binding. `df = 2` could not be run:
 patsy's `cr()` cannot build a 2-df natural cubic basis.
+
+### Test 10 re-run, after scaling the penalty
+
+Scaling the ridge removed most of the drift (`mean(pi)` correlation with n fell
+from +0.983 to +0.723, and the 50,000-cell `mean(pi)` moved inside the
+full-sample CI), but the test still does not pass cleanly. Looking at every
+restart rather than the best one explains why:
+
+| n | restart agreement | log-likelihood spread | `sigma_1` across restarts |
+|---|---:|---:|---|
+| **678,885** | **4/5 (80%)** | 1,089 | 1.364 x4, 0.000 x1 |
+| 200,000 | 1/5 (20%) | 502 | 0.000, 1.376, 1.430, 1.401, 1.401 |
+| 50,000 | 1/5 (20%) | 264 | 1.257, 0.000, 1.579, 1.696, 1.759 |
+
+**The remaining instability is multimodality at reduced n, not drift in the
+estimand.** At the full sample the surface is well behaved and the `B != 0`
+solution beats `B = 0` by 1,089 log-likelihood units. At 200,000 every restart
+finds a different optimum, and a `B = 0` solution wins by just 47 units over four
+restarts that find `sigma_1 ~ 1.4`. Spec 4.4's own 60% criterion flags both
+subsamples as multimodal and passes the full sample.
+
+The comparison was also not like-for-like: these fits used 5 restarts against the
+point estimate's 20. `stability_reps` is now 20, and Test 10 should be re-run once
+more before its verdict is final.
+
+**What this says about the model.** The interaction `B` is reliably identified
+only at the full sample. That is a real limitation worth stating: the
+neighbourhood-interaction result should not be expected to replicate on a
+200,000-cell section, and `sigma_1` from a subsample is not trustworthy. The
+fold change, by contrast, is stable everywhere (5.79 / 5.64 / 5.63).
