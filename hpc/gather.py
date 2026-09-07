@@ -56,6 +56,20 @@ def main():
         if df.empty:
             raise SystemExit("every task failed to fit; nothing to summarise")
 
+    # A job that refits the same specification must land on the same optimum.
+    # Silent failure to do so is what made the first subsample_stability and
+    # density_sensitivity runs uninterpretable: every task found a local optimum
+    # 1,089 log-likelihood units worse and reported it as a result.
+    pt = os.path.join(a.out, "point_estimate.json")
+    if os.path.exists(pt) and "loglik" in df.columns:
+        ref = json.load(open(pt))["loglik"]
+        best = float(df["loglik"].max())
+        if best < ref - 1.0:
+            print(f"\n  ** best log-likelihood here ({best:.1f}) is {ref - best:.1f} "
+                  f"units WORSE than the point estimate ({ref:.1f}). These fits are "
+                  "in a different, worse optimum -- check the restart count before "
+                  "reading anything below. **")
+
     if a.job in ("cv_penalty", "cv_rank"):
         key = "lam" if a.job == "cv_penalty" else "rank"
         df["sigma1"] = [s[0] if s else np.nan for s in df.get("sigma", [])]

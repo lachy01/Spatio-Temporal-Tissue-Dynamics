@@ -161,5 +161,13 @@ bracket_restarts: 5
 stage_d_restarts: 3
 knn_density_k: 30      # spec 1.3's fixed-k density, tested as a Stage D variant
 stability_sizes: [50000, 200000, 0]   # 0 = the full sample (spec 6.10)
-stability_reps: 3
-density_df_grid: [0, 2, 3, 5]          # 0 = h() dropped entirely (spec 6.13)
+# 5, not 3. The deterministic Poisson start lands in a local optimum 1,089
+# log-likelihood units worse than the global one (in the 20-restart multistart,
+# 19 of 20 found the good optimum and only the deterministic start did not), so
+# a job needs several perturbed starts to be trusted.
+stability_reps: 5
+# 0 = h() dropped entirely (spec 6.13). df=2 is omitted: patsy's cr() cannot
+# build a 2-df natural cubic basis (it raises before the fit starts), so those
+# tasks produced no output at all in the first run. Spec 6.13 asks for
+# df in {2,3,5}; 2 is unavailable with this basis, which is a documented gap.
+density_df_grid: [0, 3, 5]

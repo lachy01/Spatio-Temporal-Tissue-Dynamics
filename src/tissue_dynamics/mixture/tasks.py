@@ -248,7 +248,11 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
                 basis = build_basis(df, cfg, verbose=False)
                 sp_ = spec_from_basis(basis, cfg, stage="B", weight_ridge=float(lam))
         data = build_data(df, basis, cfg, sp_)
-        r_ = int(task.get("restart", 0))
+        # subsample_stability and density_sensitivity index their repeats as
+        # "rep"; the others use "restart". Reading only "restart" silently made
+        # every repeat the SAME deterministic fit, so those jobs ran one start
+        # three times and reported a bad local optimum as if it were stable.
+        r_ = int(task.get("restart", task.get("rep", 0)))
         ps = poisson_start(data, sp_)
         p0 = init_params(sp_, cfg, data=data,
                          rng=None if r_ == 0 else np.random.default_rng(r_),
