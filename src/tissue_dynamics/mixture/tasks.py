@@ -46,6 +46,20 @@ def enumerate_tasks(job, cfg):
         # picking one by fit.
         return [{"job": job, "theta_free": tf, "restart": r}
                 for tf in (False, True) for r in range(int(cfg.get("bracket_restarts", 5)))]
+    if job == "subsample_stability":
+        # Spec 6.10: fit at 50K, 200K and the full set; rate ratios must be
+        # stable within their bootstrap CIs and mean(pi) must not drift with n.
+        return [{"job": job, "n_cells": n, "rep": r}
+                for n in cfg.get("stability_sizes", [50000, 200000, 0])
+                for r in range(int(cfg.get("stability_reps", 3)))]
+    if job == "density_sensitivity":
+        # Spec 6.13: the density spline in the WEIGHT competes with c and B --
+        # density and phi_bar are both spatially smooth on similar scales, so a
+        # flexible h() can absorb genuine neighbourhood signal. This is spatial
+        # confounding acting on the primary estimand, not on a nuisance term.
+        return [{"job": job, "df_weight": d, "rep": r}
+                for d in cfg.get("density_df_grid", [0, 2, 3, 5])
+                for r in range(int(cfg.get("stability_reps", 3)))]
     if job == "stage_c":
         # Additive background. EM does not apply (spec 4.3), so direct only.
         return [{"job": job, "restart": r}
@@ -183,7 +197,8 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
             np.asarray(responsibilities(res.params, data.as_jax(), spec)), df, basis))
         return out
 
-    if job in ("theta_bracket", "stage_c", "stage_d"):
+    if job in ("theta_bracket", "stage_c", "stage_d", "subsample_stability",
+               "density_sensitivity"):
         import dataclasses
 
         from .diagnostics import confound_diagnostic
@@ -216,6 +231,22 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
                     "theta in the model, which model.py does not carry. Spec 2.2 "
                     "makes that restriction load-bearing for identifiability, so "
                     "it is a deliberate change, not a config flag.")
+        elif job == "subsample_stability":
+            n_ = int(task["n_cells"])
+            if n_ and n_ < len(df):
+                rng_ = np.random.default_rng(1000 + int(task["rep"]))
+                keep = np.sort(rng_.choice(len(df), n_, replace=False))
+                df, xy = df.iloc[keep].reset_index(drop=True), xy[keep]
+                df.attrs["phi_names"] = basis.phi_names
+        elif job == "density_sensitivity":
+            dfw = int(task["df_weight"])
+            if dfw == 0:
+                # h() dropped entirely -- spec 6.13's mandatory comparison
+                sp_ = dataclasses.replace(spec, df_weight=0)
+            else:
+                cfg = {**cfg, "model": {**cfg["model"], "weight_density_spline_df": dfw}}
+                basis = build_basis(df, cfg, verbose=False)
+                sp_ = spec_from_basis(basis, cfg, stage="B", weight_ridge=float(lam))
         data = build_data(df, basis, cfg, sp_)
         r_ = int(task.get("restart", 0))
         ps = poisson_start(data, sp_)

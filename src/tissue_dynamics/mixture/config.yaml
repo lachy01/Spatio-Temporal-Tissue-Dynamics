@@ -160,3 +160,6 @@ n_permutations: 100
 bracket_restarts: 5
 stage_d_restarts: 3
 knn_density_k: 30      # spec 1.3's fixed-k density, tested as a Stage D variant
+stability_sizes: [50000, 200000, 0]   # 0 = the full sample (spec 6.10)
+stability_reps: 3
+density_df_grid: [0, 2, 3, 5]          # 0 = h() dropped entirely (spec 6.13)

@@ -152,7 +152,8 @@ def init_params(spec, cfg, data=None, rng=None, poisson_start=None):
         p["c"] = draw(spec.d_nbr)
         p["U"] = draw(spec.d_own, spec.rank)
         p["V"] = draw(spec.d_nbr, spec.rank)
-        p["h"] = jnp.zeros(spec.df_weight)
+        if spec.df_weight > 0:
+            p["h"] = jnp.zeros(spec.df_weight)
         p["psi"] = jnp.asarray(0.0)
     if spec.has_background:
         p["r0"] = jnp.asarray(float(np.log(max(
@@ -176,7 +177,9 @@ def _logit_pi(p, d, spec):
     if spec.has_state:
         eta = (eta + d["own"] @ p["a"] + d["nbr"] @ p["c"]
                + jnp.sum((d["own"] @ p["U"]) * (d["nbr"] @ p["V"]), axis=-1)
-               + d["hbasis"] @ p["h"] + p["psi"] * d["oxygen"])
+               + p["psi"] * d["oxygen"])
+        if spec.df_weight > 0:                  # h() dropped when df_weight == 0
+            eta = eta + d["hbasis"] @ p["h"]
     return eta
 
 
@@ -238,9 +241,10 @@ def loglik(p, d, spec):
         if spec.ridge_tau > 0:                      # spec 3.2 conditioning term
             ll = ll - spec.ridge_tau * uv
         if spec.weight_ridge > 0:
-            ll = ll - spec.weight_ridge * (
-                jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2)
-                + jnp.sum(p["h"] ** 2) + p["psi"] ** 2 + uv)
+            pen = jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2) + p["psi"] ** 2 + uv
+            if spec.df_weight > 0:
+                pen = pen + jnp.sum(p["h"] ** 2)
+            ll = ll - spec.weight_ridge * pen
     return ll
 
 

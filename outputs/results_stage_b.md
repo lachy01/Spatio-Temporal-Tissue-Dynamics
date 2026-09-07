@@ -202,3 +202,46 @@ component its own theta needs a second parameter in the model, and spec 2.2
 makes that restriction load-bearing for identifiability at this count depth, so
 it is a modelling change rather than a config flag. It remains the one assumption
 in the specification that has not been tested.
+
+---
+
+## Spec 8.2 — archetype-conditional neighbourhood effects (the headline estimand)
+
+Odds ratio of cycling per IQR of each neighbourhood component, for a cell whose
+own state sits at the given archetype centroid: `exp((c + B^T phi_a)_k * IQR_k)`,
+mapped back from the projected basis to cell types. Full table with CIs in
+`outputs/estimands_8_2.md`; **42 of 81 entries have a bootstrap CI excluding 1**.
+
+| own archetype | Endo | CAFs | PVL | B | T | Mye | NormEp | Plasma | **CancEp** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Endothelial | 0.85 | 0.71 | 0.33 | 0.87 | 1.14 | 1.15 | 1.18 | 0.02 | **11.44** |
+| CAFs | 0.59 | 0.80 | 0.61 | 0.81 | 1.18 | 1.04 | 1.03 | 0.03 | **7.58** |
+| T-cells | 0.55 | 0.80 | 0.65 | 0.80 | 1.17 | 1.01 | 1.01 | 0.04 | **7.38** |
+| Plasmablasts | 0.24 | 1.07 | **2.82** | 0.67 | 1.27 | 0.81 | 0.73 | 0.18 | 2.73 |
+| **Cancer Epithelial** | 0.18 | 1.23 | **5.70** | 0.63 | 1.35 | 0.76 | 0.62 | 0.23 | **1.62** |
+
+Two patterns stand out.
+
+**A tumour neighbourhood raises cycling odds for everything except tumour.** The
+`Cancer Epithelial` column runs 7-11x for stromal and immune own-states but only
+**1.62x** for a cancer cell itself. Being surrounded by tumour matters far more
+if you are not tumour — the interaction is not a uniform "tumour is
+proliferative" effect.
+
+**Cancer and plasmablast cells respond to PVL where others do not.** The `PVL`
+column is 0.33-0.65 (suppressive) for most own-states but **5.70x** for Cancer
+Epithelial and **2.82x** for Plasmablasts. This is exactly the context-dependence
+`B` exists to capture, and it is invisible to any model with main effects only.
+
+## Spatial fit (`outputs/figures/spatial_residuals.png`)
+
+Observed and fitted mean counts track closely across the section; the Pearson
+residual map shows speckle but no coherent regions, consistent with Moran's I =
+0.0142 and a correlation range under 25 um.
+
+`pi_hat` shows a bright band along one tissue margin. **Checked and it is not an
+edge artefact**: binning by neighbour count, `pi_hat` is *lowest* in the sparsest
+decile (0.075 at 39 neighbours) and peaks at middle density (0.133 at 155),
+tracking the observed count in the same direction throughout. `h(log density)` is
+hump-shaped rather than monotone, despite its negative leading spline
+coefficient — the coefficient's sign does not give the direction of a spline.
