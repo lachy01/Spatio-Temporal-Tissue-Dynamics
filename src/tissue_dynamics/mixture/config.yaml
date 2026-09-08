@@ -76,7 +76,21 @@ model:
   # artefact (3.03) at no cost to the estimate.
   area_spline_df: 8
   background_spline_df: 3          # g(log density), Stage C
-  weight_density_spline_df: 3      # h(log density); spec 9.10 forbids raising
+  # Interior knots for h(log density), placed EXPLICITLY at these percentiles.
+  # Spec 9.10 lists raising df(h) beyond 3 as a prohibited action; done here on
+  # explicit instruction, and for a specific reason: `cr` is a natural cubic
+  # spline, so it is linear beyond the boundary knots, and a response that turns
+  # downward only at high density (contact inhibition) cannot be represented
+  # without an interior knot up there. 68,000 cells lie above q90, so the tail
+  # is well supported.
+  #
+  # The cost is the one spec 3.4 warns about: density and phi_bar are both
+  # spatially smooth on similar scales, so a more flexible h() can absorb
+  # genuine neighbourhood signal. Test 13 is therefore a GATE on this change,
+  # not a box-tick -- if nbr[Cancer Epithelial] moves when h() is dropped, the
+  # density shape has been bought at the cost of the headline result.
+  weight_density_knot_quantiles: [25, 50, 75, 90]
+  weight_density_spline_df: 3      # ignored when knot_quantiles is set
   rank: 2                          # bilinear B = U V^T, swept in Test 11
   ridge_tau: 1.0e-4                # spec 3.2 conditioning term on U, V
   ridge_tau_sensitivity: [0.0, 1.0e-4, 1.0e-3]
@@ -115,6 +129,10 @@ model:
   # contact inhibition backwards -- which matters because the phase portrait's
   # competition term runs through exactly this channel.
   density_interaction: true
+  # true  -> K is (d_own x n_h_cols): each cell type gets its own density CURVE
+  # false -> k is (d_own,): one shared curve shape with a per-type tilt, which
+  #          cannot represent a response that turns down only at high density
+  density_interaction_spline: true
   weight_ridge_n_reference: 678885
   weight_ridge: 10
   weight_ridge_grid: [0.0, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0]

@@ -57,7 +57,8 @@ class ModelSpec:
     df_bg: int = 3
     ridge_tau: float = 1e-4
     weight_ridge: float = 0.0     # ridge on a, c, k, h, psi, U, V -- see loglik()
-    density_interaction: bool = False   # per-cell-type density slope; see _logit_pi
+    density_interaction: bool = False   # per-cell-type density response
+    density_interaction_spline: bool = False   # curve per type, not just a tilt
     n_reference: int = 0          # sample size weight_ridge was calibrated at
 
     @property
@@ -163,7 +164,10 @@ def init_params(spec, cfg, data=None, rng=None, poisson_start=None):
         if spec.df_weight > 0:
             p["h"] = jnp.zeros(spec.df_weight)
         if spec.density_interaction:
-            p["k"] = draw(spec.d_own)
+            if spec.density_interaction_spline:
+                p["K"] = draw(spec.d_own, spec.df_weight)
+            else:
+                p["k"] = draw(spec.d_own)
         p["psi"] = jnp.asarray(0.0)
     if spec.has_background:
         p["r0"] = jnp.asarray(float(np.log(max(
@@ -195,10 +199,15 @@ def _logit_pi(p, d, spec):
             # detection and neighbourhood, log density raises the cycling odds
             # for Myeloid/Endothelial/Normal-Epithelial/PVL/CAFs (+0.15 to
             # +0.24) but LOWERS them for Cancer Epithelial (-0.031, z = -4.1).
-            # This gives each cell type its own density slope on top of h, so
-            # the tumour's contact inhibition is no longer averaged away by the
-            # stromal populations.
-            eta = eta + (d["own"] @ p["k"]) * d["logdens"]
+            if spec.density_interaction_spline:
+                # Each type gets its own density CURVE. The linear version below
+                # gives every type the same curve shape with a constant tilt,
+                # which cannot express a response that turns downward only at
+                # high density -- i.e. contact inhibition, the one mechanism the
+                # phase portrait's confinement depends on.
+                eta = eta + jnp.einsum("ij,jm,im->i", d["own"], p["K"], d["hbasis"])
+            else:
+                eta = eta + (d["own"] @ p["k"]) * d["logdens"]
     return eta
 
 
@@ -264,7 +273,8 @@ def loglik(p, d, spec):
             if spec.df_weight > 0:
                 pen = pen + jnp.sum(p["h"] ** 2)
             if spec.density_interaction:
-                pen = pen + jnp.sum(p["k"] ** 2)
+                pen = pen + jnp.sum(
+                    p["K"] ** 2 if spec.density_interaction_spline else p["k"] ** 2)
             # Scale the penalty with the sample size it is applied to. The
             # log-likelihood grows with n while an absolute ridge does not, so a
             # fixed lambda shrinks a subsample far harder: at n = 50,000 it is

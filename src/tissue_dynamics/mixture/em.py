@@ -116,10 +116,16 @@ def _weight_design(data, spec, p, block):
         cols += [data.hbasis, data.oxygen[:, None]]
         sizes += [("h", spec.df_weight), ("psi", 1)]
         if spec.density_interaction:
-            # linear in k given the design, so it slots straight into the
-            # logistic M-step alongside a and c
-            cols.append(data.own * data.logdens[:, None])
-            sizes.append(("k", spec.d_own))
+            # still linear in the coefficients given the design, so it slots
+            # straight into the logistic M-step alongside a and c
+            if spec.density_interaction_spline:
+                cols.append(np.concatenate(
+                    [data.own * data.hbasis[:, [m]] for m in range(spec.df_weight)],
+                    axis=1))
+                sizes.append(("K", spec.d_own * spec.df_weight))
+            else:
+                cols.append(data.own * data.logdens[:, None])
+                sizes.append(("k", spec.d_own))
     X = np.concatenate(cols, axis=1)
 
     def unpack(beta, p_in):
@@ -135,6 +141,8 @@ def _weight_design(data, spec, p, block):
                 out["U"] = np.asarray(v).reshape(spec.rank, spec.d_own).T
             elif name == "V":
                 out["V"] = np.asarray(v).reshape(spec.rank, spec.d_nbr).T
+            elif name == "K":
+                out["K"] = np.asarray(v).reshape(spec.df_weight, spec.d_own).T
             else:
                 out[name] = np.asarray(v)
         return out
@@ -146,7 +154,9 @@ def _weight_design(data, spec, p, block):
         start += [np.asarray(p["h"], float),
                   np.atleast_1d(np.asarray(p["psi"], dtype=float))]
         if spec.density_interaction:
-            start.append(np.asarray(p["k"], float))
+            start.append(np.asarray(
+                p["K"], float).T.ravel() if spec.density_interaction_spline
+                else np.asarray(p["k"], float))
     return X, np.concatenate(start), unpack
 
 

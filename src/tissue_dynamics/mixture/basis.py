@@ -51,12 +51,30 @@ class _Spline:
     the training `x` and reused, as spec 3.1 requires.
     """
 
-    def __init__(self, x, df, tol=1e-8):
+    def __init__(self, x, df, tol=1e-8, knot_quantiles=None):
+        """`knot_quantiles` places interior knots explicitly, e.g. [25, 50, 75, 90].
+
+        Worth doing deliberately rather than relying on `df`. `cr` is a NATURAL
+        cubic spline, so the second derivative is forced to zero beyond the
+        boundary knots and the fit is linear in both tails. A response that
+        turns downward only at high density -- contact inhibition -- is exactly
+        the shape that constraint forbids unless an interior knot sits up there.
+        Placing them by hand also makes the basis inspectable, which reading
+        patsy's internals is not.
+        """
         import patsy
         from scipy.linalg import qr
 
         x = np.asarray(x, dtype=float)
-        dm = patsy.dmatrix(f"cr(x, df={int(df)}) - 1", {"x": x}, return_type="matrix")
+        if knot_quantiles:
+            kn = np.unique(np.percentile(x, np.asarray(knot_quantiles, dtype=float)))
+            self.knots = kn
+            dm = patsy.dmatrix("cr(x, knots=kn) - 1", {"x": x, "kn": kn},
+                               return_type="matrix")
+        else:
+            self.knots = None
+            dm = patsy.dmatrix(f"cr(x, df={int(df)}) - 1", {"x": x},
+                               return_type="matrix")
         self._di = dm.design_info
         self.df = int(df)
         B = np.asarray(dm)
@@ -216,7 +234,8 @@ def build_basis(df, cfg, verbose=True):
 
     adata_density = df["density"].to_numpy(float)
     area_spline = _Spline(np.log(df["area"].to_numpy(float)), mc["area_spline_df"])
-    dw = _Spline(np.log(df["density"].to_numpy(float)), mc["weight_density_spline_df"])
+    dw = _Spline(np.log(df["density"].to_numpy(float)), mc["weight_density_spline_df"],
+                 knot_quantiles=mc.get("weight_density_knot_quantiles"))
     dg = _Spline(np.log(df["density"].to_numpy(float)), mc["background_spline_df"])
 
     # spec 2.2: orthogonalise log N against the area spline only if strongly collinear
@@ -260,5 +279,6 @@ def spec_from_basis(basis, cfg, stage="B", theta_free=True, weight_ridge=0.0,
         df_area=basis.n_area, df_weight=basis.n_weight, df_bg=basis.n_bg,
         ridge_tau=float(mc["ridge_tau"]), weight_ridge=float(weight_ridge),
         density_interaction=bool(mc.get("density_interaction", False)),
+        density_interaction_spline=bool(mc.get("density_interaction_spline", False)),
         n_reference=int(mc.get("weight_ridge_n_reference", 0)
                         if n_reference is None else n_reference))

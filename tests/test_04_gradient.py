@@ -88,3 +88,53 @@ def test_04_gradient_with_density_interaction():
                     break
             worst = max(worst, e)
     assert worst < 1e-5, f"max relative gradient error {worst:.2e} with the interaction"
+
+
+def test_04_gradient_with_density_spline_interaction():
+    """The per-type density CURVE must not break the analytic gradient either."""
+    cfg = load_config()
+    data, _t, sb = simulate_stage_b(n=4000, seed=0, d_own=6, d_nbr=8)
+    rng = np.random.default_rng(0)
+    data.logdens = rng.normal(0, 0.4, len(data.y))
+    spec = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8,
+                     df_area=data.area.shape[1], df_weight=data.hbasis.shape[1],
+                     ridge_tau=sb.ridge_tau, density_interaction=True,
+                     density_interaction_spline=True)
+    D = data.as_jax()
+    worst = 0.0
+    for trial in range(2):
+        p = init_params(spec, cfg, data=data, rng=np.random.default_rng(90 + trial))
+        assert np.shape(p["K"]) == (6, data.hbasis.shape[1])
+        flat, unflat = flatten(p)
+        g = np.asarray(flatten(jax.grad(loglik)(p, D, spec))[0])
+        f = lambda v: float(loglik(unflat(v), D, spec))
+        for j in range(len(flat)):
+            e = np.inf
+            for eps in (1e-5, 1e-6, 1e-4):
+                v1, v2 = np.array(flat), np.array(flat)
+                v1[j] += eps; v2[j] -= eps
+                e = min(e, abs((f(v1) - f(v2)) / (2 * eps) - g[j]) / max(abs(g[j]), 1e-8))
+                if e < 1e-8:
+                    break
+            worst = max(worst, e)
+    assert worst < 1e-5, f"max relative gradient error {worst:.2e} with the spline interaction"
+
+
+def test_04_spline_interaction_can_bend_where_a_tilt_cannot():
+    """The point of the upgrade: a per-type response that turns DOWN at high
+    density, which the linear tilt provably cannot represent."""
+    import dataclasses
+    from tissue_dynamics.mixture.basis import _Spline
+    x = np.random.default_rng(0).normal(0.0, 0.6, 20000)
+    S = _Spline(x, 3, knot_quantiles=[25, 50, 75, 90])
+    H = S(x)
+    # a curve that rises then falls -- contact inhibition's shape
+    target = np.where(x < np.percentile(x, 75), 0.4 * x, 0.4 * np.percentile(x, 75)
+                      - 0.9 * (x - np.percentile(x, 75)))
+    coef, *_ = np.linalg.lstsq(np.column_stack([np.ones(len(x)), H]), target, rcond=None)
+    fit_spline = np.column_stack([np.ones(len(x)), H]) @ coef
+    coef_l, *_ = np.linalg.lstsq(np.column_stack([np.ones(len(x)), x]), target, rcond=None)
+    fit_lin = np.column_stack([np.ones(len(x)), x]) @ coef_l
+    r2 = lambda f: 1 - np.var(target - f) / np.var(target)
+    assert r2(fit_spline) > 0.95, f"spline basis cannot represent the shape: R2 {r2(fit_spline):.3f}"
+    assert r2(fit_lin) < 0.6, f"a linear tilt should NOT capture it: R2 {r2(fit_lin):.3f}"
