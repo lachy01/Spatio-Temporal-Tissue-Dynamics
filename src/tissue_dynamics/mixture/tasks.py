@@ -46,6 +46,13 @@ def enumerate_tasks(job, cfg):
         # picking one by fit.
         return [{"job": job, "theta_free": tf, "restart": r}
                 for tf in (False, True) for r in range(int(cfg.get("bracket_restarts", 5)))]
+    if job == "weight_variants":
+        # Isolate what the density interaction buys over simply giving h() more
+        # knots. All three share the same explicit knots, so the only thing
+        # varying is how the density response is allowed to differ by cell type.
+        return [{"job": job, "variant": v, "restart": r}
+                for v in ("knots_only", "linear_interaction", "spline_interaction")
+                for r in range(int(cfg["init"]["n_restarts"]))]
     if job == "subsample_stability":
         # Spec 6.10: fit at 50K, 200K and the full set; rate ratios must be
         # stable within their bootstrap CIs and mean(pi) must not drift with n.
@@ -198,7 +205,7 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
         return out
 
     if job in ("theta_bracket", "stage_c", "stage_d", "subsample_stability",
-               "density_sensitivity"):
+               "density_sensitivity", "weight_variants"):
         import dataclasses
 
         from .diagnostics import confound_diagnostic
@@ -231,6 +238,12 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
                     "theta in the model, which model.py does not carry. Spec 2.2 "
                     "makes that restriction load-bearing for identifiability, so "
                     "it is a deliberate change, not a config flag.")
+        elif job == "weight_variants":
+            v = task["variant"]
+            sp_ = dataclasses.replace(
+                spec,
+                density_interaction=(v != "knots_only"),
+                density_interaction_spline=(v == "spline_interaction"))
         elif job == "subsample_stability":
             n_ = int(task["n_cells"])
             if n_ and n_ < len(df):

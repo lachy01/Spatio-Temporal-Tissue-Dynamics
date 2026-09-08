@@ -173,6 +173,31 @@ def main():
             lo, hi = np.percentile(s1, [2.5, 97.5])
             print(f"  {'sigma_1(B)':<12} {s1.mean():+.4f}  [{lo:+.4f}, {hi:+.4f}]")
 
+    elif a.job == "weight_variants":
+        df["sigma1"] = [x[0] if isinstance(x, list) and x else np.nan for x in df["sigma"]]
+        best = df.sort_values("loglik", ascending=False).groupby("variant").head(1)
+        order = ["knots_only", "linear_interaction", "spline_interaction"]
+        best = best.set_index("variant").reindex([v for v in order if v in set(best["variant"])])
+        npar = {"knots_only": 65, "linear_interaction": 73, "spline_interaction": 105}
+        print("\nWhat does letting the density response vary by cell type buy,")
+        print("over simply giving h() more knots? All three share the same knots.\n")
+        print(f"{'variant':<20}{'params':>8}{'loglik':>13}{'vs knots_only':>15}"
+              f"{'per param':>11}{'fold':>8}{'mean w':>9}{'sigma1':>9}")
+        ref = best.loc["knots_only", "loglik"] if "knots_only" in best.index else np.nan
+        for v, r in best.iterrows():
+            gain = r["loglik"] - ref
+            dpar = npar.get(v, np.nan) - npar["knots_only"]
+            pp = gain / dpar if dpar else np.nan
+            print(f"{v:<20}{npar.get(v, 0):>8}{r['loglik']:>13.1f}{gain:>15.1f}"
+                  + (f"{pp:>11.1f}" if np.isfinite(pp) and dpar else f"{'-':>11}")
+                  + f"{np.exp(r['e_delta']):>8.4f}{r['mean_w']:>9.4f}{r['sigma1']:>9.4f}")
+        print("\nA gain of ~0.5 per parameter is what pure overfitting yields, so anything")
+        print("near that is not evidence for the extra block. Restart agreement per variant:")
+        for v in best.index:
+            ll = df[df["variant"] == v]["loglik"].to_numpy()
+            print(f"  {v:<20}{100 * np.mean(ll > ll.max() - 1e-6):>5.0f}%  "
+                  f"({df[df['variant'] == v]['converged'].sum()}/{len(ll)} converged)")
+
     elif a.job == "heldout_genes":
         print("\nspec 6.8: does w predict the held-out half of the signature,")
         print("beyond depth/area/density, against a spatially-permuted null?\n")
