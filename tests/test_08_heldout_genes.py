@@ -72,3 +72,39 @@ def test_08_poisson_deviance_zero_at_perfect_fit():
     y = np.array([0.0, 1.0, 5.0, 12.0])
     assert poisson_deviance(y, y) < 1e-9        # y log(y/mu) term handles y=0
     assert poisson_deviance(y, y * 2) > 0
+
+
+def test_density_interaction_recovers_per_type_slopes():
+    """The interaction must recover cell-type-specific density responses.
+
+    This is the whole point of adding it: a single shared h() averages a
+    positive density effect in stromal populations against a negative one in
+    tumour, and the average gets the tumour's sign wrong.
+    """
+    import dataclasses
+    from tissue_dynamics.mixture.data import load_config
+    from tissue_dynamics.mixture.fit import multistart
+    from tissue_dynamics.mixture.simulate import simulate_stage_b
+
+    cfg = load_config()
+    rng = np.random.default_rng(0)
+    n, d_own = 40000, 4
+    data, truth, sb = simulate_stage_b(n=n, seed=0, d_own=d_own, d_nbr=4)
+    logd = rng.normal(0.0, 0.5, n)
+    data.logdens = logd
+    k_true = np.array([+0.9, -0.9, 0.0, 0.0][:d_own])     # opposite signs, as observed
+
+    # regenerate the outcome with a per-type density slope in the weight
+    spec = dataclasses.replace(sb, density_interaction=True)
+    eta = (truth["a0"] + data.own @ truth["a"] + data.nbr @ truth["c"]
+           + (data.own @ k_true) * logd)
+    pi = 1 / (1 + np.exp(-eta))
+    lam0 = np.exp(truth["b0"] + truth["theta"] * data.logN + data.area @ truth["s"])
+    z = rng.random(n) < pi
+    data.y = rng.poisson(np.where(z, lam0 * np.exp(np.exp(truth["delta"])), lam0)).astype(float)
+
+    best, _ = multistart(data, spec, cfg, n_restarts=3, verbose=False, maxiter=3000)
+    k_hat = np.asarray(best.params["k"])
+    assert np.corrcoef(k_true, k_hat)[0, 1] > 0.9, f"k not recovered: {k_hat}"
+    assert k_hat[0] > 0 and k_hat[1] < 0, \
+        f"opposite-sign density slopes not recovered: {k_hat}"

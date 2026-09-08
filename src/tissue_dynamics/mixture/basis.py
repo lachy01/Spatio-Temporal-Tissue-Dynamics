@@ -107,6 +107,7 @@ class FrozenBasis:
     logN_ortho_r2: float
     cond_own: float
     cond_nbr: float
+    mean_log_density: float = 0.0
 
     @property
     def n_area(self):
@@ -213,6 +214,7 @@ def build_basis(df, cfg, verbose=True):
             "reduction to 99.9% of variance here. Not triggered on this data, "
             "so deliberately not implemented -- add it if a new sample needs it.")
 
+    adata_density = df["density"].to_numpy(float)
     area_spline = _Spline(np.log(df["area"].to_numpy(float)), mc["area_spline_df"])
     dw = _Spline(np.log(df["density"].to_numpy(float)), mc["weight_density_spline_df"])
     dg = _Spline(np.log(df["density"].to_numpy(float)), mc["background_spline_df"])
@@ -237,7 +239,8 @@ def build_basis(df, cfg, verbose=True):
         rowsum_constant=const, area_spline=area_spline,
         density_weight_spline=dw, density_bg_spline=dg,
         logN_ortho_coef=coef, logN_ortho_r2=r2,
-        cond_own=cond_own, cond_nbr=cond_nbr)
+        cond_own=cond_own, cond_nbr=cond_nbr,
+        mean_log_density=float(np.log(adata_density).mean()))
 
 
 def spec_from_basis(basis, cfg, stage="B", theta_free=True, weight_ridge=0.0,
@@ -256,5 +259,6 @@ def spec_from_basis(basis, cfg, stage="B", theta_free=True, weight_ridge=0.0,
         theta_free=bool(theta_free), d_own=basis.d_own, d_nbr=basis.d_nbr,
         df_area=basis.n_area, df_weight=basis.n_weight, df_bg=basis.n_bg,
         ridge_tau=float(mc["ridge_tau"]), weight_ridge=float(weight_ridge),
+        density_interaction=bool(mc.get("density_interaction", False)),
         n_reference=int(mc.get("weight_ridge_n_reference", 0)
                         if n_reference is None else n_reference))

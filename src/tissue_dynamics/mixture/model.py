@@ -56,7 +56,8 @@ class ModelSpec:
     df_weight: int = 3
     df_bg: int = 3
     ridge_tau: float = 1e-4
-    weight_ridge: float = 0.0     # ridge on a, c, h, psi, U, V -- see loglik()
+    weight_ridge: float = 0.0     # ridge on a, c, k, h, psi, U, V -- see loglik()
+    density_interaction: bool = False   # per-cell-type density slope; see _logit_pi
     n_reference: int = 0          # sample size weight_ridge was calibrated at
 
     @property
@@ -87,6 +88,7 @@ class MixtureData:
     own: np.ndarray = field(default=None)
     nbr: np.ndarray = field(default=None)
     hbasis: np.ndarray = field(default=None)
+    logdens: np.ndarray = field(default=None)      # centred log density
     oxygen: np.ndarray = field(default=None)
     gbasis: np.ndarray = field(default=None)
 
@@ -119,6 +121,11 @@ def build_data(df, basis, cfg, spec):
         d.own = np.asarray(basis.own(df), dtype=np.float64)
         d.nbr = np.asarray(basis.nbr(df), dtype=np.float64)
         d.hbasis = np.asarray(basis.density_weight_basis(df), dtype=np.float64)
+        # centred, so `a` keeps its meaning as the own-state effect AT MEAN
+        # DENSITY; uncentred, `a` and `k` would be entangled through a baseline
+        # (log density = 0) that no cell is anywhere near.
+        ld = np.log(df["density"].to_numpy(np.float64))
+        d.logdens = ld - basis.mean_log_density
         d.oxygen = df["oxygen"].to_numpy(np.float64)
     if spec.has_background:
         d.gbasis = np.asarray(basis.density_bg_basis(df), dtype=np.float64)
@@ -155,6 +162,8 @@ def init_params(spec, cfg, data=None, rng=None, poisson_start=None):
         p["V"] = draw(spec.d_nbr, spec.rank)
         if spec.df_weight > 0:
             p["h"] = jnp.zeros(spec.df_weight)
+        if spec.density_interaction:
+            p["k"] = draw(spec.d_own)
         p["psi"] = jnp.asarray(0.0)
     if spec.has_background:
         p["r0"] = jnp.asarray(float(np.log(max(
@@ -181,6 +190,15 @@ def _logit_pi(p, d, spec):
                + p["psi"] * d["oxygen"])
         if spec.df_weight > 0:                  # h() dropped when df_weight == 0
             eta = eta + d["hbasis"] @ p["h"]
+        if spec.density_interaction:
+            # A single shared h() averages opposite mechanisms: adjusted for
+            # detection and neighbourhood, log density raises the cycling odds
+            # for Myeloid/Endothelial/Normal-Epithelial/PVL/CAFs (+0.15 to
+            # +0.24) but LOWERS them for Cancer Epithelial (-0.031, z = -4.1).
+            # This gives each cell type its own density slope on top of h, so
+            # the tumour's contact inhibition is no longer averaged away by the
+            # stromal populations.
+            eta = eta + (d["own"] @ p["k"]) * d["logdens"]
     return eta
 
 
@@ -245,6 +263,8 @@ def loglik(p, d, spec):
             pen = jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2) + p["psi"] ** 2 + uv
             if spec.df_weight > 0:
                 pen = pen + jnp.sum(p["h"] ** 2)
+            if spec.density_interaction:
+                pen = pen + jnp.sum(p["k"] ** 2)
             # Scale the penalty with the sample size it is applied to. The
             # log-likelihood grows with n while an absolute ridge does not, so a
             # fixed lambda shrinks a subsample far harder: at n = 50,000 it is

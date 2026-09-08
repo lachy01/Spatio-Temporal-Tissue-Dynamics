@@ -115,6 +115,11 @@ def _weight_design(data, spec, p, block):
             sizes.append(("V", spec.d_nbr * spec.rank))
         cols += [data.hbasis, data.oxygen[:, None]]
         sizes += [("h", spec.df_weight), ("psi", 1)]
+        if spec.density_interaction:
+            # linear in k given the design, so it slots straight into the
+            # logistic M-step alongside a and c
+            cols.append(data.own * data.logdens[:, None])
+            sizes.append(("k", spec.d_own))
     X = np.concatenate(cols, axis=1)
 
     def unpack(beta, p_in):
@@ -140,6 +145,8 @@ def _weight_design(data, spec, p, block):
         start.append(np.asarray(p[block], float).T.ravel())
         start += [np.asarray(p["h"], float),
                   np.atleast_1d(np.asarray(p["psi"], dtype=float))]
+        if spec.density_interaction:
+            start.append(np.asarray(p["k"], float))
     return X, np.concatenate(start), unpack
 
 

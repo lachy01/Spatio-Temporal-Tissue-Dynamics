@@ -59,3 +59,32 @@ def test_04_gradient():
     lines += ["", f"- threshold (spec 6.4): **1e-5**; worst observed **{worst:.2e}**"]
     write("Test 04 -- gradient check (spec 6.4)", lines, passed=bool(worst < 1e-5))
     assert worst < 1e-5, f"max relative gradient error {worst:.2e} exceeds 1e-5"
+
+
+def test_04_gradient_with_density_interaction():
+    """The per-cell-type density slope must not break the analytic gradient."""
+    cfg = load_config()
+    data, _t, sb = simulate_stage_b(n=4000, seed=0, d_own=6, d_nbr=8)
+    data.logdens = np.random.default_rng(0).normal(0, 0.4, len(data.y))
+    spec = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8,
+                     df_area=data.area.shape[1], df_weight=data.hbasis.shape[1],
+                     ridge_tau=sb.ridge_tau, density_interaction=True)
+    D = data.as_jax()
+    worst = 0.0
+    for trial in range(2):
+        p = init_params(spec, cfg, data=data, rng=np.random.default_rng(70 + trial))
+        assert "k" in p and np.shape(p["k"]) == (6,)      # the new block exists
+        flat, unflat = flatten(p)
+        g = np.asarray(flatten(jax.grad(loglik)(p, D, spec))[0])
+        f = lambda v: float(loglik(unflat(v), D, spec))
+        for j in range(len(flat)):
+            e = np.inf
+            for eps in (1e-5, 1e-6, 1e-4):
+                v1, v2 = np.array(flat), np.array(flat)
+                v1[j] += eps; v2[j] -= eps
+                e = min(e, abs((f(v1) - f(v2)) / (2 * eps) - g[j])
+                        / max(abs(g[j]), 1e-8))
+                if e < 1e-8:
+                    break
+            worst = max(worst, e)
+    assert worst < 1e-5, f"max relative gradient error {worst:.2e} with the interaction"

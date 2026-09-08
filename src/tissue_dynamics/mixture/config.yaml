@@ -13,10 +13,14 @@ data:
   # would fold in lymphatic endothelium, which is deliberately excluded.
   phi_minor_csv: data/phispace_minor_normalised.csv
   table_parquet: data/mixture_cells_major.parquet
-  # Density and neighbourhood keep the definitions every earlier model uses
-  # (radius-based), so results stay comparable with notebook sections 9-24.
-  # Spec 1.3 prefers fixed-k kNN; recorded as a deviation, tested in Stage D.
-  density_radius_um: 50.0
+  # Density and the neighbourhood mean now share ONE radius. 50um was inherited
+  # from the earlier NB models and had no justification of its own; matching it
+  # to the 80um neighbourhood makes `n` and `phibar` properties of the same disc,
+  # which the phase-portrait state variable X_k = n * wbar_k requires. Stage D
+  # showed the estimands are insensitive to the density definition (fixed-k kNN
+  # moved the fold change by 0.0%), so this is low risk.
+  # Spec 1.3 prefers fixed-k kNN; still a recorded deviation, tested in Stage D.
+  density_radius_um: 80.0
   neighbour_radius_um: 80.0
   # Spec 1.2 item 2: N must exclude the outcome genes AND the blocklist. The
   # blocklist is the set of panel genes correlated with the Tirosh set, removed
@@ -102,6 +106,15 @@ model:
   # this a fixed lambda shrinks a subsample much harder than the full sample and
   # mean(pi) drifts with n (spec 6.10). At the full sample the scaling is 1, so
   # every result reported so far is unchanged.
+  # Per-cell-type density slope in the mixing weight. A single shared h()
+  # averages opposite mechanisms: adjusted for detection and neighbourhood
+  # composition, log density raises the cycling odds for Myeloid (+0.238),
+  # Endothelial (+0.206), Normal Epithelial (+0.205), PVL (+0.199) and CAFs
+  # (+0.152) but LOWERS them for Cancer Epithelial (-0.031, z = -4.1). The
+  # shared term comes out monotonically increasing and gets the tumour's
+  # contact inhibition backwards -- which matters because the phase portrait's
+  # competition term runs through exactly this channel.
+  density_interaction: true
   weight_ridge_n_reference: 678885
   weight_ridge: 10
   weight_ridge_grid: [0.0, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0]

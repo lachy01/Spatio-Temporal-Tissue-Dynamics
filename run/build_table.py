@@ -20,3 +20,9 @@ with open("outputs/data_report.md", "w") as fh:
     fh.write(rep.to_markdown() + "\n")
 print("\n" + rep.to_markdown())
 print(f"\nwrote {out} ({os.path.getsize(out) / 1e6:.0f} MB)")
+# The Test 08 half-set counts are added by a separate script and are NOT
+# reproduced here, so any rebuild drops them silently. Say so loudly.
+if not [c for c in clean.columns if c.startswith(("y_A", "y_B"))]:
+    print("\n** the Test 08 gene-split columns (y_A*/y_B*) are not in this table.")
+    print("   Run `python run/add_gene_splits.py` before submitting `heldout_genes`,")
+    print("   and re-copy the parquet. **")
