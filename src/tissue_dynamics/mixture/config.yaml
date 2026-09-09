@@ -209,4 +209,6 @@ stability_reps: 20
 # build a 2-df natural cubic basis (it raises before the fit starts), so those
 # tasks produced no output at all in the first run. Spec 6.13 asks for
 # df in {2,3,5}; 2 is unavailable with this basis, which is a documented gap.
-density_df_grid: [0, 3, 5]
+# Test 13 sweeps the KNOTS, not df: with explicit knot quantiles configured, df
+# is ignored, so a df sweep refits the identical model. null = h() dropped.
+density_knot_grid: [null, [50], [25, 50, 75], [25, 50, 75, 90]]

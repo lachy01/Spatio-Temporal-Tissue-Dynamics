@@ -39,6 +39,17 @@ def main():
     df = load(a.job, a.out)
     if df.empty:
         raise SystemExit(f"no results found in {os.path.join(a.out, a.job)}")
+    # A directory holding fits from two model versions is worse than a missing
+    # one, because the numbers look plausible. Detect it from the parameter
+    # shapes, which change whenever the bases do.
+    if "params" in df.columns and df["params"].notna().any():
+        shapes = df["params"].dropna().apply(
+            lambda p: tuple(sorted((k, np.shape(np.asarray(v))) for k, v in p.items())))
+        if shapes.nunique() > 1:
+            print(f"\n  ** {shapes.nunique()} DIFFERENT parameter shapes in this "
+                  "directory: it holds fits from more than one model version. "
+                  "Delete it and resubmit -- the results below mix them. **\n")
+
     missing = expected - len(df)
     print(f"{a.job}: {len(df)}/{expected} tasks present"
           + (f"  ** {missing} MISSING **" if missing else ""))

@@ -40,8 +40,14 @@ def main():
     d = os.path.join(a.out, a.job)
     os.makedirs(d, exist_ok=True)
     path = os.path.join(d, f"{a.index:05d}.json")
-    if os.path.exists(path):                    # idempotent: safe to resubmit
-        print(f"already done: {path}")
+    if os.path.exists(path):
+        # Idempotent so a partially-failed array can be resubmitted. The hazard
+        # is that results from a DIFFERENT model version survive here and get
+        # mixed with new ones -- which happened once and silently corrupted a
+        # Test 13 sweep. Warn loudly enough to be seen in the log.
+        print(f"already done, SKIPPING: {path}")
+        print("  ** if the model has changed since this file was written, delete "
+              "the directory and resubmit: stale and current fits do not mix. **")
         return
 
     t0 = time.time()

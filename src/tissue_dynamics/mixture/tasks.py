@@ -64,8 +64,14 @@ def enumerate_tasks(job, cfg):
         # density and phi_bar are both spatially smooth on similar scales, so a
         # flexible h() can absorb genuine neighbourhood signal. This is spatial
         # confounding acting on the primary estimand, not on a nuisance term.
-        return [{"job": job, "df_weight": d, "rep": r}
-                for d in cfg.get("density_df_grid", [0, 2, 3, 5])
+        #
+        # The sweep varies the KNOTS, not `df`. Once explicit knot quantiles are
+        # configured they override `df` entirely, so a df sweep silently fits the
+        # same model repeatedly -- which is exactly what happened in the previous
+        # run, where the df=3 and df=5 arms returned identical log-likelihoods.
+        return [{"job": job, "knots": kq, "rep": r}
+                for kq in cfg.get("density_knot_grid",
+                                  [None, [50], [25, 50, 75], [25, 50, 75, 90]])
                 for r in range(int(cfg.get("stability_reps", 3)))]
     if job == "stage_c":
         # Additive background. EM does not apply (spec 4.3), so direct only.
@@ -252,12 +258,13 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
                 df, xy = df.iloc[keep].reset_index(drop=True), xy[keep]
                 df.attrs["phi_names"] = basis.phi_names
         elif job == "density_sensitivity":
-            dfw = int(task["df_weight"])
-            if dfw == 0:
+            kq = task["knots"]
+            if kq is None:
                 # h() dropped entirely -- spec 6.13's mandatory comparison
                 sp_ = dataclasses.replace(spec, df_weight=0)
             else:
-                cfg = {**cfg, "model": {**cfg["model"], "weight_density_spline_df": dfw}}
+                cfg = {**cfg, "model": {**cfg["model"],
+                                        "weight_density_knot_quantiles": list(kq)}}
                 basis = build_basis(df, cfg, verbose=False)
                 sp_ = spec_from_basis(basis, cfg, stage="B", weight_ridge=float(lam))
         data = build_data(df, basis, cfg, sp_)
