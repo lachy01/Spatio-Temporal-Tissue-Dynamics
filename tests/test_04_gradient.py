@@ -138,3 +138,27 @@ def test_04_spline_interaction_can_bend_where_a_tilt_cannot():
     r2 = lambda f: 1 - np.var(target - f) / np.var(target)
     assert r2(fit_spline) > 0.95, f"spline basis cannot represent the shape: R2 {r2(fit_spline):.3f}"
     assert r2(fit_lin) < 0.6, f"a linear tilt should NOT capture it: R2 {r2(fit_lin):.3f}"
+
+
+def test_04_dropping_h_also_drops_the_density_interaction():
+    """Test 13's h-dropped arm must remove density from the weight ENTIRELY.
+
+    The per-type interaction is built on the h basis, so keeping it while
+    dropping h() would leave nine per-type density curves in the model and
+    measure nothing -- besides failing on shape.
+    """
+    import dataclasses
+    cfg = load_config()
+    data, _t, sb = simulate_stage_b(n=3000, seed=0, d_own=6, d_nbr=8)
+    data.logdens = np.random.default_rng(0).normal(0, 0.4, len(data.y))
+    full = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8,
+                     df_area=data.area.shape[1], df_weight=data.hbasis.shape[1],
+                     ridge_tau=sb.ridge_tau, density_interaction=True,
+                     density_interaction_spline=True)
+    dropped = dataclasses.replace(full, df_weight=0)
+    p_full = init_params(full, cfg, data=data, rng=np.random.default_rng(1))
+    p_drop = init_params(dropped, cfg, data=data, rng=np.random.default_rng(1))
+    assert "K" in p_full and "h" in p_full
+    assert "K" not in p_drop and "h" not in p_drop, "density survived the drop"
+    # and it must actually evaluate
+    assert np.isfinite(float(loglik(p_drop, data.as_jax(), dropped)))

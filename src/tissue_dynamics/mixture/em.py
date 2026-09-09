@@ -115,7 +115,7 @@ def _weight_design(data, spec, p, block):
             sizes.append(("V", spec.d_nbr * spec.rank))
         cols += [data.hbasis, data.oxygen[:, None]]
         sizes += [("h", spec.df_weight), ("psi", 1)]
-        if spec.density_interaction:
+        if spec.density_interaction and spec.df_weight > 0:
             # still linear in the coefficients given the design, so it slots
             # straight into the logistic M-step alongside a and c
             if spec.density_interaction_spline:
@@ -153,7 +153,7 @@ def _weight_design(data, spec, p, block):
         start.append(np.asarray(p[block], float).T.ravel())
         start += [np.asarray(p["h"], float),
                   np.atleast_1d(np.asarray(p["psi"], dtype=float))]
-        if spec.density_interaction:
+        if spec.density_interaction and spec.df_weight > 0:
             start.append(np.asarray(
                 p["K"], float).T.ravel() if spec.density_interaction_spline
                 else np.asarray(p["k"], float))

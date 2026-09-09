@@ -163,7 +163,7 @@ def init_params(spec, cfg, data=None, rng=None, poisson_start=None):
         p["V"] = draw(spec.d_nbr, spec.rank)
         if spec.df_weight > 0:
             p["h"] = jnp.zeros(spec.df_weight)
-        if spec.density_interaction:
+        if spec.density_interaction and spec.df_weight > 0:
             if spec.density_interaction_spline:
                 p["K"] = draw(spec.d_own, spec.df_weight)
             else:
@@ -194,7 +194,12 @@ def _logit_pi(p, d, spec):
                + p["psi"] * d["oxygen"])
         if spec.df_weight > 0:                  # h() dropped when df_weight == 0
             eta = eta + d["hbasis"] @ p["h"]
-        if spec.density_interaction:
+        # `df_weight == 0` means density is removed from the weight altogether
+        # (Test 13's comparison). The per-type interaction is ALSO a density
+        # term -- it is built on the same basis -- so it must go with h(), or the
+        # test would drop the shared curve while keeping nine per-type ones and
+        # measure nothing.
+        if spec.density_interaction and spec.df_weight > 0:
             # A single shared h() averages opposite mechanisms: adjusted for
             # detection and neighbourhood, log density raises the cycling odds
             # for Myeloid/Endothelial/Normal-Epithelial/PVL/CAFs (+0.15 to
@@ -272,7 +277,7 @@ def loglik(p, d, spec):
             pen = jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2) + p["psi"] ** 2 + uv
             if spec.df_weight > 0:
                 pen = pen + jnp.sum(p["h"] ** 2)
-            if spec.density_interaction:
+            if spec.density_interaction and spec.df_weight > 0:
                 pen = pen + jnp.sum(
                     p["K"] ** 2 if spec.density_interaction_spline else p["k"] ** 2)
             # Scale the penalty with the sample size it is applied to. The
