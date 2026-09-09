@@ -25,13 +25,30 @@ OUT = os.environ.get("MIX_OUT", "outputs/hpc")
 
 
 def main():
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--job", default="multistart",
+                    help="which array to collect from (e.g. weight_variants)")
+    ap.add_argument("--variant", default=None,
+                    help="restrict to one variant of that job")
+    a = ap.parse_args()
+
     cfg = load_config()
-    files = sorted(glob.glob(os.path.join(OUT, "multistart", "*.json")))
+    files = sorted(glob.glob(os.path.join(OUT, a.job, "*.json")))
     if not files:
         raise SystemExit(f"no multistart results in {os.path.join(OUT, 'multistart')} "
-                         "-- run ./hpc/submit.sh multistart first")
+                         f"-- run ./hpc/submit.sh {a.job} first")
     rows = [json.load(open(f)) for f in files]
+    if a.variant:
+        rows = [r for r in rows if r.get("variant") == a.variant]
+        print(f"collecting from {a.job}, variant {a.variant!r}")
     n_expected = int(cfg["init"]["n_restarts"])
+    # the collected fit's own settings, not the config's, decide what it is
+    if rows:
+        for key in ("density_interaction", "density_interaction_spline", "variant"):
+            if key in rows[0]:
+                print(f"  {key}: {rows[0][key]}")
     ok = [r for r in rows if not r.get("failed") and np.isfinite(r.get("loglik", -np.inf))]
     print(f"restarts: {len(rows)}/{n_expected} present, {len(ok)} usable")
     if not ok:
