@@ -189,6 +189,19 @@ def run_em(data, spec, params0, max_iter=500, tol=1e-8, ll_tol=1e-13,
     if spec.has_background:
         raise ValueError("EM does not apply with the additive background "
                          "(spec 4.3); use fit_lbfgs for Stage C")
+    if getattr(spec, "weight_ridge", 0.0) > 0:
+        # The M-steps maximise the UNPENALISED Q: `_weighted_irls` carries only a
+        # 1e-10 diagonal for conditioning, and nothing adds `weight_ridge` to the
+        # normal equations. `run_em` then checks monotonicity of the PENALISED
+        # log-likelihood, so a penalised spec would make the guard fire on an
+        # objective mismatch rather than on a bug -- exactly the signal it exists
+        # to protect. Refuse instead of reporting a false violation.
+        raise ValueError(
+            f"EM is implemented for the unpenalised objective only "
+            f"(spec.weight_ridge = {spec.weight_ridge}). Its M-steps do not "
+            f"include the ridge, while the monotonicity check reads the penalised "
+            f"log-likelihood, so the two would disagree. Pass a spec with "
+            f"weight_ridge=0.0 to cross-check the optimiser, or use fit_lbfgs.")
     import jax.numpy as jnp
 
     D = data.as_jax() if hasattr(data, "as_jax") else data

@@ -17,7 +17,12 @@ from tissue_dynamics.mixture.simulate import simulate_stage_b
 
 def _run(stage, n, n_iter):
     cfg = load_config()
-    data, _t, sb = simulate_stage_b(n=n, seed=0, d_own=6, d_nbr=8)
+    # EM's M-steps maximise the unpenalised Q (see run_em's guard), so the
+    # optimiser cross-check runs on the unpenalised model. The penalised
+    # estimator is covered by the L-BFGS tests, which now carry the
+    # production weight_ridge.
+    data, _t, sb = simulate_stage_b(n=n, seed=0, d_own=6, d_nbr=8,
+                                    weight_ridge=0.0)
     spec = (sb if stage == "B"
             else ModelSpec(stage="A", theta_free=True, d_own=0, d_nbr=0, df_area=4))
     ps = poisson_start(data, spec)

@@ -78,7 +78,7 @@ def _draw(truth, blocks, spec, rng, wiggly_area=None):
 def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
                      e_delta=np.log(4.0), mean_pi=0.15, b_scale=0.26,
                      theta_free=True, single_component=False,
-                     wiggly_area_df=None, fit_area_df=4):
+                     wiggly_area_df=None, fit_area_df=4, weight_ridge=None):
     """Spec 6.1/6.2/6.3/6.7 generator.
 
     Parameters
@@ -89,6 +89,18 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
     b_scale : float
         Scale of `B`'s entries. The default gives an odds-ratio modification of
         roughly 1.3 across a one-sd move in the state, per spec 6.1.
+    weight_ridge : float or None
+        The weight-model penalty the returned spec carries. `None` (the default)
+        reads `model.weight_ridge` from the config, so a simulation exercises the
+        SAME estimator as the real-data fit. Pass `0.0` for the unpenalised model
+        the spec itself describes.
+
+        This matters more than it looks. The penalty is scaled by
+        `n / weight_ridge_n_reference` and so is constant per observation: a
+        simulation at n = 100,000 carries `lambda = 10 * 100000/678885 = 1.47`,
+        which is the same `lambda / n` as the full-sample fit. Before this was
+        wired through, every simulation test ran at `weight_ridge = 0` and so
+        validated a model that produced none of the reported results.
     single_component : bool
         Spec 6.3: draw with `pi_i == 0`, i.e. no latent class structure at all.
     wiggly_area_df : int or None
@@ -100,11 +112,21 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
     blocks = _design(n, d_own, d_nbr, df_area=fit_area_df, rng=rng)
     # the spline bases carry df-1 columns (the constant is projected out), so the
     # spec's column counts are read off the blocks rather than assumed
+    if weight_ridge is None:
+        from .data import load_config
+        _mc = load_config()["model"]
+        weight_ridge = float(_mc["weight_ridge"])
+        n_reference = int(_mc["weight_ridge_n_reference"])
+    else:
+        # an explicit value is taken as given at the simulated n, so that
+        # `weight_ridge=0.0` really is unpenalised rather than 0 x something
+        n_reference = n
     spec = ModelSpec(stage="B", rank=rank, theta_free=theta_free,
                      d_own=d_own, d_nbr=d_nbr,
                      df_area=blocks["area"].shape[1],
                      df_weight=blocks["hbasis"].shape[1],
-                     df_bg=blocks["gbasis"].shape[1])
+                     df_bg=blocks["gbasis"].shape[1],
+                     weight_ridge=weight_ridge, n_reference=n_reference)
 
     a0 = float(np.log(mean_pi / (1 - mean_pi)))
     truth = {

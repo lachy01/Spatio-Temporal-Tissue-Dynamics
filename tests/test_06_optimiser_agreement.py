@@ -15,7 +15,7 @@ from tissue_dynamics.mixture.simulate import simulate_stage_b
 
 def test_06_optimiser_agreement():
     cfg = load_config()
-    data, _t, _sb = simulate_stage_b(n=20_000, seed=0)
+    data, _t, _sb = simulate_stage_b(n=20_000, seed=0, weight_ridge=0.0)
     spec = ModelSpec(stage="A", theta_free=True, d_own=0, d_nbr=0, df_area=4)
     ps = poisson_start(data, spec)
     p0 = init_params(spec, cfg, data=data, poisson_start=ps)
