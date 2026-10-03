@@ -1,0 +1,81 @@
+PORTRAIT DYNAMICS SUMMARY  (spec 3.2 signed anchor)
+
+1. Density thresholds per archetype, swept at that archetype's own mean
+   neighbourhood composition.  '+' = pi > pi_bar (grows), '-' = shrinks.
+
+   archetype            crossings of pi_k = pi_bar_k in total density n
+   Endothelial          n=79 [pct 47] UNSTABLE (shrink->grow);  n=151 [pct 88] stable (grow->shrink)
+   CAFs                 none (always shrinks)
+   PVL                  n=79 [pct 47] UNSTABLE (shrink->grow);  n=156 [pct 89] stable (grow->shrink)
+   B-cells              n=76 [pct 44] UNSTABLE (shrink->grow);  n=145 [pct 86] stable (grow->shrink)
+   T-cells              n=88 [pct 57] UNSTABLE (shrink->grow);  n=154 [pct 89] stable (grow->shrink)
+   Myeloid              none (always shrinks)
+   Normal Epithelial    n=84 [pct 52] UNSTABLE (shrink->grow);  n=160 [pct 91] stable (grow->shrink)
+   Plasmablasts         n=151 [pct 88] UNSTABLE (shrink->grow)
+   Cancer Epithelial    n=152 [pct 89] UNSTABLE (shrink->grow)
+
+2. Flow either side of the Cancer Epithelial threshold (CE x CAFs slice, q50)
+   X_CE=  10.0  n=  55.6  pi_CE=0.1891 (bar 0.1669)  dX/dt= +0.2215  grow
+   X_CE=  20.0  n=  65.6  pi_CE=0.1830 (bar 0.1669)  dX/dt= +0.3226  grow
+   X_CE=  28.0  n=  73.6  pi_CE=0.1779 (bar 0.1669)  dX/dt= +0.3083  grow
+   X_CE=  35.0  n=  80.6  pi_CE=0.1709 (bar 0.1669)  dX/dt= +0.1413  grow
+   X_CE=  37.0  n=  82.6  pi_CE=0.1684 (bar 0.1669)  dX/dt= +0.0562  grow
+   X_CE=  40.0  n=  85.6  pi_CE=0.1643 (bar 0.1669)  dX/dt= -0.1035  shrink
+   X_CE=  55.0  n= 100.6  pi_CE=0.1451 (bar 0.1669)  dX/dt= -1.1982  shrink
+   X_CE=  80.0  n= 125.6  pi_CE=0.1407 (bar 0.1669)  dX/dt= -2.0965  shrink
+   X_CE= 120.0  n= 165.6  pi_CE=0.1752 (bar 0.1669)  dX/dt= +0.9996  grow
+
+3. Are the nullclines just total-density contours?  (n along the zero contour)
+   pair                             nullcline              mean n     sd n      cv
+   CAFs x Myeloid                   CAFs                      nan      nan     nan
+   CAFs x Myeloid                   Myeloid                   nan      nan     nan
+   Cancer Epithelial x CAFs         Cancer Epithelial        83.9     5.13  0.0611
+   Cancer Epithelial x CAFs         CAFs                      nan      nan     nan
+   Cancer Epithelial x Myeloid      Cancer Epithelial        82.5     6.99  0.0848
+   Cancer Epithelial x Myeloid      Myeloid                   nan      nan     nan
+   Cancer Epithelial x T-cells      Cancer Epithelial        82.5    16.07  0.1949
+   Cancer Epithelial x T-cells      T-cells                  73.0    14.93  0.2046
+
+4. Angle between the two nullcline gradients at the 80th pct (0 deg = degenerate)
+   CAFs x Myeloid                     1.33 deg
+   Cancer Epithelial x CAFs          32.67 deg
+   Cancer Epithelial x Myeloid       45.57 deg
+   Cancer Epithelial x T-cells       19.18 deg
+
+5. Composition bifurcation for Cancer Epithelial.
+   Blend the neighbourhood composition from the q50 reference (t=0) to a
+   purely tumour neighbourhood (t=1), sweeping total density at each t.
+
+       t       w_CE crossings of pi_CE = pi_bar_CE (total density n)        
+    0.00      0.110 n=21[p5]escape
+    0.05      0.154 n=26[p7]escape
+    0.10      0.199 n=31[p8]escape
+    0.15      0.243 n=36[p10]escape
+    0.20      0.288 n=41[p12]escape;  n=103[p68]STABLE;  n=119[p76]escape
+    0.25      0.332 n=46[p15]escape;  n=97[p64]STABLE;  n=125[p79]escape
+    0.30      0.377 n=52[p19]escape;  n=92[p60]STABLE;  n=129[p81]escape
+    0.35      0.421 n=58[p23]escape;  n=88[p56]STABLE;  n=133[p82]escape
+    0.40      0.466 n=65[p31]escape;  n=82[p51]STABLE;  n=136[p84]escape
+    0.45      0.510 n=140[p85]escape
+    0.50      0.555 n=143[p86]escape
+    0.55      0.599 n=147[p87]escape
+    0.60      0.644 n=151[p88]escape
+    0.65      0.688 n=154[p89]escape
+    0.70      0.733 n=158[p90]escape
+    0.75      0.777 n=162[p91]escape
+    0.80      0.822 n=167[p92]escape
+    0.85      0.866 n=172[p93]escape
+    0.90      0.911 n=177[p94]escape
+    0.95      0.955 n=183[p95]escape
+    1.00      1.000 n=189[p96]escape
+
+   -> the stable ceiling disappears at t = 0.00 (w_CE = 0.110)
+   observed w_CE: median 0.065, q75 0.366, q90 0.693, q95 0.833, frac>0.11 = 43.8%
+
+   wrote outputs/portrait/composition_bifurcation.png
+
+6. CORRECTED: the stable ceiling exists only inside a WINDOW of tumour fraction.
+   stable ceiling present for  0.266 <= w_CE <= 0.493  (saddle-node at both ends)
+   observed neighbourhoods inside that window: 12.4%
+   below it (tumour-poor / invasion front): 69.0%   above it (tumour core): 18.5%
+   observed w_CE quantiles: q25 -0.035  q50 0.065  q75 0.366  q90 0.693

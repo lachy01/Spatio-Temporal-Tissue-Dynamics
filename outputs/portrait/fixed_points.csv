@@ -1,0 +1,6 @@
+q_ref,pair,X_a,X_b,n,wbar_a,classification,in_support,stable_in_slice_unstable_held,max_re_reduced,max_re_full
+25,Cancer Epithelial x T-cells,25.093483008433488,26.142600642629258,47.39579528379681,0.5294453412624177,saddle,False,False,0.04981967308571298,0.045518355857444945
+50,Cancer Epithelial x CAFs,37.50440208997919,0.0,,,boundary(face),False,False,,
+50,Cancer Epithelial x Myeloid,35.15656060858205,0.0,,,boundary(face),False,False,,
+50,Cancer Epithelial x T-cells,27.66804109353431,0.0,,,boundary(face),False,False,,
+50,Cancer Epithelial x T-cells,0.0,104.12550909433352,,,boundary(face),False,False,,
