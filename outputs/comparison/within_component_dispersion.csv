@@ -1,0 +1,15 @@
+archetype,component,n,pearson_dispersion
+B-cells,non-cycling (w<0.05),23832,0.21361588756700634
+CAFs,non-cycling (w<0.05),38210,0.3145244542135405
+Cancer Epithelial,non-cycling (w<0.05),84103,0.6916555730860308
+Cancer Epithelial,cycling (w>0.95),12275,2.6969261948961663
+Endothelial,non-cycling (w<0.05),15989,0.21531090248849247
+Myeloid,non-cycling (w<0.05),28352,0.20876251908647026
+Normal Epithelial,non-cycling (w<0.05),42183,0.26641362791389145
+PVL,non-cycling (w<0.05),14280,0.22904391274774646
+Plasmablasts,non-cycling (w<0.05),79379,0.6305224244375871
+Plasmablasts,cycling (w>0.95),3883,3.0669533386166674
+T-cells,non-cycling (w<0.05),35217,0.2389022501750172
+T-cells,cycling (w>0.95),265,5.474050508652365
+all,non-cycling (w<0.05),361545,0.4359433986542564
+all,cycling (w>0.95),16869,3.0986736537736337

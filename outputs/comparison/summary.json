@@ -1,0 +1,21 @@
+{
+  "n": 678885,
+  "y_mean": 0.8693107079991457,
+  "y_var_mean": 7.827050630074128,
+  "zeros": 0.6798279531879479,
+  "alpha": {
+    "nb_prev": 0.6833491039328866,
+    "nb_matched": 0.6481265764507775
+  },
+  "nb_converged": {
+    "nb_prev": true,
+    "nb_matched": false
+  },
+  "nb_iters": {
+    "nb_prev": 3146,
+    "nb_matched": 20000
+  },
+  "mixture_penalised_loglik": -624938.0731197734,
+  "mixture_rate_ratio": 5.6294321449647535,
+  "mixture_mean_pi": 0.11475452769160406
+}
