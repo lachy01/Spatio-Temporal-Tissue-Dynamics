@@ -228,3 +228,7 @@ data/
 outputs/hpc/
 logs/
 .venv-spartan/
+
+# Large regenerable outputs (rebuild in minutes from the scripts that write them)
+outputs/division_classifier/labels.parquet
+outputs/spatial/nb_fits.npz

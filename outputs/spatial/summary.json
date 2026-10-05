@@ -1,0 +1,38 @@
+{
+  "blocks": {
+    "n_blocks": 250,
+    "cells_per_block_median": 2704.0,
+    "cells_per_block_p5": 1057.45,
+    "cells_per_block_p95": 4271.15,
+    "median_block_diameter_um": 506.14777925045325,
+    "tissue_extent_um": [
+      10583.547073364258,
+      15570.162386417389
+    ]
+  },
+  "argmax_agreement": 0.9990278176716233,
+  "raw_argmax_agreement": 0.3663993165263631,
+  "edges_um": [
+    0.0,
+    15.0,
+    25.0,
+    35.0,
+    50.0,
+    75.0,
+    100.0,
+    150.0,
+    200.0,
+    300.0,
+    400.0,
+    500.0
+  ],
+  "n_focal_all": 30000,
+  "n_focal_stratum": 6000,
+  "bin_um": 100.0,
+  "min_cells_per_bin": 20,
+  "n_perm": 9999,
+  "nb_alpha": {
+    "nb_prev": 0.6833491039328866,
+    "nb_matched": 0.6481265764507775
+  }
+}
