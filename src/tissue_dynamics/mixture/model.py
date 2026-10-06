@@ -7,7 +7,11 @@
     log lambda_1i = b0 + e^d  + theta * logN_i + s(log area_i)
     log rho_i     = r0 + g(log density_i)                      [Stage C onward]
     logit(pi_i)   = a0 + phi_i.a + nbr_i.c + phi_i' B nbr_i
-                       + h(log density_i) + psi * oxygen_i
+                       + h(log density_i) [+ psi * oxygen_i]
+
+The oxygen term is off in production (`model.oxygen: false`): on the log1p
+table the field explained nothing beyond cell state and never beat its rotated
+or mirrored decoys (notebooks/nb_baseline.ipynb, section 3).
 
 with `B = U V^T`. The structural rules of spec 0 are enforced by construction
 here, not by convention: the state blocks are only ever read by `_logit_pi`, and
@@ -60,6 +64,12 @@ class ModelSpec:
     density_interaction: bool = False   # per-cell-type density response
     density_interaction_spline: bool = False   # curve per type, not just a tilt
     n_reference: int = 0          # sample size weight_ridge was calibrated at
+    oxygen: bool = True           # psi * oxygen in the weight; off in production
+    # How B = U V' is penalised (see loglik): "frobenius" (production since
+    # 2026-10-06) puts weight_ridge * ||U V'||_F^2 in the shrinkage and uses
+    # ridge_tau as the weight of the balancing term ||U'U - V'V||_F^2;
+    # "nuclear" is the earlier form, (weight_ridge + ridge_tau)(||U||^2 + ||V||^2).
+    b_penalty: str = "frobenius"
 
     @property
     def has_state(self):
@@ -127,7 +137,8 @@ def build_data(df, basis, cfg, spec):
         # (log density = 0) that no cell is anywhere near.
         ld = np.log(df["density"].to_numpy(np.float64))
         d.logdens = ld - basis.mean_log_density
-        d.oxygen = df["oxygen"].to_numpy(np.float64)
+        if spec.oxygen:
+            d.oxygen = df["oxygen"].to_numpy(np.float64)
     if spec.has_background:
         d.gbasis = np.asarray(basis.density_bg_basis(df), dtype=np.float64)
     return d
@@ -168,7 +179,8 @@ def init_params(spec, cfg, data=None, rng=None, poisson_start=None):
                 p["K"] = draw(spec.d_own, spec.df_weight)
             else:
                 p["k"] = draw(spec.d_own)
-        p["psi"] = jnp.asarray(0.0)
+        if spec.oxygen:
+            p["psi"] = jnp.asarray(0.0)
     if spec.has_background:
         p["r0"] = jnp.asarray(float(np.log(max(
             1e-6, float(np.mean(data.y)) * 0.05 if data is not None else 1e-3))))
@@ -190,8 +202,9 @@ def _logit_pi(p, d, spec):
     eta = p["a0"]
     if spec.has_state:
         eta = (eta + d["own"] @ p["a"] + d["nbr"] @ p["c"]
-               + jnp.sum((d["own"] @ p["U"]) * (d["nbr"] @ p["V"]), axis=-1)
-               + p["psi"] * d["oxygen"])
+               + jnp.sum((d["own"] @ p["U"]) * (d["nbr"] @ p["V"]), axis=-1))
+        if spec.oxygen:
+            eta = eta + p["psi"] * d["oxygen"]
         if spec.df_weight > 0:                  # h() dropped when df_weight == 0
             eta = eta + d["hbasis"] @ p["h"]
         # `df_weight == 0` means density is removed from the weight altogether
@@ -270,11 +283,13 @@ def loglik(p, d, spec):
     """
     ll = jnp.sum(loglik_terms(p, d, spec))
     if spec.has_state:
-        uv = jnp.sum(p["U"] ** 2) + jnp.sum(p["V"] ** 2)
-        if spec.ridge_tau > 0:                      # spec 3.2 conditioning term
-            ll = ll - spec.ridge_tau * uv
+        b_pen, cond = b_penalty_terms(p, spec)
+        if spec.ridge_tau > 0:                      # conditioning term
+            ll = ll - spec.ridge_tau * cond
         if spec.weight_ridge > 0:
-            pen = jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2) + p["psi"] ** 2 + uv
+            pen = jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2) + b_pen
+            if spec.oxygen:
+                pen = pen + p["psi"] ** 2
             if spec.df_weight > 0:
                 pen = pen + jnp.sum(p["h"] ** 2)
             if spec.density_interaction and spec.df_weight > 0:
@@ -293,6 +308,31 @@ def loglik(p, d, spec):
                 lam = lam * (d["y"].shape[0] / spec.n_reference)
             ll = ll - lam * pen
     return ll
+
+
+def b_penalty_terms(p, spec):
+    """`(shrinkage term for B, conditioning term)` for the configured form.
+
+    "frobenius" (production since 2026-10-06):
+        shrinkage    ||U V'||_F^2 = sum(U'U * V'V), a ridge on the entries of B,
+                     the same squared-L2 penalty as a, c, h and K;
+        conditioning ||U'U - V'V||_F^2, the balancing term. Every B has a
+                     factorisation with U'U = V'V, so this is exactly zero at
+                     any optimum: it removes the U -> U A, V -> V A^-T scaling
+                     freedom without penalising B, and the estimate of B does
+                     not depend on ridge_tau at all. Only an orthogonal rotation
+                     of U and V together stays flat.
+    "nuclear" (the earlier form): both terms are ||U||^2 + ||V||^2, which at
+        the balanced optimum equals 2 ||B||_*. It soft-thresholds the singular
+        values of B, and ridge_tau then shrinks B a little too.
+    """
+    if spec.b_penalty == "frobenius":
+        UtU, VtV = p["U"].T @ p["U"], p["V"].T @ p["V"]
+        return jnp.sum(UtU * VtV), jnp.sum((UtU - VtV) ** 2)
+    if spec.b_penalty == "nuclear":
+        uv = jnp.sum(p["U"] ** 2) + jnp.sum(p["V"] ** 2)
+        return uv, uv
+    raise ValueError(f"unknown b_penalty {spec.b_penalty!r}")
 
 
 def neg_loglik(p, d, spec):

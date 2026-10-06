@@ -28,6 +28,68 @@ def load(job, out):
     return pd.DataFrame(rows)
 
 
+def select_lambda(df, ok):
+    """The largest lambda whose held-out log-likelihood is within noise of the best.
+
+    Held-out log-likelihood is a proper scoring rule and, with contiguous
+    spatial folds, a valid criterion on spatially dependent data. For the
+    penalty it is also blunt: the weight model reaches the marginal likelihood
+    only through a latent class, so the curve is flat over a wide range of
+    lambda. The rule therefore takes the MOST regularised setting that is
+    statistically indistinguishable from the best (the one-standard-error rule),
+    not the best point, and not -- as before 2026-10-06 -- the smallest lambda
+    whose sigma_1(B) had "plateaued", which on the log1p table picked the
+    unpenalised end of the grid.
+
+    Uncertainty comes from the spatial blocks: each fit stores its held-out
+    log-likelihood per block (`heldout_by_block`), the per-block differences
+    between two lambdas are paired, and the SE of their sum is
+    sqrt(n_blocks) x sd(block differences). With ~250 blocks this is far
+    better determined than a t on 5 folds. Runs without per-block scores fall
+    back to the fold-level paired t.
+
+    Only settings converged on every fold are eligible.
+    """
+    lams = sorted(ok.index)
+    has_blocks = "heldout_by_block" in df and df["heldout_by_block"].notna().all()
+
+    def block_scores(lam):
+        out = {}
+        for _, r in df[df["lam"] == lam].iterrows():
+            for b, (ll, _n) in r["heldout_by_block"].items():
+                out[int(b)] = out.get(int(b), 0.0) + float(ll)
+        return pd.Series(out).sort_index()
+
+    if has_blocks:
+        S = pd.DataFrame({lam: block_scores(lam) for lam in lams})
+        tot = S.sum()
+        top = tot.idxmax()
+        print(f"\nheld-out log-likelihood, total over {len(S)} spatial blocks; "
+              f"difference from the best (lam={top:g}) with its block SE:")
+        within = {}
+        for lam in lams:
+            d = S[lam] - S[top]
+            se = float(d.std(ddof=1) * np.sqrt(len(d))) if lam != top else 0.0
+            diff = float(d.sum())
+            within[lam] = lam == top or diff > -2.0 * se
+            print(f"  lam {lam:<8g} total {tot[lam]:14.1f}   diff {diff:+10.1f} "
+                  f"+/- {se:7.1f}   {'within noise' if within[lam] else 'worse'}")
+    else:
+        piv = df.pivot(index="fold", columns="lam", values="heldout_loglik_per_cell")
+        top = ok["heldout"].idxmax()
+        print(f"\nno per-block scores in these results; fold-level paired t vs the "
+              f"best (lam={top:g}):")
+        within = {}
+        for lam in lams:
+            d = (piv[lam] - piv[top]) * 1e6
+            sd = d.std(ddof=1)
+            t = d.mean() / (sd / np.sqrt(len(d))) if sd > 0 else 0.0
+            within[lam] = lam == top or t > -2.0
+            print(f"  lam {lam:<8g} {d.mean():+10.2f} x1e-6/cell  t = {t:+.1f}   "
+                  f"{'within noise' if within[lam] else 'worse'}")
+    return max(lam for lam in lams if within[lam])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("job")
@@ -81,96 +143,64 @@ def main():
                   "in a different, worse optimum -- check the restart count before "
                   "reading anything below. **")
 
-    if a.job in ("cv_penalty", "cv_rank"):
-        key = "lam" if a.job == "cv_penalty" else "rank"
+    if a.job in ("cv_penalty", "cv_penalty_unwhitened", "cv_penalty_buffered", "cv_rank"):
+        key = "rank" if a.job == "cv_rank" else "lam"
         df["sigma1"] = [s[0] if s else np.nan for s in df.get("sigma", [])]
-        g = df.groupby(key).agg(
-            heldout=("heldout_loglik_per_cell", "mean"),
-            n_converged=("converged", "sum"), n=("converged", "size"),
-            grad=("grad_inf", "median"), sigma1=("sigma1", "median"),
-            entropy=("entropy", "median"), e_delta=("e_delta", "median"))
-        print("\nper-%s summary:" % key)
-        print(g.round(6).to_string())
+        agg = dict(heldout=("heldout_loglik_per_cell", "mean"),
+                   n_converged=("converged", "sum"), n=("converged", "size"),
+                   grad=("grad_inf", "median"), sigma1=("sigma1", "median"),
+                   entropy=("entropy", "median"), e_delta=("e_delta", "median"))
+        for c in ("sd_eta_own", "sd_eta_nbr", "sd_eta_bilinear", "sd_eta_density",
+                  "sd_eta_density_by_type", "sd_eta"):
+            if c in df:
+                agg[c] = (c, "median")
+        g = df.groupby(key).agg(**agg)
+        print("\nper-%s summary (sd_eta_* = each weight block's contribution to the "
+              "spread of logit pi, median over folds):" % key)
+        print(g.round(4).to_string())
 
         # Paired comparison. Every value of `key` is fit on the SAME folds, so
         # the between-fold variance -- which is several times larger than the
         # effect -- cancels. Comparing group means hides the signal entirely.
         piv = df.pivot(index="fold", columns=key, values="heldout_loglik_per_cell")
-        base = piv[piv.columns[0]]
-        print("\npaired difference vs %s=%g, per cell (x1e6):" % (key, piv.columns[0]))
-        for k in piv.columns:
-            d_ = (piv[k] - base) * 1e6
-            sd = d_.std(ddof=1)
-            t = d_.mean() / (sd / np.sqrt(len(d_))) if sd > 0 else float("nan")
-            print(f"  {key} {k:<8g} {d_.mean():+10.2f}  paired t = "
-                  + (f"{t:+.1f}" if np.isfinite(t) else "-"))
-
-        # Selection is restricted to settings that actually converged. A held-out
-        # score from a fit that stopped at the iteration cap is not an estimate
-        # of that setting's predictive performance.
-        # Convergence alone is not enough. On the real data lambda=0.3 converged
-        # on every fold yet returned sigma_1(B) = 26.6 -- 60x the true value in
-        # the Test 01 simulation (0.440) -- because a converged fit of an
-        # overfit weight model is still an overfit weight model. A genuine
-        # interaction is stable against the penalty; a variance-dominated one
-        # tracks it. So require sigma_1 to have entered its plateau: the change
-        # to the next-larger setting must be modest.
-        if key == "lam" and "sigma1" in g:
-            sig = g["sigma1"]
-            rel = (sig / sig.shift(-1) - 1.0).abs()      # change vs next lambda up
-            g["sigma1_drift"] = rel
-            stable = rel < 0.5
-            print("\nsigma_1(B) stability (|change| to the next setting up; a real"
-                  "\ninteraction plateaus, an overfit one keeps falling):")
-            for k in g.index:
-                mark = "plateau" if bool(stable.get(k, False)) else "still falling"
-                print(f"  {key} {k:<8g} sigma_1 {sig[k]:8.3f}   {mark}")
-            g = g[stable.fillna(True)]
-            if g.empty:
-                print("\n** sigma_1 never stabilises across this grid; extend it "
-                      "upward before selecting. **")
-
         ok = g[g["n_converged"] == g["n"]]
         if ok.empty:
             print(f"\n** No {key} value converged on every fold, so none can be "
                   "selected on held-out likelihood. Raise `optim.maxiter` and "
                   "re-run before reading anything from the table above. **")
+        elif key == "rank":
+            # Spec 6.11 selects the rank by held-out log-likelihood on
+            # spatial blocks. Take the smallest rank that is not
+            # significantly worse than the best -- the parsimonious end of
+            # the plateau, which is what "a clear maximum or plateau" means.
+            top = ok["heldout"].idxmax()
+            best = top
+            for k in sorted(ok.index):
+                d_ = (piv[k] - piv[top]) * 1e6
+                sd = d_.std(ddof=1)
+                t = d_.mean() / (sd / np.sqrt(len(d_))) if sd > 0 else 0.0
+                if not np.isfinite(t) or t > -2.0:      # indistinguishable
+                    best = k
+                    break
+            print(f"\nselected {key} = {best} (smallest rank not significantly "
+                  f"worse than the best-scoring rank {top}; spec 6.11 selects "
+                  "the rank on held-out log-likelihood)")
+            ties = [k for k in ok.index
+                    if k != best and abs(ok.loc[k, "heldout"]
+                                         - ok.loc[best, "heldout"]) < 1e-12]
+            if ties:
+                print(f"  ranks {ties} are numerically identical to {best}: the "
+                      "extra components carry no weight, so B is effectively "
+                      f"rank {best}.")
         else:
-            if key == "rank":
-                # Spec 6.11 selects the rank by held-out log-likelihood on
-                # spatial blocks. Take the smallest rank that is not
-                # significantly worse than the best -- the parsimonious end of
-                # the plateau, which is what "a clear maximum or plateau" means.
-                top = ok["heldout"].idxmax()
-                best = top
-                for k in sorted(ok.index):
-                    d_ = (piv[k] - piv[top]) * 1e6
-                    sd = d_.std(ddof=1)
-                    t = d_.mean() / (sd / np.sqrt(len(d_))) if sd > 0 else 0.0
-                    if not np.isfinite(t) or t > -2.0:      # indistinguishable
-                        best = k
-                        break
-                print(f"\nselected {key} = {best} (smallest rank not significantly "
-                      f"worse than the best-scoring rank {top}; spec 6.11 selects "
-                      "the rank on held-out log-likelihood)")
-                ties = [k for k in ok.index
-                        if k != best and abs(ok.loc[k, "heldout"]
-                                             - ok.loc[best, "heldout"]) < 1e-12]
-                if ties:
-                    print(f"  ranks {ties} are numerically identical to {best}: the "
-                          "extra components carry no weight, so B is effectively "
-                          f"rank {best}.")
-            else:
-                # For the penalty, held-out likelihood is monotone toward
-                # lambda=0 and cannot score the parameter (see config.yaml), so
-                # take the smallest eligible setting instead.
-                best = ok.index.min()
-                print(f"\nselected {key} = {best} (smallest setting that both "
-                      f"converged on all folds and has a stable sigma_1)")
-                top = g["heldout"].idxmax()
-                if best != top and int(g.loc[top, "n_converged"]) < int(g.loc[top, "n"]):
-                    print(f"  note: {key}={top} scores higher but did not converge "
-                          "on every fold, so it is not eligible.")
+            best = select_lambda(df, ok)
+            print(f"\nselected lam = {best}")
+            g_ = g.loc[best]
+            print(f"  at the selected lam: sigma_1(B) {g_['sigma1']:.3f}, entropy "
+                  f"{g_['entropy']:.4f}, e^delta {g_['e_delta']:.4f}")
+            if best == max(ok.index):
+                print("  ** the selection is at the top of the grid: extend the grid "
+                      "upward before trusting it **")
 
     elif a.job == "bootstrap":
         print("\npercentile CIs (spec 7.1):")

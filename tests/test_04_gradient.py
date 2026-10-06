@@ -24,7 +24,7 @@ def test_04_gradient():
     data, _truth, sb = simulate_stage_b(n=4000, seed=0, d_own=6, d_nbr=8)
     data.gbasis = data.hbasis.copy()                 # Stage C background basis
     # column counts come from the bases, which carry df-1 columns each
-    spec = ModelSpec(stage="C", rank=2, theta_free=True, d_own=6, d_nbr=8,
+    spec = ModelSpec(stage="C", rank=2, theta_free=True, d_own=6, d_nbr=8, oxygen=sb.oxygen,
                      df_area=data.area.shape[1], df_weight=data.hbasis.shape[1],
                      df_bg=data.gbasis.shape[1], ridge_tau=sb.ridge_tau)
     D = data.as_jax()
@@ -66,7 +66,7 @@ def test_04_gradient_with_density_interaction():
     cfg = load_config()
     data, _t, sb = simulate_stage_b(n=4000, seed=0, d_own=6, d_nbr=8)
     data.logdens = np.random.default_rng(0).normal(0, 0.4, len(data.y))
-    spec = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8,
+    spec = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8, oxygen=sb.oxygen,
                      df_area=data.area.shape[1], df_weight=data.hbasis.shape[1],
                      ridge_tau=sb.ridge_tau, density_interaction=True)
     D = data.as_jax()
@@ -96,7 +96,7 @@ def test_04_gradient_with_density_spline_interaction():
     data, _t, sb = simulate_stage_b(n=4000, seed=0, d_own=6, d_nbr=8)
     rng = np.random.default_rng(0)
     data.logdens = rng.normal(0, 0.4, len(data.y))
-    spec = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8,
+    spec = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8, oxygen=sb.oxygen,
                      df_area=data.area.shape[1], df_weight=data.hbasis.shape[1],
                      ridge_tau=sb.ridge_tau, density_interaction=True,
                      density_interaction_spline=True)
@@ -151,7 +151,7 @@ def test_04_dropping_h_also_drops_the_density_interaction():
     cfg = load_config()
     data, _t, sb = simulate_stage_b(n=3000, seed=0, d_own=6, d_nbr=8)
     data.logdens = np.random.default_rng(0).normal(0, 0.4, len(data.y))
-    full = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8,
+    full = ModelSpec(stage="B", rank=2, theta_free=True, d_own=6, d_nbr=8, oxygen=sb.oxygen,
                      df_area=data.area.shape[1], df_weight=data.hbasis.shape[1],
                      ridge_tau=sb.ridge_tau, density_interaction=True,
                      density_interaction_spline=True)

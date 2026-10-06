@@ -20,7 +20,11 @@ def setup():
     df = pd.read_parquet(ROOT / cfg["data"]["table_parquet"]).sample(40000, random_state=0)
     df.attrs["phi_names"] = json.load(open(ROOT / "data/mixture_cells_major.phi_names.json"))
     basis = build_basis(df, cfg, verbose=False)
-    pe = json.load(open(ROOT / "outputs/hpc/point_estimate.json"))
+    pe_path = ROOT / "outputs/hpc/point_estimate.json"
+    if not pe_path.exists():
+        pytest.skip("no mixture point estimate yet (outputs/hpc/point_estimate.json); "
+                    "run the multistart job and run/collect_point_estimate.py")
+    pe = json.load(open(pe_path))
     model = PortraitModel.from_fit(pe["params"], basis)
     from tissue_dynamics.portrait.core import build_archetypes
     arch, W = build_archetypes(df, basis)
@@ -41,7 +45,11 @@ def anchored():
     df = pd.read_parquet(ROOT / cfg["data"]["table_parquet"]).sample(40000, random_state=0)
     df.attrs["phi_names"] = json.load(open(ROOT / "data/mixture_cells_major.phi_names.json"))
     basis = build_basis(df, cfg, verbose=False)
-    pe = json.load(open(ROOT / "outputs/hpc/point_estimate.json"))
+    pe_path = ROOT / "outputs/hpc/point_estimate.json"
+    if not pe_path.exists():
+        pytest.skip("no mixture point estimate yet (outputs/hpc/point_estimate.json); "
+                    "run the multistart job and run/collect_point_estimate.py")
+    pe = json.load(open(pe_path))
     spec = spec_from_basis(basis, cfg, stage="B", weight_ridge=float(pe["weight_ridge"]))
     data = build_data(df, basis, cfg, spec)
     P = {k: jnp.asarray(np.asarray(v)) for k, v in pe["params"].items()}

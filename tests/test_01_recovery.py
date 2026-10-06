@@ -27,6 +27,8 @@ def test_01_recovery():
         best, _ = multistart(data, spec, cfg, n_restarts=size(5, 3),
                              seed=100 * rep, verbose=False, maxiter=2000)
         for k in SCALARS:
+            if k not in truth:              # psi: absent when the config drops oxygen
+                continue
             est[k].append(float(best.params[k]))
             truths[k] = float(truth[k])
         bfro.append(float(np.linalg.norm(B_matrix(best.params) - truth["B"])
@@ -37,6 +39,8 @@ def test_01_recovery():
     lines.append("| parameter | truth | mean estimate | MC SE | bias / SE |")
     lines.append("|---|---:|---:|---:|---:|")
     for k in SCALARS:
+        if not est[k]:
+            continue
         v = np.array(est[k])
         se = v.std(ddof=1) / np.sqrt(len(v))
         z = abs(v.mean() - truths[k]) / max(se, 1e-12)

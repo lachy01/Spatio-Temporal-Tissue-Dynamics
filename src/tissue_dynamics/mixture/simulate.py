@@ -65,7 +65,9 @@ def _draw(truth, blocks, spec, rng, wiggly_area=None):
     if spec.has_state:
         eta = (eta + blocks["own"] @ truth["a"] + blocks["nbr"] @ truth["c"]
                + np.einsum("ij,jk,ik->i", blocks["own"], truth["B"], blocks["nbr"])
-               + blocks["hbasis"] @ truth["h"] + truth["psi"] * blocks["oxygen"])
+               + blocks["hbasis"] @ truth["h"])
+        if spec.oxygen:
+            eta = eta + truth["psi"] * blocks["oxygen"]
     pi = 1.0 / (1.0 + np.exp(-eta))
     rho = (np.exp(truth["r0"] + blocks["gbasis"] @ truth["g"])
            if spec.has_background else np.zeros(n))
@@ -78,7 +80,7 @@ def _draw(truth, blocks, spec, rng, wiggly_area=None):
 def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
                      e_delta=np.log(4.0), mean_pi=0.15, b_scale=0.26,
                      theta_free=True, single_component=False,
-                     wiggly_area_df=None, fit_area_df=4, weight_ridge=None):
+                     wiggly_area_df=None, fit_area_df=4, weight_ridge=None, oxygen=None):
     """Spec 6.1/6.2/6.3/6.7 generator.
 
     Parameters
@@ -107,6 +109,10 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
         Spec 6.7: add an area effect built from a `wiggly_area_df` basis that a
         `fit_area_df` spline cannot represent, with no class structure. The
         adversarial size-confound test.
+    oxygen : bool or None
+        Whether the weight carries `psi * oxygen`. `None` reads `model.oxygen`
+        from the config, so simulations follow the production weight model
+        (which dropped the term on 2026-10-06).
     """
     rng = np.random.default_rng(seed)
     blocks = _design(n, d_own, d_nbr, df_area=fit_area_df, rng=rng)
@@ -121,8 +127,17 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
         # an explicit value is taken as given at the simulated n, so that
         # `weight_ridge=0.0` really is unpenalised rather than 0 x something
         n_reference = n
+    from .data import load_config
+    _mcfg = load_config()["model"]
+    if oxygen is None:
+        oxygen = bool(_mcfg.get("oxygen", True))
+    # the weight model's penalty form follows the production config, so the
+    # simulations exercise the same estimator as the real-data fit
+    b_pen = str(_mcfg.get("b_penalty", "nuclear"))
+    tau = float(_mcfg["balance_tau"] if b_pen == "frobenius" else _mcfg["ridge_tau"])
     spec = ModelSpec(stage="B", rank=rank, theta_free=theta_free,
-                     d_own=d_own, d_nbr=d_nbr,
+                     d_own=d_own, d_nbr=d_nbr, oxygen=bool(oxygen),
+                     b_penalty=b_pen, ridge_tau=tau,
                      df_area=blocks["area"].shape[1],
                      df_weight=blocks["hbasis"].shape[1],
                      df_bg=blocks["gbasis"].shape[1],
@@ -133,9 +148,11 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
         "b0": -0.55, "delta": float(np.log(e_delta)),
         "s": rng.normal(0, 0.15, spec.df_area),
         "a0": a0, "a": rng.normal(0, 0.30, d_own), "c": rng.normal(0, 0.30, d_nbr),
-        "h": rng.normal(0, 0.10, spec.df_weight), "psi": 0.35,
+        "h": rng.normal(0, 0.10, spec.df_weight),
         "r0": -3.0, "g": np.zeros(spec.df_bg),
     }
+    if spec.oxygen:
+        truth["psi"] = 0.35
     if theta_free:
         truth["theta"] = 0.85
     U = rng.normal(0, b_scale, (d_own, rank))
@@ -162,12 +179,14 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
         truth["c"] = np.zeros(d_nbr)
         truth["B"] = np.zeros((d_own, d_nbr))
         truth["h"] = np.zeros(spec.df_weight)
-        truth["psi"] = 0.0
+        if spec.oxygen:
+            truth["psi"] = 0.0
 
     y, pi, z = _draw(truth, blocks, spec, rng, wiggly_area=wig)
     data = MixtureData(y=y, logN=blocks["logN"], area=blocks["area"],
                        own=blocks["own"], nbr=blocks["nbr"],
-                       hbasis=blocks["hbasis"], oxygen=blocks["oxygen"])
+                       hbasis=blocks["hbasis"],
+                       oxygen=blocks["oxygen"] if spec.oxygen else None)
     truth["pi"], truth["z"] = pi, z
     truth["mean_y"] = float(y.mean())
     truth["zero_frac"] = float((y == 0).mean())

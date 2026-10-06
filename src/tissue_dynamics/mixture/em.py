@@ -113,8 +113,11 @@ def _weight_design(data, spec, p, block):
             cols.append(np.concatenate(
                 [data.nbr * OU[:, [k]] for k in range(spec.rank)], axis=1))
             sizes.append(("V", spec.d_nbr * spec.rank))
-        cols += [data.hbasis, data.oxygen[:, None]]
-        sizes += [("h", spec.df_weight), ("psi", 1)]
+        cols.append(data.hbasis)
+        sizes.append(("h", spec.df_weight))
+        if spec.oxygen:
+            cols.append(data.oxygen[:, None])
+            sizes.append(("psi", 1))
         if spec.density_interaction and spec.df_weight > 0:
             # still linear in the coefficients given the design, so it slots
             # straight into the logistic M-step alongside a and c
@@ -151,8 +154,9 @@ def _weight_design(data, spec, p, block):
     if spec.has_state:
         start += [np.asarray(p["a"], float), np.asarray(p["c"], float)]
         start.append(np.asarray(p[block], float).T.ravel())
-        start += [np.asarray(p["h"], float),
-                  np.atleast_1d(np.asarray(p["psi"], dtype=float))]
+        start.append(np.asarray(p["h"], float))
+        if spec.oxygen:
+            start.append(np.atleast_1d(np.asarray(p["psi"], dtype=float)))
         if spec.density_interaction and spec.df_weight > 0:
             start.append(np.asarray(
                 p["K"], float).T.ravel() if spec.density_interaction_spline
@@ -202,6 +206,16 @@ def run_em(data, spec, params0, max_iter=500, tol=1e-8, ll_tol=1e-13,
             f"include the ridge, while the monotonicity check reads the penalised "
             f"log-likelihood, so the two would disagree. Pass a spec with "
             f"weight_ridge=0.0 to cross-check the optimiser, or use fit_lbfgs.")
+    if (getattr(spec, "has_state", False) and getattr(spec, "b_penalty", "") == "frobenius"
+            and getattr(spec, "ridge_tau", 0.0) > 0):
+        # Same objective mismatch for the balancing term ||U'U - V'V||^2: the
+        # alternating U and V M-steps ignore it, and at ridge_tau = 1 it moves
+        # the penalised log-likelihood by hundreds of units. It never changes
+        # the estimate of B, so the unpenalised cross-check simply leaves it out.
+        raise ValueError(
+            "EM does not include the balancing term ridge_tau * ||U'U - V'V||^2 in "
+            "its M-steps. Pass a spec with ridge_tau=0.0 (B is unaffected), or use "
+            "fit_lbfgs.")
     import jax.numpy as jnp
 
     D = data.as_jax() if hasattr(data, "as_jax") else data

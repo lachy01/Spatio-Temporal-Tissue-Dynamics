@@ -44,7 +44,7 @@ class PortraitModel:
         p = {k: np.asarray(v, dtype=float) for k, v in params.items()}
         return cls(a0=float(p["a0"]), a=p["a"], c=p["c"],
                    B=p["U"] @ p["V"].T, h=p.get("h", np.zeros(0)),
-                   K=p.get("K"), psi=float(p["psi"]),
+                   K=p.get("K"), psi=float(p.get("psi", 0.0)),
                    density_basis=basis.density_weight_spline,
                    mean_log_density=float(basis.mean_log_density))
 

@@ -43,7 +43,10 @@ def main():
     data = build_data(df, basis, cfg, spec)
     p = {k: jnp.asarray(np.asarray(v)) for k, v in pe["params"].items()}
     D = data.as_jax()
-    Q = basis.Q_own
+    # eff below is a NEIGHBOUR-space vector (c + B' phi), so it maps back to
+    # cell types through Q_nbr. Q_own gave the same answer only while the two
+    # projections were identical, which whitening ends.
+    Q = basis.Q_nbr
 
     own = basis.own(df)                     # projected, centred
     nbr_raw = df[[f"nbr_phi_{j:02d}" for j in range(len(names))]].to_numpy(float)

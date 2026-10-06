@@ -7,8 +7,9 @@ Spec sections 1 and 9, tests V1 (convergence), V5 (fold identity) and V6
 fits made here for V1 are also Stage 3's out-of-fold NB arms: their held-out
 predictions are saved and reused rather than refitted.
 
-Decided by the user (see report.md): theta free in both NB arms, as in MIX;
-NB-d's dispersion is log alpha_i = gamma0 + phi_i' gamma on the projected state.
+Decided by the user (see report.md): theta in both NB arms as in MIX -- free
+until 2026-10-06, fixed at 1 since (config `model.theta_free`); NB-d's
+dispersion is log alpha_i = gamma0 + phi_i' gamma on the projected state.
 """
 import hashlib
 import json
@@ -141,8 +142,10 @@ def main():
     probe = arms.init_eta(D["own"].shape[1], D["nbr"].shape[1], D["hbasis"].shape[1],
                           spec.rank, rng)
     names = {"MIX": arms.eta_column_names(Pmix),
-             "NB-c": arms.eta_column_names(arms.init_nb(D, "const", spec.rank, 0)),
-             "NB-d": arms.eta_column_names(arms.init_nb(D, "state", spec.rank, 0))}
+             "NB-c": arms.eta_column_names(arms.init_nb(D, "const", spec.rank, 0,
+                                                        theta_free=spec.theta_free)),
+             "NB-d": arms.eta_column_names(arms.init_nb(D, "state", spec.rank, 0,
+                                                        theta_free=spec.theta_free))}
     for lab in ("LOG-T", "LOG-O", "LOG-S"):
         names[lab] = arms.eta_column_names(probe)
     v6_names_ok = all(v == names["MIX"] for v in names.values())
@@ -161,13 +164,15 @@ def main():
         Ds = data.subset(idx).as_jax() if idx is not None else D
         m = n if idx is None else len(idx)
         say(f"  {arm} {tag} (n = {m:,}, seed {seed})")
-        f = arms.nb_objective(Ds, m, spec.weight_ridge, spec.n_reference, spec.ridge_tau)
+        f = arms.nb_objective(Ds, m, spec.weight_ridge, spec.n_reference, spec.ridge_tau,
+                              spec.b_penalty)
         # Retry from the next seed if Newton cannot finish. The optimum is unique
         # (two seeds agree to 1e-10 on all cells), and on 2026-10-05 the one V1
         # failure -- NB-c, fold 4, seed 0, stuck at |g| 2.3e-3 -- had already
         # reached the same objective that seeds 1 and 2 converged to.
         for attempt in range(3):
-            p0 = arms.init_nb(Ds, ARMS[arm], spec.rank, seed + 100 * attempt)
+            p0 = arms.init_nb(Ds, ARMS[arm], spec.rank, seed + 100 * attempt,
+                              theta_free=spec.theta_free)
             p, info = arms.minimise(f, p0, say=say)
             if info["converged"]:
                 break

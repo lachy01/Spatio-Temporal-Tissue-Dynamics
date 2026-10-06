@@ -64,6 +64,13 @@ state:
   drop_cycling_from_own: true
   drop_cycling_from_neighbour: false
   condition_number_max: 1.0e6      # spec 3.1 branch (b) PCA fallback trigger
+  # 2026-10-06, decided by the user, pending the cv_penalty vs
+  # cv_penalty_unwhitened comparison. Whiten the projected own and neighbour
+  # blocks (Sigma^-1/2), so one weight_ridge shrinks every direction of a, c and
+  # B per SD. Unwhitened, B's covariates (products of own and neighbour
+  # coordinates) have SD ~0.03 against ~0.29 for own, and one lambda shrank B
+  # ~100x harder per coefficient. See mixture/basis.py.
+  whiten: true
   pca_variance_keep: 0.999
 
 oxygen:
@@ -115,7 +122,19 @@ model:
   weight_density_knot_quantiles: [25, 50, 75, 90]
   weight_density_spline_df: 3      # ignored when knot_quantiles is set
   rank: 2                          # bilinear B = U V^T, swept in Test 11
-  ridge_tau: 1.0e-4                # spec 3.2 conditioning term on U, V
+  ridge_tau: 1.0e-4                # spec 3.2 conditioning term on U, V (b_penalty: nuclear only)
+  # 2026-10-06, decided by the user: B is penalised by weight_ridge * ||U V'||_F^2,
+  # a ridge on B's entries like the one on a, c, h, K, and conditioned by the
+  # balancing term balance_tau * ||U'U - V'V||_F^2, which is zero at every
+  # optimum, so the estimate of B does not depend on balance_tau. The earlier
+  # form ("nuclear") put (weight_ridge + ridge_tau)(||U||^2 + ||V||^2) = 2 x
+  # (weight_ridge + ridge_tau) ||B||_* on B, soft-thresholding its singular
+  # values and mixing the conditioning term into the shrinkage.
+  b_penalty: frobenius
+  balance_tau: 1.0
+  # Scale the weight model's density-spline columns (h, and K through it) to
+  # unit SD, for the same reason the state blocks are whitened.
+  scale_weight_splines: true
   ridge_tau_sensitivity: [0.0, 1.0e-4, 1.0e-3]
   # Ridge on EVERY weight coefficient (a, c, h, psi, U, V). Added to the spec:
   # without it the concomitant logistic model separates on null data (||a||=57.5,
@@ -157,10 +176,32 @@ model:
   #          cannot represent a response that turns down only at high density
   density_interaction_spline: true
   weight_ridge_n_reference: 678885
+  # PROVISIONAL: 10 was selected on the unwhitened, nuclear-norm weight model and
+  # means almost no shrinkage on the whitened scale. Replace it with the value
+  # the cv_penalty rerun selects (hpc/gather.py cv_penalty).
   weight_ridge: 10
-  weight_ridge_grid: [0.0, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0]
+  # Re-ranged 2026-10-06 for the whitened, Frobenius-penalised weight model:
+  # on a per-SD scale a given lambda shrinks far less than it did on B's tiny
+  # unwhitened covariates, so the grid runs four decades higher.
+  weight_ridge_grid: [0.0, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0, 3000.0, 10000.0]
+  # Buffered CV (job cv_penalty_buffered): drop training cells within this
+  # distance of the held-out fold, as a check on leakage across fold edges.
+  cv_buffer_um: 200.0
   cv_folds: 5
   theta_config: both               # F (theta=1) and V (theta free); a bracket
+  # 2026-10-06, decided by the user: production fits pin theta at 1
+  # (Configuration F, log N an offset, a pure rate model). On the log1p table the
+  # NB baseline estimates theta = 1.0007 (SE 0.004), and freeing it moves no state
+  # coefficient by more than 0.03 SE (notebooks/nb_baseline.ipynb, section 2).
+  # The theta_bracket job still fits F and V side by side.
+  theta_free: false
+  # 2026-10-06, decided by the user: psi * oxygen is removed from the weight. On
+  # the log1p table the field marks vessels (AUROC 0.79) but explains nothing
+  # about division beyond cell state: |psi| <= 0.016 per SD at every L0 from 50
+  # to 800 um, and it never beats its rotated or mirrored decoys at L0 >= 100
+  # (notebooks/nb_baseline.ipynb, section 3). The oxygen column stays in the
+  # table, so cells outside the field's tissue mask are still dropped.
+  oxygen: false
 
 init:
   delta: 0.0940                    # e^delta = log(3): threefold rate in cycling
@@ -235,3 +276,8 @@ stability_reps: 20
 # Test 13 sweeps the KNOTS, not df: with explicit knot quantiles configured, df
 # is ignored, so a df sweep refits the identical model. null = h() dropped.
 density_knot_grid: [null, [50], [25, 50, 75], [25, 50, 75, 90]]
+
+# Test 03 along a lambda path (job sim_single_component_path): which weight
+# block runs away as the penalty is relaxed on data with no class structure.
+sim_lambda_grid: [0.0, 1.0, 10.0, 100.0, 1000.0, 10000.0]
+sim_path_reps: 8

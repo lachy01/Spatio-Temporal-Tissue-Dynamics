@@ -4,14 +4,17 @@ Every arm shares one weight block, `eta_state` (spec 1, "shared weight block").
 It is written once here and checked against the production mixture's
 `_logit_pi` to machine precision (V6), so the arms cannot drift apart.
 
-    eta(x) = phi'a + phibar'c + sum_r (phi'U_r)(phibar'V_r) + psi ox + H'h + phi'K H
+    eta(x) = phi'a + phibar'c + sum_r (phi'U_r)(phibar'V_r) [+ psi ox] + H'h + phi'K H
+
+The oxygen term is present only when `psi` is in the parameters, matching the
+mixture's `model.oxygen` switch (off in production since 2026-10-06).
 
 The intercept is NOT part of `eta_state`: in the NB it is not separately
 identified from the technical intercept, and each arm adds exactly one.
 
 Penalty parity (spec 1): the arms carry the production mixture's penalty term
-for term -- `weight_ridge * n / n_reference` on every eta coefficient, plus the
-spec-3.2 conditioning ridge `ridge_tau` on U and V.
+for term -- `weight_ridge * n / n_reference` on every eta coefficient (B through
+`model.b_penalty_terms`), plus its conditioning term weighted by `ridge_tau`.
 """
 
 from __future__ import annotations
@@ -36,28 +39,33 @@ def _jax():
 def eta_state(p, D):
     import jax.numpy as jnp
 
-    return (D["own"] @ p["a"] + D["nbr"] @ p["c"]
-            + jnp.sum((D["own"] @ p["U"]) * (D["nbr"] @ p["V"]), axis=-1)
-            + p["psi"] * D["oxygen"] + D["hbasis"] @ p["h"]
-            + jnp.einsum("ij,jm,im->i", D["own"], p["K"], D["hbasis"]))
+    eta = (D["own"] @ p["a"] + D["nbr"] @ p["c"]
+           + jnp.sum((D["own"] @ p["U"]) * (D["nbr"] @ p["V"]), axis=-1)
+           + D["hbasis"] @ p["h"]
+           + jnp.einsum("ij,jm,im->i", D["own"], p["K"], D["hbasis"]))
+    return eta + p["psi"] * D["oxygen"] if "psi" in p else eta
 
 
-def init_eta(d_own, d_nbr, n_h, rank, rng):
+def init_eta(d_own, d_nbr, n_h, rank, rng, oxygen=False):
     """Zero start, except U and V: `U = V = 0` is a saddle (each block's
     gradient vanishes there), so they start at small random values."""
     import jax.numpy as jnp
 
-    return {"a": jnp.zeros(d_own), "c": jnp.zeros(d_nbr),
-            "U": jnp.asarray(rng.normal(0, 0.01, (d_own, rank))),
-            "V": jnp.asarray(rng.normal(0, 0.01, (d_nbr, rank))),
-            "psi": jnp.asarray(0.0), "h": jnp.zeros(n_h),
-            "K": jnp.zeros((d_own, n_h))}
+    p = {"a": jnp.zeros(d_own), "c": jnp.zeros(d_nbr),
+         "U": jnp.asarray(rng.normal(0, 0.01, (d_own, rank))),
+         "V": jnp.asarray(rng.normal(0, 0.01, (d_nbr, rank))),
+         "h": jnp.zeros(n_h), "K": jnp.zeros((d_own, n_h))}
+    if oxygen:
+        p["psi"] = jnp.asarray(0.0)
+    return p
 
 
 def eta_column_names(p):
     """Ordered names of every eta coefficient, for the V6 parity audit."""
     out = []
     for b in ETA_BLOCKS:
+        if b not in p:
+            continue
         shape = np.shape(np.asarray(p[b]))
         if shape == ():
             out.append(b)
@@ -66,15 +74,20 @@ def eta_column_names(p):
     return out
 
 
-def penalty(p, n, weight_ridge, n_reference, ridge_tau):
+def penalty(p, n, weight_ridge, n_reference, ridge_tau, b_penalty="frobenius"):
     """The production mixture's penalty, term for term (model.loglik)."""
     import jax.numpy as jnp
+    from types import SimpleNamespace
 
-    uv = jnp.sum(p["U"] ** 2) + jnp.sum(p["V"] ** 2)
-    pen = (jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2) + p["psi"] ** 2 + uv
+    from ..mixture.model import b_penalty_terms
+
+    b_pen, cond = b_penalty_terms(p, SimpleNamespace(b_penalty=b_penalty))
+    pen = (jnp.sum(p["a"] ** 2) + jnp.sum(p["c"] ** 2) + b_pen
            + jnp.sum(p["h"] ** 2) + jnp.sum(p["K"] ** 2))
+    if "psi" in p:
+        pen = pen + p["psi"] ** 2
     lam = weight_ridge * (n / n_reference) if n_reference > 0 else weight_ridge
-    return ridge_tau * uv + lam * pen
+    return ridge_tau * cond + lam * pen
 
 
 # --------------------------------------------------------------------------
@@ -83,7 +96,8 @@ def penalty(p, n, weight_ridge, n_reference, ridge_tau):
 def nb_log_mu(p, D):
     import jax.numpy as jnp
 
-    eta = p["b0"] + p["theta"] * D["logN"] + D["area"] @ p["s"] + eta_state(p, D)
+    theta = p["theta"] if "theta" in p else 1.0          # absent = offset (F)
+    eta = p["b0"] + theta * D["logN"] + D["area"] @ p["s"] + eta_state(p, D)
     return jnp.clip(eta, -30.0, 30.0)
 
 
@@ -105,29 +119,34 @@ def nb_logpmf(y, log_mu, log_alpha):
             + r * (jnp.log(r) - jnp.log(r + mu)) + y * (log_mu - jnp.log(r + mu)))
 
 
-def init_nb(D, dispersion, rank, seed):
+def init_nb(D, dispersion, rank, seed, oxygen=None, theta_free=True):
+    """Starting values. `oxygen=None` includes psi only if `D` carries an
+    oxygen column; `theta_free=False` leaves theta out (log N an offset)."""
     import jax.numpy as jnp
 
     rng = np.random.default_rng(seed)
     y = np.asarray(D["y"])
     logN = np.asarray(D["logN"])
-    p = init_eta(D["own"].shape[1], D["nbr"].shape[1], D["hbasis"].shape[1], rank, rng)
+    oxygen = ("oxygen" in D) if oxygen is None else bool(oxygen)
+    p = init_eta(D["own"].shape[1], D["nbr"].shape[1], D["hbasis"].shape[1], rank, rng,
+                 oxygen=oxygen)
     p.update({"b0": jnp.asarray(float(np.log(y.mean() + 1e-9) - logN.mean())),
-              "theta": jnp.asarray(1.0), "s": jnp.zeros(D["area"].shape[1]),
-              "la": jnp.asarray(0.0)})
+              "s": jnp.zeros(D["area"].shape[1]), "la": jnp.asarray(0.0)})
+    if theta_free:
+        p["theta"] = jnp.asarray(1.0)
     if dispersion == "state":
         p["gamma"] = jnp.zeros(D["own"].shape[1])
     return p
 
 
-def nb_objective(D, n, weight_ridge, n_reference, ridge_tau):
+def nb_objective(D, n, weight_ridge, n_reference, ridge_tau, b_penalty="frobenius"):
     """Penalised negative log-likelihood, summed -- the scale the mixture's
     convergence criteria are stated on."""
     import jax.numpy as jnp
 
     def f(p):
         ll = jnp.sum(nb_logpmf(D["y"], nb_log_mu(p, D), nb_log_alpha(p, D)))
-        return -ll + penalty(p, n, weight_ridge, n_reference, ridge_tau)
+        return -ll + penalty(p, n, weight_ridge, n_reference, ridge_tau, b_penalty)
     return f
 
 

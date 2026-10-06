@@ -4,6 +4,8 @@ Pass: the log-likelihood is non-decreasing at every EM iteration to within 1e-8.
 Run at Stage A (the spec's wording) and again at Stage B, where the alternating
 bilinear M-step is the part most likely to break monotonicity.
 """
+import dataclasses
+
 import numpy as np
 import pytest
 from mixture_report import write
@@ -23,7 +25,9 @@ def _run(stage, n, n_iter):
     # production weight_ridge.
     data, _t, sb = simulate_stage_b(n=n, seed=0, d_own=6, d_nbr=8,
                                     weight_ridge=0.0)
-    spec = (sb if stage == "B"
+    # ridge_tau=0: EM's M-steps carry no balancing term (see run_em's guard);
+    # the term never changes B, so the unpenalised cross-check leaves it out
+    spec = (dataclasses.replace(sb, ridge_tau=0.0) if stage == "B"
             else ModelSpec(stage="A", theta_free=True, d_own=0, d_nbr=0, df_area=4))
     ps = poisson_start(data, spec)
     rng = np.random.default_rng(1) if stage == "B" else None

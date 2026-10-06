@@ -28,8 +28,14 @@ def enumerate_tasks(job, cfg):
     mc, ic, nc = cfg["model"], cfg["init"], cfg["inference"]
     if job == "bootstrap":
         return [{"job": job, "rep": r} for r in range(int(nc["n_bootstrap"]))]
-    if job == "cv_penalty":
-        return [{"job": job, "lam": float(lam), "fold": f}
+    if job in ("cv_penalty", "cv_penalty_unwhitened", "cv_penalty_buffered"):
+        # cv_penalty_unwhitened: the same grid with the state blocks left
+        # unwhitened -- the test of state.whiten. cv_penalty_buffered: training
+        # cells within cv_buffer_um of the held-out fold dropped -- the check on
+        # leakage across fold edges.
+        extra = {"cv_penalty": {}, "cv_penalty_unwhitened": {"whiten": False},
+                 "cv_penalty_buffered": {"buffer_um": float(mc.get("cv_buffer_um", 200.0))}}[job]
+        return [{"job": job, "lam": float(lam), "fold": f, **extra}
                 for lam in mc["weight_ridge_grid"]
                 for f in range(int(mc.get("cv_folds", 5)))]
     if job == "cv_rank":
@@ -85,6 +91,12 @@ def enumerate_tasks(job, cfg):
     if job in ("sim_recovery", "sim_null_bilinear", "sim_single_component",
                "sim_size_confound"):
         return [{"job": job, "rep": r} for r in range(int(cfg.get("sim_reps", 20)))]
+    if job == "sim_single_component_path":
+        # Test 03 along a lambda path: on data with no class structure, which
+        # weight block grows as the penalty is relaxed.
+        return [{"job": job, "lam": float(lam), "rep": r}
+                for lam in cfg.get("sim_lambda_grid", [0.0, 1.0, 10.0, 100.0, 1000.0])
+                for r in range(int(cfg.get("sim_path_reps", 8)))]
     raise ValueError(f"unknown job {job!r}")
 
 
@@ -150,7 +162,10 @@ def _summarise(res, data, spec, extra=None, include_params=False):
         "sigma": [float(v) for v in np.atleast_1d(sv)],
         # spec 3.2: B is the identified object, never U or V
         "B": B_matrix(res.params).tolist() if spec.has_state else None,
+        "b_penalty": getattr(spec, "b_penalty", None),
     }
+    if spec.has_state:
+        out.update(_eta_blocks(res.params, data, spec))
     for k in ("a", "c", "psi", "b0", "theta", "h"):
         if k in res.params:
             out[k] = np.asarray(res.params[k]).tolist()
@@ -163,6 +178,34 @@ def _summarise(res, data, spec, extra=None, include_params=False):
     return out
 
 
+def _eta_blocks(p, data, spec):
+    """Each weight block's contribution to the spread of logit(pi) across cells.
+
+    On the logit scale, so blocks are comparable whatever their covariates'
+    scales -- unlike coefficient norms. Tracked along the lambda path, the block
+    whose contribution keeps growing as lambda -> 0 is the one the penalty is
+    restraining (and the honest basis for any differential penalty).
+    """
+    own, nbr = np.asarray(data.own), np.asarray(data.nbr)
+    P = {k: np.asarray(v) for k, v in p.items()}
+    parts = {"own": own @ P["a"], "nbr": nbr @ P["c"],
+             "bilinear": np.sum((own @ P["U"]) * (nbr @ P["V"]), axis=1)}
+    if spec.df_weight > 0:
+        hb = np.asarray(data.hbasis)
+        parts["density"] = hb @ P["h"]
+        if "K" in P:
+            parts["density_by_type"] = np.einsum("ij,jm,im->i", own, P["K"], hb)
+    if "psi" in P:
+        parts["oxygen"] = P["psi"] * np.asarray(data.oxygen)
+    total = sum(parts.values())
+    out = {f"sd_eta_{k}": float(np.std(v)) for k, v in parts.items()}
+    out["sd_eta"] = float(np.std(total))
+    UtU, VtV = P["U"].T @ P["U"], P["V"].T @ P["V"]
+    out["norm_K"] = float(np.linalg.norm(P["K"])) if "K" in P else None
+    out["balance_gap"] = float(np.linalg.norm(UtU - VtV))
+    return out
+
+
 def _run_real(task, cfg, verbose=False, out_dir=None):
     from .basis import build_basis, spec_from_basis
     from .fit import fit_lbfgs, multistart, poisson_start
@@ -170,6 +213,8 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
     from .model import build_data, init_params
 
     job = task["job"]
+    if "whiten" in task:                       # cv_penalty_unwhitened
+        cfg = {**cfg, "state": {**cfg["state"], "whiten": bool(task["whiten"])}}
     df, basis = _load(cfg)
     mc = cfg["model"]
     lam = task.get("lam", mc.get("weight_ridge") or 0.0)
@@ -178,20 +223,38 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
     data = build_data(df, basis, cfg, spec)
     xy = df[["x", "y"]].to_numpy(float)
 
-    if job in ("cv_penalty", "cv_rank"):
+    if job in ("cv_penalty", "cv_penalty_unwhitened", "cv_penalty_buffered", "cv_rank"):
         labels = spatial_blocks(xy, int(cfg["inference"]["n_blocks_target"]))
         folds = block_folds(labels, int(mc.get("cv_folds", 5)))
         f = int(task["fold"])
         tr, te = np.where(folds != f)[0], np.where(folds == f)[0]
+        n_dropped = 0
+        if float(task.get("buffer_um", 0.0)) > 0:
+            from scipy.spatial import cKDTree
+            dist, _ = cKDTree(xy[te]).query(xy[tr], k=1)
+            keep = dist > float(task["buffer_um"])
+            n_dropped = int((~keep).sum())
+            tr = tr[keep]
         best, _ = multistart(data.subset(tr), spec, cfg, n_restarts=2,
                              seed=1000 * f, verbose=verbose)
         import jax.numpy as jnp
 
         from .model import loglik_terms
-        held = float(jnp.sum(loglik_terms(best.params, data.subset(te).as_jax(), spec)))
+        ll_te = np.asarray(loglik_terms(best.params, data.subset(te).as_jax(), spec))
+        held = float(ll_te.sum())
+        # Held-out log-likelihood per spatial block: the blocks, not the five
+        # folds, are the units the selection rule resamples (hpc/gather.py), so
+        # its uncertainty reflects ~50 independent-ish regions per fold rather
+        # than 4 degrees of freedom.
+        bl = labels[te]
+        ub = np.unique(bl)
+        by_block = {int(b): [float(ll_te[bl == b].sum()), int((bl == b).sum())] for b in ub}
         return {**task, **_summarise(best, data.subset(tr), spec,
                                      {"heldout_loglik_per_cell": held / len(te),
-                                      "n_train": len(tr), "n_test": len(te)})}
+                                      "heldout_by_block": by_block,
+                                      "n_train": len(tr), "n_test": len(te),
+                                      "n_buffer_dropped": n_dropped,
+                                      "whiten": bool(cfg["state"].get("whiten", False))})}
 
     if job == "multistart":
         r = int(task["restart"])
@@ -357,10 +420,11 @@ def _run_sim(task, cfg):
 
     rep = int(task["rep"])
     n = int(cfg.get("sim_n", 100_000))
-    lam = float(cfg["model"].get("weight_ridge") or 0.0)
+    lam = float(task.get("lam", cfg["model"].get("weight_ridge") or 0.0))
     kw = {"sim_recovery": {},
           "sim_null_bilinear": {"b_scale": 0.0},
           "sim_single_component": {"single_component": True},
+          "sim_single_component_path": {"single_component": True},
           "sim_size_confound": {"wiggly_area_df": 10}}[task["job"]]
     data, truth, spec = simulate_stage_b(n=n, seed=rep, d_own=8, d_nbr=8,
                                          fit_area_df=int(cfg["model"]["area_spline_df"]),

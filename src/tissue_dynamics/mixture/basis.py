@@ -51,7 +51,7 @@ class _Spline:
     the training `x` and reused, as spec 3.1 requires.
     """
 
-    def __init__(self, x, df, tol=1e-8, knot_quantiles=None):
+    def __init__(self, x, df, tol=1e-8, knot_quantiles=None, scale=False):
         """`knot_quantiles` places interior knots explicitly, e.g. [25, 50, 75, 90].
 
         Worth doing deliberately rather than relying on `df`. `cr` is a NATURAL
@@ -96,13 +96,17 @@ class _Spline:
         rank = int((np.abs(np.diag(r)) > tol * abs(r[0, 0])).sum())
         self._keep = np.sort(piv[:rank])
         self.n_cols = int(rank)
+        # `scale`: divide each kept column by its training SD, so a ridge on the
+        # coefficients is a ridge on effects per SD of each basis column -- the
+        # same scale the whitened state blocks are on (see build_basis).
+        self._sd = Bc[:, self._keep].std(0) if scale else np.ones(rank)
 
     def __call__(self, x):
         import patsy
 
         B = np.asarray(patsy.build_design_matrices(
             [self._di], {"x": np.asarray(x, dtype=float)}, return_type="matrix")[0])
-        return (B - self._mean)[:, self._keep]
+        return (B - self._mean)[:, self._keep] / self._sd
 
 
 @dataclass
@@ -126,6 +130,10 @@ class FrozenBasis:
     cond_own: float
     cond_nbr: float
     mean_log_density: float = 0.0
+    # Whitening (state.whiten): W_* = Sigma^-1/2 of the projected block, already
+    # folded into Q_own / Q_nbr, which are then Q0 W. Kept for reporting.
+    W_own: np.ndarray | None = None
+    W_nbr: np.ndarray | None = None
 
     @property
     def n_area(self):
@@ -222,6 +230,27 @@ def build_basis(df, cfg, verbose=True):
     else:
         say(f"  rowsum not constant (sd {rowsum.std():.3e}) -> full dimension (spec 3.1b)")
 
+    # Whitening. The weight model's ridge is only commensurate across blocks if
+    # their covariates share a scale, and they do not: on the log1p table the
+    # projected own coordinates have SD ~0.29, the neighbour means ~0.11, and
+    # their products -- B's covariates -- ~0.03, so one lambda shrank each entry
+    # of B ~100x harder per coefficient than `a` (10% against 0.1% at
+    # lambda = 10). Whitening each block (Sigma^-1/2 of its projected
+    # coordinates) puts every own and neighbour direction, and so every entry of
+    # B, on a per-SD scale. It is a reparameterisation: unpenalised fits are
+    # unchanged, and effects map back to cell types through Q = Q0 W exactly as
+    # before. It also matches the simulations, whose covariates are N(0, 1).
+    W_own = W_nbr = None
+    if sc.get("whiten", False):
+        def _inv_sqrt(X):
+            w, E = np.linalg.eigh(np.cov(X, rowvar=False))
+            return (E / np.sqrt(w)) @ E.T
+        W_own, W_nbr = _inv_sqrt(CO), _inv_sqrt(CN)
+        CO, CN = CO @ W_own, CN @ W_nbr
+        Q_own = W_own if Q_own is None else Q_own @ W_own
+        Q_nbr = W_nbr if Q_nbr is None else Q_nbr @ W_nbr
+        say("  own and neighbour blocks whitened (unit variance, uncorrelated)")
+
     cond_own = float(np.linalg.cond(np.column_stack([np.ones(len(CO)), CO])))
     cond_nbr = float(np.linalg.cond(np.column_stack([np.ones(len(CN)), CN])))
     say(f"  condition numbers: own {cond_own:.3g}, neighbour {cond_nbr:.3g}")
@@ -235,7 +264,8 @@ def build_basis(df, cfg, verbose=True):
     adata_density = df["density"].to_numpy(float)
     area_spline = _Spline(np.log(df["area"].to_numpy(float)), mc["area_spline_df"])
     dw = _Spline(np.log(df["density"].to_numpy(float)), mc["weight_density_spline_df"],
-                 knot_quantiles=mc.get("weight_density_knot_quantiles"))
+                 knot_quantiles=mc.get("weight_density_knot_quantiles"),
+                 scale=bool(mc.get("scale_weight_splines", False)))
     dg = _Spline(np.log(df["density"].to_numpy(float)), mc["background_spline_df"])
 
     # spec 2.2: orthogonalise log N against the area spline only if strongly collinear
@@ -259,10 +289,11 @@ def build_basis(df, cfg, verbose=True):
         density_weight_spline=dw, density_bg_spline=dg,
         logN_ortho_coef=coef, logN_ortho_r2=r2,
         cond_own=cond_own, cond_nbr=cond_nbr,
-        mean_log_density=float(np.log(adata_density).mean()))
+        mean_log_density=float(np.log(adata_density).mean()),
+        W_own=W_own, W_nbr=W_nbr)
 
 
-def spec_from_basis(basis, cfg, stage="B", theta_free=True, weight_ridge=0.0,
+def spec_from_basis(basis, cfg, stage="B", theta_free=None, weight_ridge=0.0,
                     rank=None, n_reference=None):
     """Build a `ModelSpec` whose column counts match this basis.
 
@@ -273,12 +304,17 @@ def spec_from_basis(basis, cfg, stage="B", theta_free=True, weight_ridge=0.0,
     from .model import ModelSpec
 
     mc = cfg["model"]
+    if theta_free is None:                 # production setting, from the config
+        theta_free = bool(mc.get("theta_free", True))
+    b_pen = str(mc.get("b_penalty", "nuclear"))
+    tau = float(mc["balance_tau"] if b_pen == "frobenius" else mc["ridge_tau"])
     return ModelSpec(
         stage=stage, rank=int(mc["rank"] if rank is None else rank),
         theta_free=bool(theta_free), d_own=basis.d_own, d_nbr=basis.d_nbr,
         df_area=basis.n_area, df_weight=basis.n_weight, df_bg=basis.n_bg,
-        ridge_tau=float(mc["ridge_tau"]), weight_ridge=float(weight_ridge),
+        ridge_tau=tau, weight_ridge=float(weight_ridge), b_penalty=b_pen,
         density_interaction=bool(mc.get("density_interaction", False)),
         density_interaction_spline=bool(mc.get("density_interaction_spline", False)),
         n_reference=int(mc.get("weight_ridge_n_reference", 0)
-                        if n_reference is None else n_reference))
+                        if n_reference is None else n_reference),
+        oxygen=bool(mc.get("oxygen", True)))

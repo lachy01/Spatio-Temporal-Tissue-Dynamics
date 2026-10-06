@@ -10,8 +10,9 @@ are the ones being compared:
               state, free log library size, an area spline and a density
               spline, all in the mean; one constant dispersion.
   nb_matched  every covariate the mixture uses -- including the rank-2 bilinear
-              term, oxygen and the per-type density curves -- placed in the NB
-              mean. Separates "richer covariates" from "mixture likelihood".
+              term and the per-type density curves (and oxygen and a free theta
+              when the mixture has them) -- placed in the NB mean. Separates
+              "richer covariates" from "mixture likelihood".
   mixture     the fitted Stage B mixture, loaded from point_estimate.json.
 
 Likelihoods are compared on the DATA term only. The mixture estimate is
@@ -70,28 +71,35 @@ def _nb_logpmf(y, mu, log_alpha):
 
 
 def _nb_logmu(p, D, matched):
-    eta = p["b0"] + p["theta"] * D["logN"] + D["area"] @ p["s"]
+    theta = p["theta"] if "theta" in p else 1.0
+    eta = p["b0"] + theta * D["logN"] + D["area"] @ p["s"]
     eta = eta + D["own"] @ p["a"] + D["nbr"] @ p["c"] + D["hbasis"] @ p["h"]
     if matched:
         eta = (eta + jnp.sum((D["own"] @ p["U"]) * (D["nbr"] @ p["V"]), axis=-1)
-               + p["psi"] * D["oxygen"]
                + jnp.einsum("ij,jm,im->i", D["own"], p["K"], D["hbasis"]))
+        if "psi" in p:
+            eta = eta + p["psi"] * D["oxygen"]
     return jnp.clip(eta, -30.0, 30.0)
 
 
-def fit_nb(D, matched, maxiter=20000, seed=0):
+def fit_nb(D, matched, maxiter=20000, seed=0, theta_free=True):
+    """`matched` follows the mixture: oxygen only if `D` carries it, and
+    `theta_free` as the mixture's spec. nb_prev keeps its free theta."""
     rng = np.random.default_rng(seed)
     d_own, d_nbr = D["own"].shape[1], D["nbr"].shape[1]
     n_h, n_s = D["hbasis"].shape[1], D["area"].shape[1]
     p = {"b0": jnp.asarray(float(np.log(np.mean(np.asarray(D["y"]))))),
-         "theta": jnp.asarray(1.0), "s": jnp.zeros(n_s), "a": jnp.zeros(d_own),
+         "s": jnp.zeros(n_s), "a": jnp.zeros(d_own),
          "c": jnp.zeros(d_nbr), "h": jnp.zeros(n_h), "log_alpha": jnp.asarray(0.0)}
+    if theta_free or not matched:
+        p["theta"] = jnp.asarray(1.0)
     if matched:
         # U = V = 0 is a saddle (each block's gradient vanishes), so start small
         p["U"] = jnp.asarray(rng.normal(0, 0.01, (d_own, 2)))
         p["V"] = jnp.asarray(rng.normal(0, 0.01, (d_nbr, 2)))
-        p["psi"] = jnp.asarray(0.0)
         p["K"] = jnp.zeros((d_own, n_h))
+        if "oxygen" in D:
+            p["psi"] = jnp.asarray(0.0)
 
     def nll(q):
         return -jnp.sum(_nb_logpmf(D["y"], jnp.exp(_nb_logmu(q, D, matched)),
@@ -199,7 +207,8 @@ def main():
           f"(penalised objective {pe['loglik']:,.2f})")
 
     # ---- NB fits ---------------------------------------------------------
-    fits = {"nb_prev": fit_nb(D, matched=False), "nb_matched": fit_nb(D, matched=True)}
+    fits = {"nb_prev": fit_nb(D, matched=False),
+            "nb_matched": fit_nb(D, matched=True, theta_free=spec.theta_free)}
     fits["mixture"] = dict(ll=ll_mix, k=k_mix, converged=bool(pe["converged"]),
                            ll_i=ll_mix_i)
 
