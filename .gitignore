@@ -232,3 +232,6 @@ logs/
 # Large regenerable outputs (rebuild in minutes from the scripts that write them)
 outputs/division_classifier/labels.parquet
 outputs/spatial/nb_fits.npz
+outputs/division_classifier/**/labels.parquet
+outputs/division_classifier/**/oof_nb.parquet
+outputs/hpc_spanorm/

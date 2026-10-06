@@ -155,6 +155,8 @@ def build_table(cfg, verbose=True):
     say(f"reading PhiSpace from {dc['phi_csv']} ...")
     P = pd.read_csv(dc.get("phi_csv", dc.get("phi_minor_csv")), index_col=0)
     P.index = P.index.astype(str)
+    if dc.get("phi_columns"):
+        P = P[list(dc["phi_columns"])]
     phi_names = list(P.columns)
     say(f"  {len(phi_names)} components: {phi_names if len(phi_names) <= 12 else '...'}")
 
@@ -171,8 +173,20 @@ def build_table(cfg, verbose=True):
     ad.obsm["phi"] = Phi
     ad.uns["phi_names"] = phi_names
     build_adjacency(ad, radius=float(dc["neighbour_radius_um"]))
+    # Shallow cells' scores are noise, so they do not contribute to anyone's
+    # neighbour average: zero their columns of the adjacency before it is
+    # row-normalised. They still count towards density below.
+    min_lib = int(dc.get("min_library_size", 0))
+    typed = df["N"].to_numpy() >= min_lib
+    if min_lib > 0:
+        import scipy.sparse as _sp
+        A = ad.obsp["spatial_connectivity"]
+        ad.obsp["spatial_connectivity"] = (A @ _sp.diags(typed.astype(float))).tocsr()
+        say(f"  neighbour average over cells with N >= {min_lib} "
+            f"({100 * typed.mean():.1f}% of cells)")
     average_neighbors(ad)
     nbr = np.asarray(ad.obsm["phi_bar"], dtype=float)
+    n_isolated = int((np.asarray(ad.obsp["spatial_connectivity"].sum(1)).ravel() == 0).sum())
 
     say(f"local density at radius {dc['density_radius_um']} um ...")
     compute_local_density(ad, radius=float(dc["density_radius_um"]))
@@ -182,11 +196,18 @@ def build_table(cfg, verbose=True):
     # excluding lymphatic LYVE1), which exists only in the celltype_minor table.
     # That table is stale, so the field inherits its staleness -- but it is the
     # same field validated in notebook sections 16-20, so results stay comparable.
-    say("oxygen field (blood-endothelium source from the celltype_minor table) ...")
     oc = cfg["oxygen"]
-    E = pd.read_csv(dc["phi_minor_csv"], index_col=0)
+    if oc.get("source", "minor") == "major":
+        say("oxygen field (Endothelial score from the major table, typed cells only) ...")
+        E = pd.DataFrame({"Endothelial": Phi[:, phi_names.index("Endothelial")]},
+                         index=df["cell_id"].to_numpy())
+        E.loc[~typed, "Endothelial"] = np.nan          # untyped cells are not sources
+        blood_cols = ["Endothelial"]
+    else:
+        say("oxygen field (blood-endothelium source from the celltype_minor table) ...")
+        E = pd.read_csv(dc["phi_minor_csv"], index_col=0)
+        blood_cols = [c for c in oc["blood_endothelium"] if c in E.columns]
     E.index = E.index.astype(str)
-    blood_cols = [c for c in oc["blood_endothelium"] if c in E.columns]
     # The minor table is compositional (rowsums constant), so SUMMING the three
     # blood-endothelial columns is not a valid "total endothelium": the rowsum
     # constraint makes them anti-correlated, and the sum ends up correlating
@@ -232,6 +253,11 @@ def build_table(cfg, verbose=True):
     for j, nm in enumerate(phi_names):
         df[f"nbr_phi_{j:02d}"] = nbr[:, j]
     df.attrs["phi_names"] = phi_names
+    if min_lib > 0:
+        say(f"dropping {int((~typed).sum()):,} analysis cells with N < {min_lib} "
+            f"({100 * (~typed).mean():.1f}%); {n_isolated:,} cells have no typed neighbour")
+        df = df.loc[typed].reset_index(drop=True)
+        df.attrs["phi_names"] = phi_names
     df.attrs["tirosh_genes"] = tirosh
     df.attrs["tirosh_library_share"] = float(y_count.sum() / total.sum())
     say(f"assembled {len(df):,} cells x {df.shape[1]} columns")

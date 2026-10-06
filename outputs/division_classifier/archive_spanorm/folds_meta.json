@@ -1,0 +1,30 @@
+{
+  "sha256": "fd4a171bfec35c3df348e3e562537a0398ec81bbe8ccb083cbfac7e2c2a3df3e",
+  "fold_sizes_train_test": {
+    "0": [
+      540272,
+      138613
+    ],
+    "1": [
+      552351,
+      126534
+    ],
+    "2": [
+      535789,
+      143096
+    ],
+    "3": [
+      540469,
+      138416
+    ],
+    "4": [
+      546659,
+      132226
+    ]
+  },
+  "matches_mixture_cv": true,
+  "sklearn": "1.9.0",
+  "numpy": "2.4.6",
+  "python": "3.12.3",
+  "host": "spartan-bm176.hpc.unimelb.edu.au"
+}

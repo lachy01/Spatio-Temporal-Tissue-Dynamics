@@ -1,18 +1,18 @@
 ### Data contract (spec section 1)
 
-- cells: **678,885** (dropped: 0 for `N == 0`, 1321 outside the oxygen tissue mask)
+- cells: **561,897** (dropped: 0 for `N == 0`, 2107 outside the oxygen tissue mask)
 - Tirosh genes present in panel: **53**
 - Tirosh share of total library: **0.83%**
-- `y_count` zero fraction: **68.0%**
-- phi rowsum: mean -7.0000, sd 5.952e-15 -> constant: **True** (spec 3.1 branch (a), Q projection)
-- `corr(log N, log area)` = **0.6560** -> orthogonalisation applied: **False**
+- `y_count` zero fraction: **62.2%**
+- phi rowsum: mean -7.0000, sd 3.411e-15 -> constant: **True** (spec 3.1 branch (a), Q projection)
+- `corr(log N, log area)` = **0.7072** -> orthogonalisation applied: **False**
 - density radius 80.0 um; neighbour radius 80.0 um
 
 `y_count` marginal:
 
 | count | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21+ |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| cells | 461,525 | 118,113 | 42,076 | 18,960 | 10,508 | 6,291 | 4,184 | 2,928 | 2,157 | 1,757 | 1,389 | 1,162 | 1,005 | 781 | 733 | 651 | 565 | 517 | 432 | 393 | 302 | 2,456 |
+| cells | 349,427 | 113,597 | 41,729 | 18,936 | 10,503 | 6,289 | 4,184 | 2,929 | 2,157 | 1,758 | 1,389 | 1,162 | 1,007 | 781 | 733 | 651 | 565 | 517 | 432 | 393 | 302 | 2,456 |
 
 **Deviations from spec:**
 

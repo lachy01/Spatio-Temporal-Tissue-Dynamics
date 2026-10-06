@@ -161,9 +161,18 @@ def main():
         Ds = data.subset(idx).as_jax() if idx is not None else D
         m = n if idx is None else len(idx)
         say(f"  {arm} {tag} (n = {m:,}, seed {seed})")
-        p0 = arms.init_nb(Ds, ARMS[arm], spec.rank, seed)
         f = arms.nb_objective(Ds, m, spec.weight_ridge, spec.n_reference, spec.ridge_tau)
-        p, info = arms.minimise(f, p0, say=say)
+        # Retry from the next seed if Newton cannot finish. The optimum is unique
+        # (two seeds agree to 1e-10 on all cells), and on 2026-10-05 the one V1
+        # failure -- NB-c, fold 4, seed 0, stuck at |g| 2.3e-3 -- had already
+        # reached the same objective that seeds 1 and 2 converged to.
+        for attempt in range(3):
+            p0 = arms.init_nb(Ds, ARMS[arm], spec.rank, seed + 100 * attempt)
+            p, info = arms.minimise(f, p0, say=say)
+            if info["converged"]:
+                break
+            say(f"      not converged; retrying from seed {seed + 100 * (attempt + 1)}")
+        info["attempts"] = attempt + 1
         ll = float(jnp.sum(arms.nb_logpmf(Ds["y"], arms.nb_log_mu(p, Ds),
                                           arms.nb_log_alpha(p, Ds))))
         la = np.asarray(arms.nb_log_alpha(p, Ds)) * np.ones(m)
@@ -172,6 +181,7 @@ def main():
                      "objective": info["f"], "grad_inf": info["grad_inf"],
                      "L-BFGS iters": info["lbfgs_iters"], "Newton iters": info["newton_iters"],
                      "converged (V1)": "pass" if info["converged"] else "FAIL",
+                     "attempts": info["attempts"],
                      "theta": float(p["theta"]),
                      "alpha": (f"{np.exp(la[0]):.4f}" if ARMS[arm] == "const" else
                                f"{np.exp(np.percentile(la, 5)):.3f}-"
@@ -251,8 +261,8 @@ reproduces the production mixture's logit to {v6_num:.1e} on every cell. **pass*
 ### V1 -- convergence
 
 Criterion: |f_t - f_(t-1)| < 1e-9 |f_(t-1)| and ||grad||_inf < 1e-5, on the
-summed penalised objective. **{'pass' if v1_ok else 'FAIL'}** on all {len(fits)}
-fits. sd(eta) > 20 flagged: **{'yes' if any_flag else 'none'}**.
+summed penalised objective. **{'pass' if v1_ok else 'FAIL'}**: {int((fits['converged (V1)'] == 'pass').sum())}
+of {len(fits)} fits converged. sd(eta) > 20 flagged: **{'yes' if any_flag else 'none'}**.
 
 {md_table(fits.drop(columns=['min Hessian eig']))}
 

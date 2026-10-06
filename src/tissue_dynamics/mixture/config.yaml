@@ -6,7 +6,23 @@ data:
   # celltype_major, 9 components -- the CURRENT table (regenerated after the
   # normalisation was updated). Rowsums are constant at -7, so spec 3.1
   # branch (a) applies: sum-to-zero projection to 8 dimensions.
-  phi_csv: data/phispace_normalised.csv
+  # 2026-10-06: replaced. The SpaNorm/SCTransform-based scores
+  # (phispace_normalised.csv) were ~86% depth: a marker-gene test showed deep
+  # cells labelled Plasmablasts/Cancer Epithelial whatever their lineage. This
+  # PhiSpace refit on log1p-normalised expression has 3.5% of score variance
+  # explained by depth and 80-97% marker agreement at every depth. Its raw
+  # score columns sum to -7 per cell, as before; `_norm` and `lib_size_G` are
+  # not used. See outputs/division_classifier/report.md.
+  phi_csv: data/phispace_scores_major_lognorm.csv
+  phi_columns: [Endothelial, CAFs, PVL, B-cells, T-cells, Myeloid, Normal Epithelial,
+                Plasmablasts, Cancer Epithelial]
+  # Cells below this library size (N, excluding the Tirosh genes and blocklist)
+  # are not typed reliably: their labels default to Endothelial (31% at N <= 5,
+  # 16% at N 6-10, against 6-13% above) and shallow 'endothelial' cells are no
+  # closer to confidently typed endothelium than any shallow cell. They are
+  # dropped as analysis cells and left out of the neighbour-state average, but
+  # still counted in local density (they are real cells). Removes ~17% of cells.
+  min_library_size: 10
   # celltype_minor, 29 components, same normalisation as the major table
   # (compositional, rowsums constant at -27). Used only as the blood-endothelium
   # source for the oxygen field: the major table's single "Endothelial" column
@@ -66,6 +82,13 @@ oxygen:
   # keep the top `source_quantile` of cells as sources, matching the ~2.6% the
   # field was originally validated with.
   source_quantile: 0.026
+  # 2026-10-06: the source is the new major-table Endothelial score, over cells
+  # with N >= min_library_size. The previous source, the blood-endothelial
+  # columns of phispace_minor_normalised.csv, came from the SpaNorm run whose
+  # scores track depth at |r| ~ 0.92 -- so it partly marked shallow cells, not
+  # vessels. Deviation: the major column also includes lymphatic endothelium,
+  # which the minor-table source excluded. `major` | `minor`.
+  source: major
 
 model:
   # s(log area) in the component rates. Raised from the spec's 4 on evidence:
