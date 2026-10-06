@@ -41,9 +41,27 @@ class PortraitModel:
 
     @classmethod
     def from_fit(cls, params, basis):
+        """Lift the weight model out of a fit, with every neighbour term
+        re-expressed in OWN-state coordinates.
+
+        The portrait describes a neighbourhood by its composition `phibar = wbar A`
+        in own-state coordinates. The fit reads neighbours in their own
+        coordinates -- centred, projected and whitened separately, and split
+        into contact and regional blocks. `basis.nbr_from_own()` gives the exact
+        affine map `nbr = offset + phibar M` under the mean-field closure that
+        every neighbourhood block has the same composition, and it is folded in:
+
+            c' = M c        B' = B M'        a' = a + B offset     a0' = a0 + offset . c
+
+        so `eta` below is the fit's own linear predictor. Before this, phibar was
+        passed to c and B directly, which was exact only while own and
+        neighbour coordinates coincided (no whitening, a single disc).
+        """
         p = {k: np.asarray(v, dtype=float) for k, v in params.items()}
-        return cls(a0=float(p["a0"]), a=p["a"], c=p["c"],
-                   B=p["U"] @ p["V"].T, h=p.get("h", np.zeros(0)),
+        off, M = basis.nbr_from_own()
+        B = p["U"] @ p["V"].T
+        return cls(a0=float(p["a0"] + off @ p["c"]), a=p["a"] + B @ off, c=M @ p["c"],
+                   B=B @ M.T, h=p.get("h", np.zeros(0)),
                    K=p.get("K"), psi=float(p.get("psi", 0.0)),
                    density_basis=basis.density_weight_spline,
                    mean_log_density=float(basis.mean_log_density))
@@ -145,7 +163,8 @@ def build_archetypes(df, basis, model=None, pi_hat=None):
     own = basis.own(df)
     arche = df["archetype"].astype(str).to_numpy()
     A = np.vstack([own[arche == nm].mean(0) for nm in names])
-    nbr = basis.nbr(df)
+    # the 80 um disc's composition, in the same own-state coordinates as A
+    nbr = basis.disc_in_own(df)
     W = simplex_loadings(nbr, A)
     recon = W @ A
     ss = np.sum((nbr - nbr.mean(0)) ** 2)

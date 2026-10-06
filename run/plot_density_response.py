@@ -44,7 +44,7 @@ def main():
     arch, _W = build_archetypes(df, basis)
     dens = df["density"].to_numpy(float)
     arche = df["archetype"].astype(str).to_numpy()
-    pbar = basis.nbr(df).mean(0)
+    pbar = basis.disc_in_own(df).mean(0)          # mean composition, own-state coordinates
     ox = float(np.median(df["oxygen"]))
     grid = np.geomspace(np.percentile(dens, 1), np.percentile(dens, 99), 300)
     med = float(np.median(dens))

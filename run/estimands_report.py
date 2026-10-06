@@ -49,7 +49,11 @@ def main():
     Q = basis.Q_nbr
 
     own = basis.own(df)                     # projected, centred
-    nbr_raw = df[[f"nbr_phi_{j:02d}" for j in range(len(names))]].to_numpy(float)
+    # the weight model's neighbour columns, in its order: the 80 um disc, or
+    # contact then regional when state.neighbourhood is "split"
+    nbr_cols = basis.nbr_cols or [f"nbr_phi_{j:02d}" for j in range(len(names))]
+    nbr_raw = df[nbr_cols].to_numpy(float)
+    nbr_names = list(basis.nbr_names)
     delta = np.percentile(nbr_raw, 75, axis=0) - np.percentile(nbr_raw, 25, axis=0)
 
     boot = [json.load(open(f)) for f in sorted(glob.glob("outputs/hpc/bootstrap/*.json"))]
@@ -73,13 +77,13 @@ def main():
 
     print(f"=== spec 8.2: odds ratio of cycling per IQR of each neighbour component ===")
     print("rows = own-state archetype, columns = neighbourhood component\n")
-    tab = pd.DataFrame({a: point[a] for a in arche_list}, index=names).T
+    tab = pd.DataFrame({a: point[a] for a in arche_list}, index=nbr_names).T
     print(tab.round(3).to_string())
 
     lo = pd.DataFrame({a: np.percentile([r[a] for r in reps], 2.5, axis=0)
-                       for a in arche_list}, index=names).T
+                       for a in arche_list}, index=nbr_names).T
     hi = pd.DataFrame({a: np.percentile([r[a] for r in reps], 97.5, axis=0)
-                       for a in arche_list}, index=names).T
+                       for a in arche_list}, index=nbr_names).T
     sig = (lo > 1.0) | (hi < 1.0)
     print(f"\nentries whose 95% CI excludes 1: {int(sig.to_numpy().sum())} of {sig.size}")
 

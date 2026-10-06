@@ -97,6 +97,12 @@ def enumerate_tasks(job, cfg):
         return [{"job": job, "lam": float(lam), "rep": r}
                 for lam in cfg.get("sim_lambda_grid", [0.0, 1.0, 10.0, 100.0, 1000.0])
                 for r in range(int(cfg.get("sim_path_reps", 8)))]
+    if job == "sim_single_component_path_full":
+        # The same at the real sample size: invented structure shrinks with n,
+        # so the n = 100,000 path overstates what the full-table fit risks.
+        return [{"job": job, "lam": float(lam), "rep": r, "n": int(cfg.get("sim_full_n", 561897))}
+                for lam in cfg.get("sim_full_lambda_grid", [30.0, 100.0, 300.0, 1000.0, 3000.0])
+                for r in range(int(cfg.get("sim_full_reps", 4)))]
     raise ValueError(f"unknown job {job!r}")
 
 
@@ -419,14 +425,18 @@ def _run_sim(task, cfg):
     from .simulate import simulate_stage_b
 
     rep = int(task["rep"])
-    n = int(cfg.get("sim_n", 100_000))
+    n = int(task.get("n", cfg.get("sim_n", 100_000)))
+    # the simulated neighbour block is as wide as the real one: 8 projected
+    # coordinates for the disc, 16 for the contact + regional split
+    d_nbr = 16 if cfg["state"].get("neighbourhood", "disc") == "split" else 8
     lam = float(task.get("lam", cfg["model"].get("weight_ridge") or 0.0))
     kw = {"sim_recovery": {},
           "sim_null_bilinear": {"b_scale": 0.0},
           "sim_single_component": {"single_component": True},
           "sim_single_component_path": {"single_component": True},
+          "sim_single_component_path_full": {"single_component": True},
           "sim_size_confound": {"wiggly_area_df": 10}}[task["job"]]
-    data, truth, spec = simulate_stage_b(n=n, seed=rep, d_own=8, d_nbr=8,
+    data, truth, spec = simulate_stage_b(n=n, seed=rep, d_own=8, d_nbr=d_nbr,
                                          fit_area_df=int(cfg["model"]["area_spline_df"]),
                                          **kw)
     spec = dataclasses.replace(spec, weight_ridge=lam)

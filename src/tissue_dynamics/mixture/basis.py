@@ -134,6 +134,11 @@ class FrozenBasis:
     # folded into Q_own / Q_nbr, which are then Q0 W. Kept for reporting.
     W_own: np.ndarray | None = None
     W_nbr: np.ndarray | None = None
+    # Neighbour block layout (state.neighbourhood): the table columns it reads,
+    # in order, and [(block name, width in model coordinates)]. None = the
+    # single 80 um disc (nbr_phi_*), as before the split.
+    nbr_cols: list | None = None
+    nbr_blocks: list | None = None
 
     @property
     def n_area(self):
@@ -162,10 +167,56 @@ class FrozenBasis:
         return X if self.Q_own is None else X @ self.Q_own
 
     def nbr(self, df):
-        """Centred (and, if needed, projected) neighbour-state matrix `phibar~`."""
-        X = df[[f"nbr_phi_{j:02d}" for j in range(len(self.phi_names))]].to_numpy(float)
-        X = X - self.m_nbr
+        """Centred (and, if needed, projected) neighbour-state matrix `phibar~`.
+
+        With the split neighbourhood this is [contact | regional], each block
+        centred, projected and whitened on its own (Q_nbr is block-diagonal).
+        """
+        cols = self.nbr_cols or [f"nbr_phi_{j:02d}" for j in range(len(self.phi_names))]
+        X = df[cols].to_numpy(float) - self.m_nbr
         return X if self.Q_nbr is None else X @ self.Q_nbr
+
+    def to_own(self, raw):
+        """Own-state coordinates of raw (n, d) compositions, e.g. a neighbourhood mean."""
+        X = np.asarray(raw, dtype=float)[:, self.own_cols] - self.m_own
+        return X if self.Q_own is None else X @ self.Q_own
+
+    def disc_in_own(self, df):
+        """The 80 um disc's mean state (`nbr_phi_*`) in own-state coordinates.
+
+        The phase portrait's neighbourhood composition: its state variable
+        n * wbar lives on that disc, whatever the weight model's neighbour block.
+        """
+        d = len(self.phi_names)
+        return self.to_own(df[[f"nbr_phi_{j:02d}" for j in range(d)]].to_numpy(float))
+
+    def nbr_from_own(self):
+        """`(offset, M)` such that the neighbour design is `offset + z @ M`
+        for a cell whose every neighbourhood block has the mean state with
+        own-state coordinates `z`.
+
+        Every map involved is affine -- raw state = m_own + z pinv(Q_own), and
+        block b's design = (raw - m_b) Q_b -- so this is exact. The phase
+        portrait uses it with the mean-field closure that contact and regional
+        neighbourhoods share one composition, and folds it into c and B so the
+        whole weight model reads own-state coordinates.
+        """
+        d = len(self.phi_names)
+        if len(self.own_cols) != d:
+            raise NotImplementedError("own-state coordinates drop components, so a "
+                                      "neighbourhood composition cannot be mapped "
+                                      "back to raw scores")
+        P = np.eye(d) if self.Q_own is None else np.linalg.pinv(self.Q_own)
+        Qn = np.eye(len(self.m_nbr)) if self.Q_nbr is None else self.Q_nbr
+        widths = [w for _, w in self.nbr_blocks] if self.nbr_blocks else [Qn.shape[1]]
+        offs, Ms, c0 = [], [], 0
+        for b, w in enumerate(widths):
+            rows = slice(b * d, (b + 1) * d)
+            Qb = Qn[rows, c0:c0 + w]                               # this block's columns
+            offs.append((self.m_own - self.m_nbr[rows]) @ Qb)
+            Ms.append(P @ Qb)
+            c0 += w
+        return np.concatenate(offs), np.hstack(Ms)
 
     def log_area_basis(self, df):
         return self.area_spline(np.log(df["area"].to_numpy(float)))
@@ -191,6 +242,11 @@ class FrozenBasis:
         return json.dumps(d, indent=2, default=str)
 
 
+def _block_diag(mats):
+    from scipy.linalg import block_diag
+    return block_diag(*mats)
+
+
 def build_basis(df, cfg, verbose=True):
     """Fit every frozen constant on the full data (spec 3.1). Returns FrozenBasis."""
     say = (lambda *a: print(*a, flush=True)) if verbose else (lambda *a: None)
@@ -205,27 +261,46 @@ def build_basis(df, cfg, verbose=True):
     own_cols = np.array([j for j, n in enumerate(phi_names) if n not in cyc])
     own_names = [phi_names[j] for j in own_cols]
     nbr_cyc = set(sc["cycling_archetypes"]) if sc["drop_cycling_from_neighbour"] else set()
-    nbr_names = [n for n in phi_names if n not in nbr_cyc]
-    if len(nbr_names) != d:
+    base_names = [n for n in phi_names if n not in nbr_cyc]
+    if len(base_names) != d:
         raise NotImplementedError("dropping cycling axes from the neighbour block "
                                   "is configured but not implemented; the neighbour "
                                   "block is built over all phi_names")
+    # The neighbour block's layout. "disc": the 80 um mean (nbr_phi_*), as
+    # before. "split": contact (0-15 um, nbrc_phi_*) and regional (15-80 um,
+    # nbrr_phi_*) means side by side, each with its own c and rows of V.
+    structure = sc.get("neighbourhood", "disc")
+    layout = {"disc": [("disc", "nbr_phi_")],
+              "split": [("contact", "nbrc_phi_"), ("regional", "nbrr_phi_")]}.get(structure)
+    if layout is None:
+        raise ValueError(f"state.neighbourhood must be 'disc' or 'split', not {structure!r}")
+    nbr_cols = [f"{pre}{j:02d}" for _, pre in layout for j in range(d)]
+    lacking = [c for c in nbr_cols if c not in df.columns]
+    if lacking:
+        raise KeyError(f"the table lacks {lacking[:3]}...: run run/add_neighbourhood_split.py "
+                       "(or rebuild the table) before using state.neighbourhood: split")
+    nbr_names = (base_names if structure == "disc"
+                 else [f"{b}:{n}" for b, _ in layout for n in base_names])
     say(f"own state: {len(own_names)} components (dropped {sorted(cyc)});"
-        f" neighbour state: {len(nbr_names)}")
+        f" neighbour state: {structure}, {len(nbr_names)} components")
 
     PO = df[[f"phi_{j:02d}" for j in own_cols]].to_numpy(float)
-    PN = df[[f"nbr_phi_{j:02d}" for j in range(d)]].to_numpy(float)
-    m_own, m_nbr = PO.mean(0), PN.mean(0)
-    CO, CN = PO - m_own, PN - m_nbr
+    m_own = PO.mean(0)
+    CO = PO - m_own
+    PN = [df[[f"{pre}{j:02d}" for j in range(d)]].to_numpy(float) for _, pre in layout]
+    m_nbr = np.concatenate([P.mean(0) for P in PN])
+    CN = [P - P.mean(0) for P in PN]
 
     # spec 3.1: rowsum constant -> project onto the sum-to-zero subspace; else
     # keep full dimension but guard the conditioning.
     rowsum = df[[f"phi_{j:02d}" for j in range(d)]].to_numpy(float).sum(1)
     const = bool(rowsum.std() < 1e-6)
-    Q_own = Q_nbr = None
+    Q_own, Qn = None, [None] * len(PN)
     if const:
-        Q_own, Q_nbr = sum_to_zero_basis(CO.shape[1]), sum_to_zero_basis(CN.shape[1])
-        CO, CN = CO @ Q_own, CN @ Q_nbr
+        Q_own = sum_to_zero_basis(CO.shape[1])
+        Qn = [sum_to_zero_basis(d) for _ in PN]
+        CO = CO @ Q_own
+        CN = [C @ Q for C, Q in zip(CN, Qn)]
         say("  rowsum constant -> sum-to-zero projection applied (spec 3.1a)")
     else:
         say(f"  rowsum not constant (sd {rowsum.std():.3e}) -> full dimension (spec 3.1b)")
@@ -240,16 +315,27 @@ def build_basis(df, cfg, verbose=True):
     # B, on a per-SD scale. It is a reparameterisation: unpenalised fits are
     # unchanged, and effects map back to cell types through Q = Q0 W exactly as
     # before. It also matches the simulations, whose covariates are N(0, 1).
+    # Each neighbour block is whitened by its own covariance: contact means
+    # average ~6 cells and regional ones ~90, so their spreads differ.
     W_own = W_nbr = None
     if sc.get("whiten", False):
         def _inv_sqrt(X):
             w, E = np.linalg.eigh(np.cov(X, rowvar=False))
             return (E / np.sqrt(w)) @ E.T
-        W_own, W_nbr = _inv_sqrt(CO), _inv_sqrt(CN)
-        CO, CN = CO @ W_own, CN @ W_nbr
+        W_own = _inv_sqrt(CO)
+        Wn = [_inv_sqrt(C) for C in CN]
+        CO = CO @ W_own
+        CN = [C @ W for C, W in zip(CN, Wn)]
         Q_own = W_own if Q_own is None else Q_own @ W_own
-        Q_nbr = W_nbr if Q_nbr is None else Q_nbr @ W_nbr
+        Qn = [W if Q is None else Q @ W for Q, W in zip(Qn, Wn)]
+        W_nbr = _block_diag(Wn)
         say("  own and neighbour blocks whitened (unit variance, uncorrelated)")
+    if all(Q is None for Q in Qn) and len(Qn) == 1:
+        Q_nbr = None                                      # legacy: raw disc, unprojected
+    else:
+        Q_nbr = _block_diag([np.eye(d) if Q is None else Q for Q in Qn])
+    nbr_blocks = [(b, int(C.shape[1])) for (b, _), C in zip(layout, CN)]
+    CN = np.hstack(CN)
 
     cond_own = float(np.linalg.cond(np.column_stack([np.ones(len(CO)), CO])))
     cond_nbr = float(np.linalg.cond(np.column_stack([np.ones(len(CN)), CN])))
@@ -290,7 +376,7 @@ def build_basis(df, cfg, verbose=True):
         logN_ortho_coef=coef, logN_ortho_r2=r2,
         cond_own=cond_own, cond_nbr=cond_nbr,
         mean_log_density=float(np.log(adata_density).mean()),
-        W_own=W_own, W_nbr=W_nbr)
+        W_own=W_own, W_nbr=W_nbr, nbr_cols=nbr_cols, nbr_blocks=nbr_blocks)
 
 
 def spec_from_basis(basis, cfg, stage="B", theta_free=None, weight_ridge=0.0,

@@ -79,6 +79,57 @@ def _tirosh_genes():
     return list(dict.fromkeys(list(TIROSH_S_GENES) + list(TIROSH_G2M_GENES)))
 
 
+def split_neighbourhood(xy, phi, pool, contact_um, regional_um, chunk=20000):
+    """Mean neighbour state in a contact disc and a regional annulus.
+
+    For every cell (row of `xy`), averages `phi` over the cells flagged in
+    `pool` (the typed cells) at distance `d` from it, never itself:
+
+        contact    0 <= d <= contact_um
+        regional   contact_um < d <= regional_um
+
+    The two together are exactly the `regional_um` disc that `build_adjacency`
+    builds (distance <= radius, self excluded), so
+    `(n_c * contact + n_r * regional) / (n_c + n_r)` reproduces the disc mean.
+
+    Gaps are filled, never dropped, so the cell set and the CV folds stay put:
+    a cell with no typed contact neighbour (3.5% of analysis cells at 15 um)
+    takes its regional mean -- "no information beyond the region" -- and one
+    with no typed neighbour within `regional_um` at all takes the pool mean.
+
+    Returns `(contact, n_contact, regional, n_regional)`; the counts are the
+    neighbours actually averaged, before any filling.
+    """
+    from scipy.spatial import cKDTree
+
+    xy = np.asarray(xy, dtype=float)
+    phi = np.asarray(phi, dtype=float)
+    pidx = np.flatnonzero(np.asarray(pool, dtype=bool))
+    tree = cKDTree(xy[pidx])
+    n, d = phi.shape
+    S = np.zeros((2, n, d))
+    C = np.zeros((2, n))
+    for s in range(0, n, chunk):
+        rows = np.arange(s, min(s + chunk, n))
+        sp = cKDTree(xy[rows]).sparse_distance_matrix(tree, regional_um, output_type="ndarray")
+        i, j, dist = sp["i"], pidx[sp["j"]], sp["v"]
+        keep = j != rows[i]                       # never the cell itself
+        i, j, dist = i[keep], j[keep], dist[keep]
+        ring = (dist > contact_um).astype(int)    # 0 = contact, 1 = regional
+        for r in (0, 1):
+            m = ring == r
+            C[r, rows] = np.bincount(i[m], minlength=len(rows))
+            for k in range(d):
+                S[r, rows, k] = np.bincount(i[m], weights=phi[j[m], k], minlength=len(rows))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mean = S / C[:, :, None]
+    pool_mean = phi[pidx].mean(0)
+    contact, regional = mean[0], mean[1]
+    regional = np.where(C[1][:, None] > 0, regional, np.where(C[0][:, None] > 0, contact, pool_mean))
+    contact = np.where(C[0][:, None] > 0, contact, regional)
+    return contact, C[0].astype(np.int64), regional, C[1].astype(np.int64)
+
+
 def build_table(cfg, verbose=True):
     """Assemble the mixture's input table (spec 1.1). Returns a DataFrame.
 
@@ -186,6 +237,12 @@ def build_table(cfg, verbose=True):
             f"({100 * typed.mean():.1f}% of cells)")
     average_neighbors(ad)
     nbr = np.asarray(ad.obsm["phi_bar"], dtype=float)
+    # Contact (0-15 um) and regional (15-80 um) means: the neighbour block of
+    # the weight model when state.neighbourhood is "split" (see basis.py).
+    # Computed over the same typed pool and the same disc as `nbr`.
+    split = split_neighbourhood(np.asarray(ad.obsm["spatial"], dtype=float), Phi, typed,
+                                float(dc.get("contact_radius_um", 15.0)),
+                                float(dc["neighbour_radius_um"]))
     n_isolated = int((np.asarray(ad.obsp["spatial_connectivity"].sum(1)).ravel() == 0).sum())
 
     say(f"local density at radius {dc['density_radius_um']} um ...")
@@ -252,6 +309,7 @@ def build_table(cfg, verbose=True):
         df[f"phi_{j:02d}"] = Phi[:, j]
     for j, nm in enumerate(phi_names):
         df[f"nbr_phi_{j:02d}"] = nbr[:, j]
+    add_split_columns(df, *split)
     df.attrs["phi_names"] = phi_names
     if min_lib > 0:
         say(f"dropping {int((~typed).sum()):,} analysis cells with N < {min_lib} "
@@ -261,6 +319,17 @@ def build_table(cfg, verbose=True):
     df.attrs["tirosh_genes"] = tirosh
     df.attrs["tirosh_library_share"] = float(y_count.sum() / total.sum())
     say(f"assembled {len(df):,} cells x {df.shape[1]} columns")
+    return df
+
+
+def add_split_columns(df, contact, n_contact, regional, n_regional):
+    """Write `split_neighbourhood`'s output into the table, in place."""
+    for j in range(contact.shape[1]):
+        df[f"nbrc_phi_{j:02d}"] = contact[:, j]
+    for j in range(regional.shape[1]):
+        df[f"nbrr_phi_{j:02d}"] = regional[:, j]
+    df["n_contact"] = n_contact
+    df["n_regional"] = n_regional
     return df
 
 
@@ -301,7 +370,8 @@ def validate(df, cfg, verbose=True):
     # 5. no NaN in the state blocks
     pcols = [c for c in out.columns if c.startswith("phi_")]
     ncols = [c for c in out.columns if c.startswith("nbr_phi_")]
-    for cols, lab in ((pcols, "phi"), (ncols, "nbr_phi")):
+    split_cols = [c for c in out.columns if c.startswith(("nbrc_phi_", "nbrr_phi_"))]
+    for cols, lab in ((pcols, "phi"), (ncols, "nbr_phi"), (split_cols, "contact/regional")):
         n_nan = int(out[cols].isna().to_numpy().sum())
         if n_nan:
             raise ValueError(f"{lab} block contains {n_nan} NaN values")

@@ -38,6 +38,9 @@ data:
   # Spec 1.3 prefers fixed-k kNN; still a recorded deviation, tested in Stage D.
   density_radius_um: 80.0
   neighbour_radius_um: 80.0
+  # Inner radius of the contact block when state.neighbourhood is "split":
+  # contact = typed neighbours at 0-15 um, regional = 15-80 um.
+  contact_radius_um: 15.0
   # Spec 1.2 item 2: N must exclude the outcome genes AND the blocklist. The
   # blocklist is the set of panel genes correlated with the Tirosh set, removed
   # from the PhiSpace input so the cell-state covariates cannot carry cell-cycle
@@ -71,6 +74,18 @@ state:
   # coordinates) have SD ~0.03 against ~0.29 for own, and one lambda shrank B
   # ~100x harder per coefficient. See mixture/basis.py.
   whiten: true
+  # 2026-10-07, decided by the user: the neighbour block is split into contact
+  # (0-15 um) and regional (15-80 um) means, each with its own c and rows of V,
+  # each projected and whitened on its own. On the NB baseline, held out over 5
+  # spatial folds, the split beats the uniform 80 um disc by 1,043 log-lik
+  # units (better on all 5) for 24 more parameters; a 10 um exponential kernel
+  # gained 932 with none, but would put the whole neighbourhood at the contact
+  # range where segmentation spillover acts. The split keeps that contact
+  # signal in its own block, so the regional block keeps its meaning as
+  # neighbourhood composition (notebooks/nb_baseline.ipynb, section 5).
+  # "disc" | "split". The 80 um disc stays in the table (nbr_phi_*): the phase
+  # portrait's state variable n * wbar is defined on it.
+  neighbourhood: split
   pca_variance_keep: 0.999
 
 oxygen:
@@ -281,3 +296,7 @@ density_knot_grid: [null, [50], [25, 50, 75], [25, 50, 75, 90]]
 # block runs away as the penalty is relaxed on data with no class structure.
 sim_lambda_grid: [0.0, 1.0, 10.0, 100.0, 1000.0, 10000.0]
 sim_path_reps: 8
+# The same at the real sample size (job sim_single_component_path_full).
+sim_full_n: 561897
+sim_full_lambda_grid: [30.0, 100.0, 300.0, 1000.0, 3000.0]
+sim_full_reps: 4
