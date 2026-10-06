@@ -111,7 +111,8 @@ def main():
             if r.get("failed"):
                 continue
             sv = np.linalg.svd(np.asarray(r["B"]), compute_uv=False)
-            rows.append({"run": label, "lam": float(r["lam"]), "fold": int(r["fold"]),
+            rows.append({"run": label, "lam": float(r["lam"]),
+                         "fold": int(r.get("fold", r.get("rep", 0))),       # sims have reps
                          "converged": bool(r["converged"]),
                          "heldout": r.get("heldout_loglik_per_cell"),
                          "norm_a": float(np.linalg.norm(r["a"])),
@@ -142,6 +143,10 @@ def main():
             if not ok:
                 ax.axvline(x, color="#c4342d", lw=1, ls=":")
         ax.set_xscale("log")
+        sds = d[[c for c in d if c.startswith("sd_")]].to_numpy(float)
+        if np.nanmax(sds) > 20 * np.nanmedian(sds):      # null fits at lambda = 0 run away
+            ax.set_yscale("log")
+            ax.set_ylim(1e-3, None)        # collapsed replicates sit at ~0; keep the scale readable
         ax.set_xticks(xpos)
         ax.set_xticklabels(["0" if l_ == 0 else f"{l_:g}" for l_ in lams], fontsize=8)
         ax.set_xlabel("weight_ridge lambda (0 plotted at the left; dotted = not converged on every fold)")
