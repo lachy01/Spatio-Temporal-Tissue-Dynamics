@@ -136,7 +136,12 @@ model:
   # density shape has been bought at the cost of the headline result.
   weight_density_knot_quantiles: [25, 50, 75, 90]
   weight_density_spline_df: 3      # ignored when knot_quantiles is set
-  rank: 2                          # bilinear B = U V^T, swept in Test 11
+  # bilinear B = U V^T. 3 since 2026-10-07 (decided by the user), from cv_rank at
+  # lambda = 300 on the split model. Held out, paired by spatial block: rank 3
+  # beats 2 by 85 +/- 16 and is 27 +/- 10 short of rank 5 -- the same size as
+  # the held-out cost accepted for lambda = 300 -- so it is the smallest rank
+  # practically as good as the best. Test 03 is rerun at rank 3.
+  rank: 3
   ridge_tau: 1.0e-4                # spec 3.2 conditioning term on U, V (b_penalty: nuclear only)
   # 2026-10-06, decided by the user: B is penalised by weight_ridge * ||U V'||_F^2,
   # a ridge on B's entries like the one on a, c, h, K, and conditioned by the
