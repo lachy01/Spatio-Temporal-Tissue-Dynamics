@@ -95,6 +95,18 @@ def main():
     res["index"] = a.index
     res["elapsed"] = time.time() - t0
     res["slurm_job"] = os.environ.get("SLURM_JOB_ID")
+    # A fresh result must itself pass the stale check, or the code did not fit
+    # what the configuration asks for: the rank-3 Test 03 once reran at rank 2
+    # because the simulator ignored model.rank (2026-10-07). Keep the result
+    # out of the job's directory and fail the task, so the error shows.
+    reasons = stale_reasons(res, tasks[a.index], cfg)
+    if reasons:
+        bad = os.path.join(d, "mismatch")
+        os.makedirs(bad, exist_ok=True)
+        with open(os.path.join(bad, f"{a.index:05d}.json"), "w") as fh:
+            json.dump(res, fh)
+        raise SystemExit(f"result does not match the configuration ({'; '.join(reasons)}); "
+                         f"saved to {bad}, not {path}")
     res["config_fingerprint"] = fingerprint(cfg)
     tmp = path + ".tmp"
     with open(tmp, "w") as fh:

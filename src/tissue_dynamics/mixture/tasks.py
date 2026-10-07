@@ -84,7 +84,10 @@ def enumerate_tasks(job, cfg):
         return [{"job": job, "restart": r}
                 for r in range(int(cfg["init"]["n_restarts"]))]
     if job == "stage_d":
-        return [{"job": job, "variant": v, "restart": r}
+        # the rank sweeps carry their rank, so the worker's stale check
+        # compares a result with the rank it was meant to fit
+        return [{"job": job, "variant": v, "restart": r,
+                 **({"rank": int(v.rsplit("_", 1)[1])} if v.startswith("rank_sweep_") else {})}
                 for v in ("free_theta_per_component", "rank_sweep_1", "rank_sweep_3",
                           "rank_sweep_5", "kNN_density")
                 for r in range(int(cfg.get("stage_d_restarts", 3)))]
@@ -434,13 +437,16 @@ def _run_sim(task, cfg):
     # coordinates for the disc, 16 for the contact + regional split
     d_nbr = 16 if cfg["state"].get("neighbourhood", "disc") == "split" else 8
     lam = float(task.get("lam", cfg["model"].get("weight_ridge") or 0.0))
+    # the fitted rank is the configured one: simulate_stage_b defaults to 2, and
+    # leaving it there ran the rank-3 Test 03 at rank 2 (2026-10-07)
+    rank = int(task.get("rank", cfg["model"]["rank"]))
     kw = {"sim_recovery": {},
           "sim_null_bilinear": {"b_scale": 0.0},
           "sim_single_component": {"single_component": True},
           "sim_single_component_path": {"single_component": True},
           "sim_single_component_path_full": {"single_component": True},
           "sim_size_confound": {"wiggly_area_df": 10}}[task["job"]]
-    data, truth, spec = simulate_stage_b(n=n, seed=rep, d_own=8, d_nbr=d_nbr,
+    data, truth, spec = simulate_stage_b(n=n, seed=rep, d_own=8, d_nbr=d_nbr, rank=rank,
                                          fit_area_df=int(cfg["model"]["area_spline_df"]),
                                          **kw)
     spec = dataclasses.replace(spec, weight_ridge=lam)

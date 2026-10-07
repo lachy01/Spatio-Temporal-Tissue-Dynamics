@@ -37,7 +37,11 @@ from tissue_dynamics.mixture.simulate import simulate_stage_b
 def test_03_single_component_null():
     cfg = load_config()
     n = size(int(cfg.get("sim_test03_n", 100_000)), 30_000)
-    data, _truth, spec = simulate_stage_b(n=n, seed=0, single_component=True)
+    # the dimensions the Spartan job fits: configured rank, 8 own coordinates,
+    # and a neighbour block as wide as the real one
+    d_nbr = 16 if cfg["state"].get("neighbourhood", "disc") == "split" else 8
+    data, _truth, spec = simulate_stage_b(n=n, seed=0, single_component=True, d_own=8,
+                                          d_nbr=d_nbr, rank=int(cfg["model"]["rank"]))
     best, _ = multistart(data, spec, cfg, n_restarts=size(10, 4), verbose=False,
                          maxiter=2000)
     D = data.as_jax()
