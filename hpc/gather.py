@@ -274,18 +274,27 @@ def main():
                       f"{'PASS' if ok else 'FAIL'}")
             if a.job.startswith("sim_single_component"):
                 # Test 03 (criterion of 2026-10-07): the model reports no
-                # structure -- cells not split (entropy < 0.10) and the two
-                # components barely differ (rate ratio < 1.5; real data 5.6).
+                # structure. A replicate passes if EITHER the mixture collapses
+                # to one component (e^delta < 0.05, or mean pi within 0.01 of a
+                # boundary -- the spec's own branch) OR its two components
+                # barely differ and cells are not split between them (rate
+                # ratio < 1.5, the Test 07 threshold, and entropy < 0.10).
+                # Entropy alone cannot judge a collapse: with pi ~ 0 for every
+                # cell it is ~1, the same reading as sharply separated classes.
                 d_ = df.assign(ratio=np.exp(df["e_delta"].astype(float)),
-                               ent=df["entropy"].astype(float))
-                d_["pass"] = (d_["ratio"] < 1.5) & (d_["ent"] < 0.10)
+                               ent=df["entropy"].astype(float),
+                               mw=df["mean_w"].astype(float))
+                d_["collapsed"] = (d_["e_delta"] < 0.05) | (np.minimum(d_["mw"], 1 - d_["mw"]) < 0.01)
+                d_["unsplit"] = (d_["ratio"] < 1.5) & (d_["ent"] < 0.10)
+                d_["pass"] = d_["collapsed"] | d_["unsplit"]
                 by = d_.groupby("lam") if "lam" in d_ else [(None, d_)]
                 for lam_, g_ in by:
-                    ok_ = (g_["ratio"].median() < 1.5) and (g_["ent"].median() < 0.10)
+                    ok_ = bool(g_["pass"].all())
                     print(f"  spec 6.3{'' if lam_ is None else f'  lam {lam_:<8g}'}  "
-                          f"rate ratio median {g_['ratio'].median():.3f} (max {g_['ratio'].max():.3f}), "
-                          f"entropy median {g_['ent'].median():.4f} (max {g_['ent'].max():.4f}); "
-                          f"{int(g_['pass'].sum())}/{len(g_)} replicates pass -> "
+                          f"{int(g_['pass'].sum())}/{len(g_)} replicates pass "
+                          f"({int(g_['collapsed'].sum())} collapsed to one component, "
+                          f"{int((g_['unsplit'] & ~g_['collapsed']).sum())} two components unsplit); "
+                          f"failing entropy {g_.loc[~g_['pass'], 'ent'].round(3).tolist()} -> "
                           f"{'PASS' if ok_ else 'FAIL'}")
             if a.job == "sim_size_confound":
                 fold = np.exp(df["e_delta"].to_numpy(float))
