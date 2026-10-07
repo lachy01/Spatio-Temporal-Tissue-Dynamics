@@ -272,6 +272,21 @@ def main():
                 print(f"  spec 6.1  ||B_hat-B||_F/||B||_F = {fro.mean():.4f} "
                       f"(max {fro.max():.4f}, threshold 0.15) -> "
                       f"{'PASS' if ok else 'FAIL'}")
+            if a.job.startswith("sim_single_component"):
+                # Test 03 (criterion of 2026-10-07): the model reports no
+                # structure -- cells not split (entropy < 0.10) and the two
+                # components barely differ (rate ratio < 1.5; real data 5.6).
+                d_ = df.assign(ratio=np.exp(df["e_delta"].astype(float)),
+                               ent=df["entropy"].astype(float))
+                d_["pass"] = (d_["ratio"] < 1.5) & (d_["ent"] < 0.10)
+                by = d_.groupby("lam") if "lam" in d_ else [(None, d_)]
+                for lam_, g_ in by:
+                    ok_ = (g_["ratio"].median() < 1.5) and (g_["ent"].median() < 0.10)
+                    print(f"  spec 6.3{'' if lam_ is None else f'  lam {lam_:<8g}'}  "
+                          f"rate ratio median {g_['ratio'].median():.3f} (max {g_['ratio'].max():.3f}), "
+                          f"entropy median {g_['ent'].median():.4f} (max {g_['ent'].max():.4f}); "
+                          f"{int(g_['pass'].sum())}/{len(g_)} replicates pass -> "
+                          f"{'PASS' if ok_ else 'FAIL'}")
             if a.job == "sim_size_confound":
                 fold = np.exp(df["e_delta"].to_numpy(float))
                 ent = df["entropy"].to_numpy(float)

@@ -90,7 +90,11 @@ def enumerate_tasks(job, cfg):
                 for r in range(int(cfg.get("stage_d_restarts", 3)))]
     if job in ("sim_recovery", "sim_null_bilinear", "sim_single_component",
                "sim_size_confound"):
-        return [{"job": job, "rep": r} for r in range(int(cfg.get("sim_reps", 20)))]
+        # Test 03 runs at the real n (sim_test03_n): invented structure shrinks
+        # with n, so a smaller null overstates what the real fit risks
+        extra = ({"n": int(cfg["sim_test03_n"])}
+                 if job == "sim_single_component" and cfg.get("sim_test03_n") else {})
+        return [{"job": job, "rep": r, **extra} for r in range(int(cfg.get("sim_reps", 20)))]
     if job == "sim_single_component_path":
         # Test 03 along a lambda path: on data with no class structure, which
         # weight block grows as the penalty is relaxed.

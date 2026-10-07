@@ -151,27 +151,21 @@ model:
   # unit SD, for the same reason the state blocks are whitened.
   scale_weight_splines: true
   ridge_tau_sensitivity: [0.0, 1.0e-4, 1.0e-3]
-  # Ridge on EVERY weight coefficient (a, c, h, psi, U, V). Added to the spec:
-  # without it the concomitant logistic model separates on null data (||a||=57.5,
-  # sd(eta)=203, pi at 0/1 for 98.6% of cells), which is the Test 03 / Test 07
-  # failure. Selected by held-out log-likelihood on contiguous spatial blocks,
-  # for the reason spec 6.11 gives for rank selection.
-  # null => select by CV. NOTE on the selection rule: held-out log-likelihood
-  # cannot score this parameter. pi is a prior on a LATENT class, so errors in
-  # it are heavily damped in the marginal density, which the count model
-  # dominates. The first CV array showed held-out likelihood monotonically
-  # preferring lambda=0 (paired t = -3.1 to -17.3, perfectly ordered) -- i.e.
-  # preferring the specification where sigma_1(B) = 30 and the weight model is
-  # diverging. The penalty is not a bias-variance knob here; it is what makes
-  # the estimator well posed. Select the SMALLEST lambda giving a converged,
-  # non-degenerate fit, and use held-out likelihood only to break ties.
-  # 10, from the second Spartan cv_penalty array. Two independent lines agree:
-  # sigma_1(B) plateaus at ~1.0 for lambda in [10, 100] (1.24 / 1.05 / 0.99) and
-  # explodes below (3.60 at lambda=3, 26.6 at 0.3, 38.3 at 0), which is the
-  # signature of a variance-dominated estimate rather than a real interaction;
-  # and the Test 03 null only collapses at lambda >= 10. Convergence alone was
-  # not a sufficient criterion -- lambda=0.3 converged on all five folds and
-  # still returned sigma_1 = 26.6, sixty times the true value in Test 01 (0.440).
+  # Ridge on EVERY weight coefficient (a, c, h, K, and B through b_penalty).
+  # Added to the spec: without it the concomitant logistic model separates on
+  # null data (||a||=57.5, sd(eta)=203, pi at 0/1 for 98.6% of cells), the
+  # Test 03 / Test 07 failure.
+  #
+  # Selection, 2026-10-07, decided by the user, on the whitened, split,
+  # ridge-on-B weight model: the SMALLEST lambda at which no Test 03 null
+  # replicate at the real n shows separated classes (normalised entropy < 0.10),
+  # provided its held-out cost on contiguous spatial folds is negligible.
+  # Held-out log-likelihood alone cannot choose: pi is a prior on a latent
+  # class, so the curve is flat (lambda = 0 to 100 within ~10 units of
+  # 603,152) and the 2-block-SE rule landed at 0.3 or 300 depending on
+  # borderline SEs. The earlier rules -- "sigma_1(B) has plateaued" (picked the
+  # unpenalised end once whitened) and lambda = 10 on the unwhitened,
+  # nuclear-norm model -- are superseded.
   # The sample size weight_ridge was calibrated at. The penalty is scaled by
   # n / weight_ridge_n_reference, so it stays constant PER OBSERVATION. Without
   # this a fixed lambda shrinks a subsample much harder than the full sample and
@@ -191,10 +185,12 @@ model:
   #          cannot represent a response that turns down only at high density
   density_interaction_spline: true
   weight_ridge_n_reference: 678885
-  # PROVISIONAL: 10 was selected on the unwhitened, nuclear-norm weight model and
-  # means almost no shrinkage on the whitened scale. Replace it with the value
-  # the cv_penalty rerun selects (hpc/gather.py cv_penalty).
-  weight_ridge: 10
+  # 300 (2026-10-07). Null at n = 561,897, entropy median (max of 4):
+  # lambda 30: 0.34 (0.63); 100: 0.028 (0.127); 300: 0.012 (0.031). Real data,
+  # held out vs the best lambda: -28.6 +/- 10.5 of 603,152 (5e-5 nats per cell);
+  # e^delta 1.7212 against 1.7199 unpenalised; sigma_1(B) per SD 11% smaller.
+  # From outputs/hpc/{cv_penalty, sim_single_component_path_full}, 2026-10-07.
+  weight_ridge: 300
   # Re-ranged 2026-10-06 for the whitened, Frobenius-penalised weight model:
   # on a per-SD scale a given lambda shrinks far less than it did on B's tiny
   # unwhitened covariates, so the grid runs four decades higher.
@@ -298,5 +294,8 @@ sim_lambda_grid: [0.0, 1.0, 10.0, 100.0, 1000.0, 10000.0]
 sim_path_reps: 8
 # The same at the real sample size (job sim_single_component_path_full).
 sim_full_n: 561897
+# Test 03 (job sim_single_component) runs at the real n: invented structure
+# shrinks with n, so a 100,000-cell null overstates what the real fit risks.
+sim_test03_n: 561897
 sim_full_lambda_grid: [30.0, 100.0, 300.0, 1000.0, 3000.0]
 sim_full_reps: 4
