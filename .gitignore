@@ -234,6 +234,7 @@ outputs/division_classifier/labels.parquet
 outputs/spatial/nb_fits.npz
 outputs/division_classifier/**/labels.parquet
 outputs/division_classifier/**/oof_nb.parquet
+outputs/division_classifier/**/oof_predictions.parquet
 outputs/hpc_spanorm/
 
 # Notebook caches for nb_baseline.ipynb (fits, fields, ring sums; rebuilt by re-running it)

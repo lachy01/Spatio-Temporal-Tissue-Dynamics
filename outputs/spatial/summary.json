@@ -1,17 +1,17 @@
 {
   "blocks": {
     "n_blocks": 250,
-    "cells_per_block_median": 2704.0,
-    "cells_per_block_p5": 1057.45,
-    "cells_per_block_p95": 4271.15,
-    "median_block_diameter_um": 506.14777925045325,
+    "cells_per_block_median": 2265.0,
+    "cells_per_block_p5": 809.4000000000001,
+    "cells_per_block_p95": 3613.9499999999994,
+    "median_block_diameter_um": 490.68832961826575,
     "tissue_extent_um": [
-      10583.547073364258,
-      15570.162386417389
+      10123.569213867188,
+      15504.429015159607
     ]
   },
-  "argmax_agreement": 0.9990278176716233,
-  "raw_argmax_agreement": 0.3663993165263631,
+  "argmax_agreement": 0.9798699761700098,
+  "raw_argmax_agreement": 0.862058348772106,
   "edges_um": [
     0.0,
     15.0,
@@ -32,7 +32,7 @@
   "min_cells_per_bin": 20,
   "n_perm": 9999,
   "nb_alpha": {
-    "nb_prev": 0.6833491039328866,
-    "nb_matched": 0.6481265764507775
+    "nb_prev": 0.7802232264920256,
+    "nb_matched": 0.7441652146304241
   }
 }

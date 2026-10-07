@@ -176,3 +176,215 @@ BASE-O call rate on null data (reported; no pass criterion):
 
 Stage 1 complete in 1.5 min. **Review point** (stages 1,
 3 and 6 pause for review).
+
+
+## Stage 2 -- NB refits (2026-10-08 08:32)
+
+**The model changed after Stage 1** (decisions recorded in the mixture's
+specification doc, 2026-10-06 to 10-07, all by the user): log N is an offset
+(theta = 1) in every count arm, MIX included; the oxygen term is dropped; the
+neighbour block is split into contact (0-15 um) and regional (15-80 um) means;
+both state blocks are whitened; B is penalised by lambda ||UV'||_F^2 with the
+balance term tau ||U'U - V'V||_F^2; lambda was selected on null-calibrated
+Test 03 and the rank by spatial CV. With theta = 1 in MIX too, the spec's offset
+mismatch (section 1) no longer arises. The labels are unaffected: they depend
+only on y, N, A and the technical null.
+
+NB-c and NB-d, matched to the mixture's covariates and penalty: the shared weight
+block (8 own and 16 neighbour coordinates,
+rank 3), log N as an offset, the same
+df-8 area spline, weight_ridge 300 x n /
+678,885 on every eta coefficient (frobenius form on B) and
+the balance term at tau = 1. NB-d adds log alpha_i = gamma0 +
+phi_i' gamma on the projected own state (gamma not penalised). Optimiser:
+L-BFGS, then Newton on the exact Hessian with absolute-value eigenvalues and a
+backtracking line search.
+
+### V5 -- fold identity
+
+250 k-means blocks (MiniBatchKMeans, seed 0) dealt into 5 folds (seed 0); map
+loaded from folds.parquet, sha256 `32abc1e083fa4d69...`. The mixture CV did not store its
+cell-to-fold map, so identity is checked on the fold sizes it recorded: all five
+match to the cell, which a different partition would not do by chance.
+**pass**
+
+| fold | n_train here | n_test here | n_test, mixture CV (Spartan) | match |
+| --- | --- | --- | --- | --- |
+| 0 | 443599 | 118298 | 118298 | yes |
+| 1 | 455993 | 105904 | 105904 | yes |
+| 2 | 444258 | 117639 | 117639 | yes |
+| 3 | 449795 | 112102 | 112102 | yes |
+| 4 | 453943 | 107954 | 107954 | yes |
+
+### V6 -- parity
+
+All 6 arms (MIX, NB-c, NB-d, LOG-T, LOG-O, LOG-S) share the same
+141 eta columns in the same order. The shared `eta_state`
+reproduces the production mixture's logit to 7.1e-15 on every cell. **pass**
+
+### V1 -- convergence
+
+Criterion: |f_t - f_(t-1)| < 1e-9 |f_(t-1)| and ||grad||_inf < 1e-5, on the
+summed penalised objective. **pass**: 14
+of 14 fits converged. sd(eta) > 20 flagged: **none**.
+
+| arm | data | seed | n | loglik | objective | grad_inf | L-BFGS iters | Newton iters | converged (V1) | attempts | theta | alpha | norm a | norm c | sigma1(B) | sd(eta) | sd(eta) > 20 | minutes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| NB-c | all cells | 0 | 561897 | -5.964e+05 | 5.964e+05 | 8.717e-06 | 1212 | 21 | pass | 1 | 1 | 0.7449 | 0.3296 | 0.1737 | 0.1787 | 0.3906 | no | 4.651 |
+| NB-c | all cells | 1 | 561897 | -5.964e+05 | 5.964e+05 | 6.333e-09 | 1319 | 8 | pass | 1 | 1 | 0.7449 | 0.3296 | 0.1737 | 0.1787 | 0.3906 | no | 6.468 |
+| NB-d | all cells | 0 | 561897 | -5.962e+05 | 5.963e+05 | 1.07e-06 | 1331 | 18 | pass | 1 | 1 | 0.544-0.866 | 0.3299 | 0.1739 | 0.1783 | 0.391 | no | 7.844 |
+| NB-d | all cells | 1 | 561897 | -5.962e+05 | 5.963e+05 | 1.904e-07 | 1374 | 10 | pass | 1 | 1 | 0.544-0.866 | 0.3299 | 0.1739 | 0.1783 | 0.391 | no | 5.19 |
+| NB-c | train fold 0 | 0 | 443599 | -4.706e+05 | 4.707e+05 | 1.559e-06 | 1452 | 7 | pass | 1 | 1 | 0.7454 | 0.3293 | 0.1737 | 0.177 | 0.3934 | no | 3.765 |
+| NB-c | train fold 1 | 0 | 455993 | -4.791e+05 | 4.792e+05 | 2.039e-07 | 1436 | 7 | pass | 1 | 1 | 0.7495 | 0.3299 | 0.1721 | 0.1791 | 0.3907 | no | 3.512 |
+| NB-c | train fold 2 | 0 | 444258 | -4.762e+05 | 4.763e+05 | 2.996e-08 | 1219 | 9 | pass | 1 | 1 | 0.7431 | 0.3284 | 0.1758 | 0.1813 | 0.388 | no | 3.683 |
+| NB-c | train fold 3 | 0 | 449795 | -4.849e+05 | 4.85e+05 | 1.98e-06 | 1562 | 14 | pass | 1 | 1 | 0.7443 | 0.3287 | 0.1763 | 0.1802 | 0.3902 | no | 4.231 |
+| NB-c | train fold 4 | 0 | 453943 | -4.744e+05 | 4.745e+05 | 2.018e-10 | 1195 | 13 | pass | 1 | 1 | 0.7407 | 0.3309 | 0.1734 | 0.1791 | 0.3925 | no | 4.184 |
+| NB-d | train fold 0 | 0 | 443599 | -4.705e+05 | 4.706e+05 | 5.947e-07 | 1359 | 9 | pass | 1 | 1 | 0.559-0.867 | 0.3293 | 0.1742 | 0.1765 | 0.3938 | no | 4.023 |
+| NB-d | train fold 1 | 0 | 455993 | -4.79e+05 | 4.791e+05 | 9.231e-07 | 1498 | 12 | pass | 1 | 1 | 0.548-0.865 | 0.3302 | 0.1718 | 0.1785 | 0.391 | no | 3.502 |
+| NB-d | train fold 2 | 0 | 444258 | -4.761e+05 | 4.762e+05 | 1.135e-08 | 1010 | 18 | pass | 1 | 1 | 0.551-0.856 | 0.329 | 0.1757 | 0.1808 | 0.3884 | no | 3.24 |
+| NB-d | train fold 3 | 0 | 449795 | -4.848e+05 | 4.848e+05 | 1.561e-08 | 1260 | 7 | pass | 1 | 1 | 0.523-0.890 | 0.3288 | 0.1774 | 0.18 | 0.3909 | no | 2.397 |
+| NB-d | train fold 4 | 0 | 453943 | -4.743e+05 | 4.744e+05 | 2.219e-08 | 1229 | 7 | pass | 1 | 1 | 0.536-0.854 | 0.3315 | 0.173 | 0.1786 | 0.3929 | no | 2.383 |
+
+`run/compare_nb_mixture.py`'s matched NB is unpenalised, so it is not the
+same model as NB-c, which matches the mixture's penalty.
+
+**Uniqueness.** Two seeds per arm on all cells:
+
+| arm | |objective diff| | max |B diff| | max |a diff| | |theta diff| |
+| --- | --- | --- | --- | --- |
+| NB-c | 2.33e-10 | 3.21e-11 | 1.27e-14 | 0 |
+| NB-d | 1.16e-10 | 4.43e-12 | 1.78e-15 | 0 |
+
+**NB-d against NB-c.** Log-likelihood -596,235.56 against -596,377.03, a gain of
+141.5 for 8 parameters (LR statistic 283). The
+dispersion depends on state.
+
+For reference, the mixture's data log-likelihood on the same cells is
+-603,106.13. As in the main write-up, the NB fits the per-cell counts better;
+the label-scale comparison begins in Stage 3.
+
+Out-of-fold NB predictions (log mu and log alpha, per held-out cell) are saved
+in `oof_nb.parquet` for Stage 3. Stage 2 complete in 59 min.
+
+
+## Stage 3 -- out-of-fold fits (2026-10-08 09:23)
+
+Every arm fitted on four folds and predicted on the fifth, on the stored
+partition. NB-c and NB-d are Stage 2's fold fits. MIX is refitted per training
+fold (penalty scaled to training size) from the full-data point estimate, to
+the mixture's convergence criteria. LOG-T, LOG-O and LOG-S regress the primary
+labels (LT_a05, LO_td050, LS) on the shared weight
+block plus b0 + theta log N + s(log A), with the mixture's penalty term for
+term. Count arms are pushed through every threshold on the alpha_B and Td
+grids: NB p = P(Y >= c); MIX p = pi P1(Y >= c) + (1 - pi) P0(Y >= c), with the
+prior pi.
+
+### V5 -- fold identity
+
+Map sha256 `32abc1e083fa4d69...`, equal to the stored map's; Stage 2's
+out-of-fold NB predictions use the identical assignment; fold sizes match the
+Spartan rank CV on every fold. **pass**
+
+### MIX fold fits
+
+All five converged: **yes**. Each fold's held-out
+log-likelihood per cell agrees with the Spartan CV fit for the same fold (rank
+3, lambda 300) to 4.5e-11, so starting
+from the full-data estimate did not change where the fits end.
+
+| data | converged | iterations | grad_inf | held-out loglik / cell | Spartan CV, same fold | e^delta | mean pi (test) | sd(eta) | minutes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| train fold 0 | pass | 1453 | 1.661e-05 | -1.074 | -1.074 | 1.721 | 0.1262 | 1.339 | 1.827 |
+| train fold 1 | pass | 1689 | 8.483e-05 | -1.12 | -1.12 | 1.727 | 0.1249 | 1.345 | 2.401 |
+| train fold 2 | pass | 1926 | 2.055e-05 | -1.032 | -1.032 | 1.721 | 0.1237 | 1.315 | 2.25 |
+| train fold 3 | pass | 2174 | 1.096e-05 | -1.005 | -1.005 | 1.725 | 0.1252 | 1.319 | 2.679 |
+| train fold 4 | pass | 1108 | 3.113e-05 | -1.142 | -1.142 | 1.721 | 0.1305 | 1.328 | 1.211 |
+
+### LOG fits and V7 -- separation
+
+Criterion: sd(eta) <= 20 at the production ridge for every LOG fit.
+**pass** (largest sd(eta) 0.876);
+all converged: **yes**.
+
+| arm | data | converged | iterations | grad_inf | theta (log N) | norm a | norm c | sigma1(B) | sd(eta) | sd(eta) > 20 (V7) | minutes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| LOG-T | all cells | pass | 1095 | 1.334e-07 | 0.5468 | 0.5877 | 0.3794 | 0.3793 | 0.8564 | no | 1.136 |
+| LOG-T | train fold 0 | pass | 1111 | 3.375e-07 | 0.551 | 0.5846 | 0.3788 | 0.3801 | 0.8641 | no | 0.8316 |
+| LOG-T | train fold 1 | pass | 1596 | 1.29e-08 | 0.5632 | 0.5933 | 0.3663 | 0.3804 | 0.8646 | no | 1.186 |
+| LOG-T | train fold 2 | pass | 1136 | 1.203e-06 | 0.5416 | 0.5819 | 0.3871 | 0.384 | 0.8497 | no | 0.848 |
+| LOG-T | train fold 3 | pass | 1111 | 2.724e-11 | 0.5502 | 0.5895 | 0.3875 | 0.3812 | 0.8445 | no | 2.312 |
+| LOG-T | train fold 4 | pass | 1232 | 1.386e-08 | 0.5292 | 0.5913 | 0.3809 | 0.3776 | 0.8757 | no | 0.9131 |
+| LOG-O | all cells | pass | 1709 | 8.15e-07 | 0.1659 | 0.3346 | 0.1672 | 0.192 | 0.4152 | no | 2.095 |
+| LOG-O | train fold 0 | pass | 1135 | 4.208e-11 | 0.1662 | 0.3375 | 0.1696 | 0.1942 | 0.4174 | no | 1.5 |
+| LOG-O | train fold 1 | pass | 1672 | 8.199e-06 | 0.1742 | 0.3331 | 0.1684 | 0.1961 | 0.4146 | no | 2.53 |
+| LOG-O | train fold 2 | pass | 1446 | 1.128e-10 | 0.1628 | 0.3391 | 0.1654 | 0.1953 | 0.4132 | no | 1.898 |
+| LOG-O | train fold 3 | pass | 1938 | 1.181e-09 | 0.1599 | 0.3339 | 0.1689 | 0.1932 | 0.4173 | no | 2.545 |
+| LOG-O | train fold 4 | pass | 1106 | 3.106e-06 | 0.1646 | 0.3313 | 0.1684 | 0.1885 | 0.4149 | no | 2.218 |
+| LOG-S | all cells | pass | 2140 | 4.51e-07 | 0.2828 | 0.3637 | 0.1572 | 0.1601 | 0.4352 | no | 3.573 |
+| LOG-S | train fold 0 | pass | 1592 | 1.496e-07 | 0.2837 | 0.3626 | 0.1588 | 0.1574 | 0.4391 | no | 2.233 |
+| LOG-S | train fold 1 | pass | 1758 | 4.466e-06 | 0.293 | 0.3621 | 0.1588 | 0.1626 | 0.4335 | no | 2.302 |
+| LOG-S | train fold 2 | pass | 1605 | 1.36e-07 | 0.2809 | 0.3686 | 0.1525 | 0.1609 | 0.4334 | no | 2.904 |
+| LOG-S | train fold 3 | pass | 1464 | 2.316e-09 | 0.2715 | 0.3635 | 0.1571 | 0.1592 | 0.4396 | no | 1.76 |
+| LOG-S | train fold 4 | pass | 2054 | 3.438e-07 | 0.2854 | 0.3616 | 0.1602 | 0.1597 | 0.4376 | no | 2.933 |
+
+### V4 -- push-through identity
+
+50,000 cells drawn at random; y simulated from each arm's out-of-fold
+predictive distribution; the simulated label rate compared with the mean
+pushed-through p. Formal criterion on the primary thresholds (cT_a05,
+cO_td050): within 3 Monte Carlo SE. **pass**.
+The other grid thresholds are shown for information; with
+21 further comparisons, one beyond 3 SE would be
+expected about 0.06 times by chance.
+
+| model | threshold | mean p | simulated rate | MC SE | z | within 3 SE |
+| --- | --- | --- | --- | --- | --- | --- |
+| NB-c | LT_a05 | 0.031675 | 0.03234 | 0.00077168 | 0.86147 | pass |
+| NB-c | LT_a01 | 0.0076889 | 0.00796 | 0.0003879 | 0.69886 | pass |
+| NB-c | LT_a001 | 0.0010861 | 0.00098 | 0.00014675 | -0.72288 | pass |
+| NB-c | LT_a0001 | 0.00018154 | 0.0001 | 6.0048e-05 | -1.3579 | pass |
+| NB-c | LO_td000 | 0.28023 | 0.28316 | 0.0019041 | 1.5372 | pass |
+| NB-c | LO_td025 | 0.23484 | 0.2369 | 0.0018271 | 1.1254 | pass |
+| NB-c | LO_td050 | 0.18938 | 0.1906 | 0.0017037 | 0.71891 | pass |
+| NB-c | LO_td075 | 0.148 | 0.15082 | 0.001552 | 1.8162 | pass |
+| NB-c | LO_td100 | 0.11445 | 0.11706 | 0.0013955 | 1.8682 | pass |
+| NB-d | LT_a05 | 0.03158 | 0.03236 | 0.00077015 | 1.0124 | pass |
+| NB-d | LT_a01 | 0.0077668 | 0.0073 | 0.00038964 | -1.198 | pass |
+| NB-d | LT_a001 | 0.0011425 | 0.001 | 0.00015047 | -0.94735 | pass |
+| NB-d | LT_a0001 | 0.00020246 | 0.00014 | 6.3416e-05 | -0.98492 | pass |
+| NB-d | LO_td000 | 0.28028 | 0.2807 | 0.0019051 | 0.21828 | pass |
+| NB-d | LO_td025 | 0.23478 | 0.23562 | 0.0018271 | 0.45991 | pass |
+| NB-d | LO_td050 | 0.18921 | 0.18972 | 0.0017029 | 0.29856 | pass |
+| NB-d | LO_td075 | 0.14778 | 0.14772 | 0.0015507 | -0.039315 | pass |
+| NB-d | LO_td100 | 0.11422 | 0.11512 | 0.0013939 | 0.64842 | pass |
+| MIX | LT_a05 | 0.038526 | 0.03818 | 0.00084427 | -0.41008 | pass |
+| MIX | LT_a01 | 0.0081053 | 0.00794 | 0.00039942 | -0.41396 | pass |
+| MIX | LT_a001 | 0.00057361 | 0.00068 | 0.00010704 | 0.99397 | pass |
+| MIX | LT_a0001 | 3.6229e-05 | 2e-05 | 2.6917e-05 | -0.60293 | pass |
+| MIX | LO_td000 | 0.27133 | 0.27268 | 0.0019076 | 0.70723 | pass |
+| MIX | LO_td025 | 0.22466 | 0.22682 | 0.0018126 | 1.1925 | pass |
+| MIX | LO_td050 | 0.18377 | 0.18376 | 0.001692 | -0.0029557 | pass |
+| MIX | LO_td075 | 0.14789 | 0.1489 | 0.0015558 | 0.64738 | pass |
+| MIX | LO_td100 | 0.11825 | 0.11878 | 0.0014178 | 0.37124 | pass |
+
+### V8 -- determinism
+
+Refitting LOG-T on training fold 0 reproduces its parameters to 0.0e+00;
+refitting NB-c on training fold 0 reproduces Stage 2's saved fit to 0.0e+00;
+rerunning the V4 simulation with its seed reproduces it to 0.0e+00.
+**pass**
+
+### Sanity check, not scoring
+
+Overall mean out-of-fold p against each label's rate. Scoring (log loss,
+Brier, AUPRC, calibration by type, intervals) is Stage 4.
+
+| label | label rate | NB-c | NB-d | MIX | LOG-T | LOG-O | LOG-S |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| BASE-T (LT_a05) | 0.03437 | 0.03173 | 0.03163 | 0.03860 | 0.03442 | nan | nan |
+| BASE-O (LO_td050) | 0.18282 | 0.18960 | 0.18943 | 0.18394 | nan | 0.18292 | nan |
+| SCORE (LS) | 0.23423 | nan | nan | nan | nan | nan | 0.23438 |
+
+Out-of-fold predictions for every arm and threshold are in
+`oof_predictions.parquet`. Stage 3 complete in 51 min.
+**Review point** (stages 1, 3 and 6 pause for review).

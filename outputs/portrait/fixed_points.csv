@@ -1,6 +1,11 @@
 q_ref,pair,X_a,X_b,n,wbar_a,classification,in_support,stable_in_slice_unstable_held,max_re_reduced,max_re_full
-25,Cancer Epithelial x T-cells,25.093483008433488,26.142600642629258,47.39579528379681,0.5294453412624177,saddle,False,False,0.04981967308571298,0.045518355857444945
-50,Cancer Epithelial x CAFs,37.50440208997919,0.0,,,boundary(face),False,False,,
-50,Cancer Epithelial x Myeloid,35.15656060858205,0.0,,,boundary(face),False,False,,
-50,Cancer Epithelial x T-cells,27.66804109353431,0.0,,,boundary(face),False,False,,
-50,Cancer Epithelial x T-cells,0.0,104.12550909433352,,,boundary(face),False,False,,
+25,Cancer Epithelial x CAFs,118.19005894973807,87.72912271575396,214.7689344762939,0.5503126382683797,stable,False,True,-0.09734115730969761,0.13808696024086164
+50,Cancer Epithelial x CAFs,106.27965338827043,70.42242694644166,218.47077748475172,0.48647079765937246,stable,False,True,-0.08842908979268832,0.11616890382848899
+50,Cancer Epithelial x CAFs,175.58907864637183,0.0,,,boundary(face),False,False,,
+50,Cancer Epithelial x Myeloid,107.04770895095433,88.00573498181404,233.0238649578427,0.45938517486318736,stable,False,True,-0.1135707407780309,0.08997970343809067
+75,CAFs x Myeloid,0.0,16.184437191516356,,,boundary(face),False,False,,
+75,Cancer Epithelial x CAFs,82.90237865330194,40.67321388034061,231.17239451666973,0.3586171213333342,stable,False,True,-0.04377101301534875,0.08005769237649187
+75,Cancer Epithelial x CAFs,123.02404276311455,0.0,,,boundary(face),False,False,,
+75,Cancer Epithelial x Myeloid,77.3694194089519,59.01223389407817,238.457365633222,0.3244580816511912,stable,False,True,-0.081579341428972,0.060305118865050314
+75,Cancer Epithelial x Myeloid,125.70194352442537,0.0,,,boundary(face),False,False,,
+75,Cancer Epithelial x T-cells,125.36693399226232,0.0,,,boundary(face),False,False,,

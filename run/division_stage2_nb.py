@@ -187,7 +187,7 @@ def main():
                      "L-BFGS iters": info["lbfgs_iters"], "Newton iters": info["newton_iters"],
                      "converged (V1)": "pass" if info["converged"] else "FAIL",
                      "attempts": info["attempts"],
-                     "theta": float(p["theta"]),
+                     "theta": float(p["theta"]) if "theta" in p else 1.0,
                      "alpha": (f"{np.exp(la[0]):.4f}" if ARMS[arm] == "const" else
                                f"{np.exp(np.percentile(la, 5)):.3f}-"
                                f"{np.exp(np.percentile(la, 95)):.3f}"),
@@ -229,7 +229,8 @@ def main():
         uniq.append({"arm": arm, "|objective diff|": abs(i0["f"] - i1["f"]),
                      "max |B diff|": float(np.max(np.abs(B0 - B1))),
                      "max |a diff|": float(np.max(np.abs(np.asarray(p0["a"]) - np.asarray(p1["a"])))),
-                     "|theta diff|": abs(float(p0["theta"]) - float(p1["theta"]))})
+                     "|theta diff|": (abs(float(p0["theta"]) - float(p1["theta"]))
+                                      if "theta" in p0 else 0.0)})
     uniq = pd.DataFrame(uniq)
     llc = float(fits[(fits.arm == "NB-c") & (fits.data == "all cells") & (fits.seed == 0)].loglik.iloc[0])
     lld = float(fits[(fits.arm == "NB-d") & (fits.data == "all cells") & (fits.seed == 0)].loglik.iloc[0])
@@ -240,12 +241,25 @@ def main():
     report(f"""
 ## Stage 2 -- NB refits ({time.strftime('%Y-%m-%d %H:%M')})
 
+**The model changed after Stage 1** (decisions recorded in the mixture's
+specification doc, 2026-10-06 to 10-07, all by the user): log N is an offset
+(theta = 1) in every count arm, MIX included; the oxygen term is dropped; the
+neighbour block is split into contact (0-15 um) and regional (15-80 um) means;
+both state blocks are whitened; B is penalised by lambda ||UV'||_F^2 with the
+balance term tau ||U'U - V'V||_F^2; lambda was selected on null-calibrated
+Test 03 and the rank by spatial CV. With theta = 1 in MIX too, the spec's offset
+mismatch (section 1) no longer arises. The labels are unaffected: they depend
+only on y, N, A and the technical null.
+
 NB-c and NB-d, matched to the mixture's covariates and penalty: the shared weight
-block, theta free on log N, the same df-8 area spline, weight_ridge 10 x n /
-678,885 on every eta coefficient and ridge_tau 1e-4 on U and V. NB-d adds log
-alpha_i = gamma0 + phi_i' gamma on the 8-dim projected own state (gamma not
-penalised). Optimiser: L-BFGS, then Newton on the exact Hessian with
-absolute-value eigenvalues and a backtracking line search.
+block ({D['own'].shape[1]} own and {D['nbr'].shape[1]} neighbour coordinates,
+rank {spec.rank}), log N {"free" if spec.theta_free else "as an offset"}, the same
+df-{cfg["model"]["area_spline_df"]} area spline, weight_ridge {spec.weight_ridge:g} x n /
+{spec.n_reference:,} on every eta coefficient ({spec.b_penalty} form on B) and
+the balance term at tau = {spec.ridge_tau:g}. NB-d adds log alpha_i = gamma0 +
+phi_i' gamma on the projected own state (gamma not penalised). Optimiser:
+L-BFGS, then Newton on the exact Hessian with absolute-value eigenvalues and a
+backtracking line search.
 
 ### V5 -- fold identity
 
@@ -271,9 +285,8 @@ of {len(fits)} fits converged. sd(eta) > 20 flagged: **{'yes' if any_flag else '
 
 {md_table(fits.drop(columns=['min Hessian eig']))}
 
-The old matched NB (`run/compare_nb_mixture.py`) stopped at 20,000 L-BFGS
-iterations with gradient 1.18. It was also unpenalised, so it is not the same
-model as NB-c, which matches the mixture's penalty.
+`run/compare_nb_mixture.py`'s matched NB is unpenalised, so it is not the
+same model as NB-c, which matches the mixture's penalty.
 
 **Uniqueness.** Two seeds per arm on all cells:
 

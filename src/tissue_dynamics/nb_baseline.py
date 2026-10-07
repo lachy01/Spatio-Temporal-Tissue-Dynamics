@@ -124,24 +124,49 @@ def subset(D, idx, **replace):
     return out
 
 
+def project_block(P, basis, ref=None):
+    """One (n, 9) neighbour-state block in the weight model's coordinates.
+
+    Returns `(X, Q)` with `X = (P - mean P) Q`; `Q` maps the block's
+    coefficients back to cell types, as `basis.Q_nbr` does for production.
+    The block is treated as `build_basis` treats each production neighbour
+    block: centred at its own mean (which keeps `a` comparable across
+    neighbourhood definitions -- a shift in phibar moves the bilinear term into
+    `a`), projected to the sum-to-zero subspace when the basis projects, and
+    whitened when the basis whitens. The whitening uses the covariance of
+    `ref` (default `P` itself); passing one `ref` for several blocks gives
+    them a common coordinate system.
+    """
+    from .mixture.basis import sum_to_zero_basis
+
+    d = P.shape[1]
+    Q = (sum_to_zero_basis(d) if basis.Q_own is not None and basis.Q_own.shape[1] < d
+         else np.eye(d))
+    if basis.W_own is not None:
+        R = P if ref is None else ref
+        w, E = np.linalg.eigh(np.cov((R - R.mean(0)) @ Q, rowvar=False))
+        Q = Q @ ((E / np.sqrt(w)) @ E.T)
+    return (P - P.mean(0)) @ Q, Q
+
+
 def project_nbr(P, basis):
-    """Centre a (n, 9) neighbour-state block at its own mean and project it
-    with the basis' sum-to-zero matrix, as `basis.nbr` does for the 80 um disc.
-    Centring at its own mean keeps `a` comparable across neighbourhood
-    definitions (a shift in phibar moves the bilinear term into `a`)."""
-    C = P - P.mean(0)
-    return C if basis.Q_nbr is None else C @ basis.Q_nbr
+    """The coordinates of `project_block`, without the back-map."""
+    return project_block(P, basis)[0]
 
 
-def stack_nbr(blocks, basis):
-    """Several neighbourhood means side by side, each projected by `project_nbr`.
+def stack_nbr(blocks, basis, return_q=False):
+    """Several neighbourhood means side by side, each projected (and whitened by
+    its own covariance) by `project_block`, as the production split is.
 
     With a stacked block, each neighbourhood gets its own main effect `c` and
     its own rows of `V`, so the bilinear term becomes
     `(phi'U)(phibar_1'V_1 + phibar_2'V_2 + ...)`: one set of own-state
-    directions, read against every neighbourhood at once.
+    directions, read against every neighbourhood at once. With `return_q`,
+    also the per-block back-maps.
     """
-    return np.hstack([project_nbr(P, basis) for P in blocks])
+    out = [project_block(P, basis) for P in blocks]
+    X = np.hstack([x for x, _ in out])
+    return (X, [q for _, q in out]) if return_q else X
 
 
 # --------------------------------------------------------------------------

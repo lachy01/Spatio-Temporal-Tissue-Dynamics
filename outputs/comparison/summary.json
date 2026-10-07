@@ -1,21 +1,21 @@
 {
-  "n": 678885,
-  "y_mean": 0.8693107079991457,
-  "y_var_mean": 7.827050630074128,
-  "zeros": 0.6798279531879479,
+  "n": 561897,
+  "y_mean": 1.0409203110178555,
+  "y_var_mean": 7.723855971701972,
+  "zeros": 0.6218702004103955,
   "alpha": {
-    "nb_prev": 0.6833491039328866,
-    "nb_matched": 0.6481265764507775
+    "nb_prev": 0.7802232264920256,
+    "nb_matched": 0.7452291207293983
   },
   "nb_converged": {
     "nb_prev": true,
-    "nb_matched": false
+    "nb_matched": true
   },
   "nb_iters": {
-    "nb_prev": 3146,
-    "nb_matched": 20000
+    "nb_prev": 1124,
+    "nb_matched": 2470
   },
-  "mixture_penalised_loglik": -624938.0731197734,
-  "mixture_rate_ratio": 5.6294321449647535,
-  "mixture_mean_pi": 0.11475452769160406
+  "mixture_penalised_loglik": -603178.6705093632,
+  "mixture_rate_ratio": 5.601988823933391,
+  "mixture_mean_pi": 0.12585134992331123
 }
