@@ -112,6 +112,20 @@ def main():
                   "directory: it holds fits from more than one model version. "
                   "Delete it and resubmit -- the results below mix them. **\n")
 
+    # Results written under another configuration (an earlier rank, lambda or
+    # penalty form) must not be summarised as current: the worker now moves
+    # them aside on resubmission, but a directory synced before that holds both.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from worker import stale_reasons
+    tasks_now = enumerate_tasks(a.job, cfg)
+    stale = [(int(r["index"]), stale_reasons(r.to_dict(), tasks_now[int(r["index"])], cfg))
+             for _, r in df.iterrows() if "index" in r and int(r["index"]) < len(tasks_now)]
+    stale = [(i, why) for i, why in stale if why]
+    if stale:
+        print(f"\n  ** {len(stale)} of {len(df)} results were written under a DIFFERENT "
+              f"configuration ({stale[0][1][0]}); they are not current. Move them aside "
+              f"and resubmit before reading the summary below. **\n")
+
     missing = expected - len(df)
     print(f"{a.job}: {len(df)}/{expected} tasks present"
           + (f"  ** {missing} MISSING **" if missing else ""))

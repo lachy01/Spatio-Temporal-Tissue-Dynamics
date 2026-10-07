@@ -7,6 +7,7 @@ completed array is still usable and a failed task can be resubmitted alone.
 Runs identically on a laptop, which is how it should be tested before submission.
 """
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -16,6 +17,39 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from tissue_dynamics.mixture.data import load_config          # noqa: E402
 from tissue_dynamics.mixture.tasks import enumerate_tasks, run_task  # noqa: E402
+
+
+FINGERPRINT_SECTIONS = ("data", "state", "model", "oxygen", "optim", "init", "inference")
+
+
+def fingerprint(cfg):
+    """Hash of the configuration sections that change what a fit is."""
+    blob = json.dumps({k: cfg.get(k) for k in FINGERPRINT_SECTIONS}, sort_keys=True, default=str)
+    return hashlib.sha256(blob.encode()).hexdigest()[:16]
+
+
+def stale_reasons(existing, task, cfg):
+    """Why an existing result does not belong to the current configuration.
+
+    Results written since 2026-10-07 carry a fingerprint of the configuration;
+    older ones are checked on the settings they record. Any difference means
+    the file came from a different model version and must not be reused.
+    """
+    mc = cfg["model"]
+    out = []
+    fp = existing.get("config_fingerprint")
+    if fp is not None and fp != fingerprint(cfg):
+        out.append("configuration fingerprint differs")
+    want = {"rank": int(task.get("rank", mc["rank"])),
+            "weight_ridge": float(task.get("lam", mc.get("weight_ridge") or 0.0)),
+            "b_penalty": mc.get("b_penalty")}
+    for k, v in want.items():
+        if existing.get(k) is not None and existing[k] != v:
+            out.append(f"{k}: file {existing[k]!r}, config {v!r}")
+    width = 16 if cfg["state"].get("neighbourhood", "disc") == "split" else 8
+    if existing.get("c") is not None and len(existing["c"]) != width:
+        out.append(f"neighbour block width: file {len(existing['c'])}, config {width}")
+    return out
 
 
 def main():
@@ -41,20 +75,27 @@ def main():
     os.makedirs(d, exist_ok=True)
     path = os.path.join(d, f"{a.index:05d}.json")
     if os.path.exists(path):
-        # Idempotent so a partially-failed array can be resubmitted. The hazard
-        # is that results from a DIFFERENT model version survive here and get
-        # mixed with new ones -- which happened once and silently corrupted a
-        # Test 13 sweep. Warn loudly enough to be seen in the log.
-        print(f"already done, SKIPPING: {path}")
-        print("  ** if the model has changed since this file was written, delete "
-              "the directory and resubmit: stale and current fits do not mix. **")
-        return
+        # Idempotent so a partially-failed array can be resubmitted -- but only
+        # for results from THIS model version. A result written under another
+        # configuration was once skipped silently and reported as current (the
+        # rank-2 Test 03 survived a rank-3 resubmission, 2026-10-07), so stale
+        # files are moved aside and the task reruns.
+        existing = json.load(open(path))
+        reasons = stale_reasons(existing, tasks[a.index], cfg)
+        if not reasons:
+            print(f"already done with the current configuration, SKIPPING: {path}")
+            return
+        os.makedirs(os.path.join(d, "stale"), exist_ok=True)
+        moved = os.path.join(d, "stale", f"{a.index:05d}.{int(time.time())}.json")
+        os.replace(path, moved)
+        print(f"STALE result moved to {moved} ({'; '.join(reasons)}); rerunning")
 
     t0 = time.time()
     res = run_task(tasks[a.index], cfg, out_dir=a.out)
     res["index"] = a.index
     res["elapsed"] = time.time() - t0
     res["slurm_job"] = os.environ.get("SLURM_JOB_ID")
+    res["config_fingerprint"] = fingerprint(cfg)
     tmp = path + ".tmp"
     with open(tmp, "w") as fh:
         json.dump(res, fh)
