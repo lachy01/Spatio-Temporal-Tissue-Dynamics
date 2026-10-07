@@ -135,11 +135,14 @@ def main():
                  "for a cell whose own state sits at the given archetype centroid. "
                  "`c + B^T phi_a`, mapped back to cell types. 95% CIs from the "
                  "spatial block bootstrap; **bold** where the CI excludes 1.\n\n")
-        fh.write("| own archetype | " + " | ".join(n[:13] for n in names) + " |\n")
-        fh.write("|---" * (len(names) + 1) + "|\n")
+        # one column per neighbour component: 9 for the disc, 18 (contact,
+        # then regional) for the split -- not the 9 own-type names
+        head = [n.replace("contact:", "c: ").replace("regional:", "r: ") for n in nbr_names]
+        fh.write("| own archetype | " + " | ".join(head) + " |\n")
+        fh.write("|---" * (len(nbr_names) + 1) + "|\n")
         for a in arche_list:
             cells = []
-            for j, _n in enumerate(names):
+            for j in range(len(nbr_names)):
                 v, l_, h_ = tab.loc[a].iloc[j], lo.loc[a].iloc[j], hi.loc[a].iloc[j]
                 cells.append(f"**{v:.2f}**" if (l_ > 1 or h_ < 1) else f"{v:.2f}")
             fh.write(f"| {a} | " + " | ".join(cells) + " |\n")

@@ -1,6 +1,7 @@
 """How much does the data support each entry of the own x neighbour interaction?
 
     python run/interaction_support.py [--cv outputs/hpc/cv_rank]
+                                      [--boot outputs/hpc/bootstrap]
 
 The weight model's bilinear term is phi' B phibar, with phibar the split
 neighbourhood [contact 0-15 um | regional 15-80 um]. In cell-type coordinates
@@ -23,13 +24,21 @@ Support, two ways:
   number of cells that carry the information, small when a few unusual cells
   dominate it.
 
-Fit: the rank-3 fits from the cv_rank run (one per spatial fold, each trained
-on the other four), mapped to cell-type coordinates B* = Q_own B Q_nbr' and
-put per SD of the own score and per SD of the neighbour score. The SE is the
-delete-one-fold jackknife over the five folds -- a spatial-block jackknife.
-Ranks 2 and 5 from the same run show where the factorisation's rank matters.
-B* is double-centred (each row and column sums to zero within a block), so an
-entry is an effect relative to the average type, not an absolute one.
+Fit: the full-data rank-3 point estimate (outputs/hpc/point_estimate.json),
+mapped to cell-type coordinates B* = Q_own B Q_nbr' and put per SD of the own
+score and per SD of the neighbour score. Its uncertainty is the spatial block
+bootstrap (job `bootstrap`, 250 blocks resampled, each replicate refitted from
+the point estimate): the bootstrap SE, and the 95% percentile interval. An
+entry is reportable when that interval excludes zero; the stricter column asks
+for |estimate / bootstrap SE| above the Bonferroni bound for all 162 entries.
+B = UV' is invariant to rotations of the factors, so replicates need no
+alignment.
+
+The cv_rank fold fits (one per spatial fold, each trained on the other four)
+add a delete-one-fold jackknife SE as a cross-check, and ranks 2 and 5 from the
+same run show where the factorisation's rank matters. B* is double-centred
+(each row and column sums to zero within a block), so an entry is an effect
+relative to the average type, not an absolute one.
 
 Writes outputs/interaction/{support.csv, support.png, fit_vs_support.png}.
 """
@@ -41,6 +50,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
@@ -87,6 +97,8 @@ def heat(ax, M, names, title, fmt, cmap, vmin=None, vmax=None, center=None, labe
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cv", default="outputs/hpc/cv_rank")
+    ap.add_argument("--boot", default="outputs/hpc/bootstrap")
+    ap.add_argument("--point", default="outputs/hpc/point_estimate.json")
     a = ap.parse_args()
 
     cfg = load_config()
@@ -151,8 +163,20 @@ def main():
         Bfit[rank] = np.stack([b_star(r, basis, sd_own, sd_nbr) for r in fits
                                if int(r["rank"]) == rank])
     g = Bfit[3].shape[0]
-    B3 = Bfit[3].mean(0)
-    se3 = np.sqrt((g - 1) / g * ((Bfit[3] - B3) ** 2).sum(0))
+    B3cv = Bfit[3].mean(0)
+    se3 = np.sqrt((g - 1) / g * ((Bfit[3] - B3cv) ** 2).sum(0))
+
+    # ---- the full-data point estimate and its spatial block bootstrap ----
+    pe = json.load(open(a.point))
+    B3 = b_star({"B": np.asarray(pe["params"]["U"]) @ np.asarray(pe["params"]["V"]).T},
+                basis, sd_own, sd_nbr)
+    boot = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(a.boot, "0*.json")))]
+    boot = [r for r in boot if int(r["rank"]) == int(pe["rank"])]
+    Bb = np.stack([b_star(r, basis, sd_own, sd_nbr) for r in boot])
+    se_b = Bb.std(0, ddof=1)
+    lo_b, hi_b = np.percentile(Bb, [2.5, 97.5], axis=0)
+    z_bonf = norm.ppf(1 - 0.025 / B3.size)
+    print(f"bootstrap: {len(Bb)} replicates; Bonferroni bound for {B3.size} entries |z| > {z_bonf:.2f}")
 
     for bi, b in enumerate(BLOCKS):
         cols = slice(bi * d, (bi + 1) * d)
@@ -164,10 +188,14 @@ def main():
                              "enrichment": enrich[k, l] if b == "contact" else np.nan,
                              "regional_fraction": reg_frac[k, l] if b == "regional" else np.nan,
                              "ess_cells": ess[b][k, l],
-                             "B_rank3": B3[k, cols][l], "se_jackknife": se3[k, cols][l],
-                             "z": B3[k, cols][l] / se3[k, cols][l],
+                             "B_rank3": B3[k, cols][l], "se_boot": se_b[k, cols][l],
+                             "ci_lo": lo_b[k, cols][l], "ci_hi": hi_b[k, cols][l],
+                             "z": B3[k, cols][l] / se_b[k, cols][l],
+                             "B_rank3_cv": B3cv[k, cols][l], "se_jackknife": se3[k, cols][l],
                              **{f"B_rank{r}": Bfit[r].mean(0)[k, cols][l] for r in Bfit if r != 3}})
     tab = pd.DataFrame(rows)
+    tab["reportable"] = (tab["ci_lo"] > 0) | (tab["ci_hi"] < 0)
+    tab["reportable_bonferroni"] = tab["z"].abs() > z_bonf
     os.makedirs(OUT, exist_ok=True)
     tab.to_csv(f"{OUT}/support.csv", index=False)
 
@@ -180,10 +208,13 @@ def main():
               f"entries below 1,000: {int((t['ess_cells'] < 1000).sum())}/81, "
               f"below 5,000: {int((t['ess_cells'] < 5000).sum())}/81")
         print(f"   rank-3 |B| per SD: median {t['B_rank3'].abs().median():.4f}, max {t['B_rank3'].abs().max():.4f}; "
-              f"|z| > 2: {int((t['z'].abs() > 2).sum())}/81")
+              f"95% CI excludes 0: {int(t['reportable'].sum())}/81; "
+              f"Bonferroni: {int(t['reportable_bonferroni'].sum())}/81")
         rs = tab[tab["block"] == b]
         print(f"   corr(log ESS, |B rank 3|) = {np.corrcoef(np.log(rs['ess_cells']), rs['B_rank3'].abs())[0, 1]:+.3f}; "
-              f"corr(log ESS, jackknife SE) = {np.corrcoef(np.log(rs['ess_cells']), rs['se_jackknife'])[0, 1]:+.3f}")
+              f"corr(log ESS, bootstrap SE) = {np.corrcoef(np.log(rs['ess_cells']), rs['se_boot'])[0, 1]:+.3f}")
+        print(f"   bootstrap SE / jackknife SE: median {np.median(rs['se_boot'] / rs['se_jackknife']):.2f}; "
+              f"corr(point estimate, fold mean) {np.corrcoef(rs['B_rank3'], rs['B_rank3_cv'])[0, 1]:+.3f}")
         if "B_rank5" in rs:
             dlt = (rs["B_rank5"] - rs["B_rank3"]).abs()
             print(f"   |B rank 5 - B rank 3|: median {dlt.median():.4f}; "
@@ -191,11 +222,12 @@ def main():
     print("\ncontact pairs, rarest 8 (own -> neighbour):")
     t = tab[tab["block"] == "contact"].sort_values("contact_pairs").head(8)
     print(t[["own", "neighbour", "contact_pairs", "cells_exposed", "enrichment", "ess_cells",
-             "B_rank3", "se_jackknife"]].round(4).to_string(index=False))
-    print("\nlargest rank-3 interaction entries (per SD):")
-    t = tab.reindex(tab["B_rank3"].abs().sort_values(ascending=False).index).head(10)
-    print(t[["block", "own", "neighbour", "B_rank3", "se_jackknife", "z", "ess_cells",
-             "contact_pairs", "regional_fraction"]].round(4).to_string(index=False))
+             "B_rank3", "ci_lo", "ci_hi"]].round(4).to_string(index=False))
+    print("\nreportable entries (95% bootstrap CI excludes 0), largest first (per SD):")
+    t = tab[tab["reportable"]]
+    t = t.reindex(t["B_rank3"].abs().sort_values(ascending=False).index)
+    print(t[["block", "own", "neighbour", "B_rank3", "ci_lo", "ci_hi", "z", "reportable_bonferroni",
+             "ess_cells"]].round(4).to_string(index=False))
 
     # ---- figures ----
     short = [n.replace(" Epithelial", " Epi.").replace("Plasmablasts", "Plasmabl.") for n in names]
@@ -217,8 +249,10 @@ def main():
     for bi, b in enumerate(BLOCKS):
         cols = slice(bi * d, (bi + 1) * d)
         heat(axes[0, bi], B3[:, cols], short,
-             f"Rank-3 interaction, {b}: effect per SD x SD (mean of 5 fold fits)",
+             f"Rank-3 interaction, {b}: effect per SD x SD (outlined: 95% CI excludes 0)",
              lambda v: f"{v:+.2f}", "RdBu_r", center=0.0, label="logit pi per SD x SD")
+        for k, l in zip(*np.nonzero((lo_b[:, cols] > 0) | (hi_b[:, cols] < 0))):
+            axes[0, bi].add_patch(plt.Rectangle((l - 0.5, k - 0.5), 1, 1, fill=False, ec="k", lw=1.2))
         t = tab[tab["block"] == b]
         ax = axes[1, bi]
         sc = ax.scatter(t["ess_cells"], t["B_rank3"].abs(), c=np.minimum(t["z"].abs(), 6),
@@ -226,7 +260,7 @@ def main():
         ax.set_xscale("log")
         ax.set_xlabel("effective cells behind the entry (Kish ESS)")
         ax.set_ylabel("|rank-3 effect| per SD x SD")
-        ax.set_title(f"{b}: fitted size against support (colour = |z|, jackknife, capped at 6)",
+        ax.set_title(f"{b}: fitted size against support (colour = |z|, bootstrap, capped at 6)",
                      fontsize=10)
         for _, r in t.reindex(t["B_rank3"].abs().sort_values(ascending=False).index).head(5).iterrows():
             ax.annotate(f"{r['own'][:10]} x {r['neighbour'][:10]}", (r["ess_cells"], abs(r["B_rank3"])),
