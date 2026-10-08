@@ -167,14 +167,14 @@ def main():
 
     # X8: under G2, LOG-O and LOG-S further from 1 than MIX (median |log ratio| over
     # stable types), with the largest distortion in small, low-depth types
-    x8_txt, x8 = "G2 not run", False
+    x8_txt, x8 = "G2 not run", "not judged"
     if "G2" in ratio_tabs:
         rt = ratio_tabs["G2"].loc[stable["G2"]]
         dist = {k: float(np.median(np.abs(np.log(np.clip(rt[k].abs(), 1e-6, None))))) for k in PREDS}
         worst = {k: rt[k].apply(lambda v: abs(np.log(max(abs(v), 1e-6)))).idxmax() for k in ("LOG-O", "LOG-S")}
         further = dist["LOG-O"] > dist["MIX pi"] and dist["LOG-S"] > dist["MIX pi"]
         low = all(worst[k] in low_depth for k in worst)
-        x8 = further and low
+        x8 = "holds" if further and low else ("partly holds" if further or low else "does not hold")
         x8_txt = (f"median |log ratio| over the {len(stable['G2'])} types with a true contrast of at "
                   f"least {MIN_TRUE}: MIX pi {dist['MIX pi']:.3f}, LOG-O {dist['LOG-O']:.3f}, "
                   f"LOG-S {dist['LOG-S']:.3f} ({'both further from 1' if further else 'not both further from 1'}); "
@@ -284,8 +284,8 @@ replicates; the truth has no cycling class):
 {md_table(label_tab)}
 
 **X8** (under G2, LOG-O and LOG-S have neighbourhood-effect ratios further from
-1 than MIX, with the largest distortion in small, low-depth types): {x8_txt}.
-**{'holds' if x8 else 'does not hold'}**.
+1 than MIX, with the largest distortion in small, low-depth types), judged
+clause by clause: {x8_txt}. **{x8}**.
 
 Figure: `sim_recovery.png`, the neighbourhood-effect ratio by arm and
 generator, and the rank agreement. Every replicate value is in

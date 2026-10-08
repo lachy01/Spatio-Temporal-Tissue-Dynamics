@@ -1061,3 +1061,191 @@ equal N, to 1.8e-08; the stored control term (float32) differs from the
 float64 one by at most 9.1e-10. The observed variance-to-mean ratio of y
 in Cancer Epithelial, which G2 matches, is 9.205 (the spec's 7.29 was the
 SpaNorm-era table's). The inputs for the Spartan array are in `sim_inputs.npz`.
+
+### Stage 6 results (2026-10-08 14:59)
+
+30 replicates (G1: 10, G2: 10, G3: 10), each
+on 100,000 real cells (held-out fold about
+19,860 cells). Converged fits: NB-c 30/30, MIX 30/30, LOG-T 30/30, LOG-O 30/30, LOG-S 30/30;
+largest LOG sd(eta) 1.01. Values are the median
+[min, max] over replicates.
+
+**1. Rank agreement with pi_true** (Spearman, held-out fold):
+
+| prediction | G1 | G2 |
+| --- | --- | --- |
+| MIX pi | 0.965 [0.957, 0.978] | 0.965 [0.959, 0.971] |
+| MIX, BASE-T | 0.775 [0.742, 0.804] | 0.778 [0.752, 0.789] |
+| MIX, BASE-O | 0.493 [0.473, 0.515] | 0.351 [0.334, 0.371] |
+| NB-c, BASE-T | 0.725 [0.679, 0.746] | 0.712 [0.672, 0.744] |
+| NB-c, BASE-O | 0.516 [0.492, 0.543] | 0.474 [0.447, 0.517] |
+| LOG-T | 0.822 [0.789, 0.844] | 0.847 [0.832, 0.859] |
+| LOG-O | 0.742 [0.711, 0.787] | 0.655 [0.598, 0.713] |
+| LOG-S | 0.701 [0.679, 0.740] | 0.686 [0.664, 0.723] |
+
+**2. Neighbourhood effect.** Pooled over the types with a true contrast of at
+least 0.1 in logit, the slope of predicted on true contrast (1 =
+recovered, below 1 = attenuated):
+
+| prediction | G1 | G2 |
+| --- | --- | --- |
+| MIX pi | 0.933 [0.805, 1.080] | 0.983 [0.709, 1.101] |
+| MIX, BASE-T | 0.627 [0.493, 0.721] | 0.593 [0.463, 0.788] |
+| MIX, BASE-O | 0.165 [0.102, 0.216] | 0.112 [0.061, 0.177] |
+| NB-c, BASE-T | 0.410 [0.319, 0.501] | 0.461 [0.319, 0.579] |
+| NB-c, BASE-O | 0.202 [0.137, 0.260] | 0.217 [0.136, 0.299] |
+| LOG-T | 0.633 [0.532, 0.756] | 0.722 [0.503, 0.898] |
+| LOG-O | 0.137 [0.110, 0.187] | 0.109 [0.074, 0.154] |
+| LOG-S | 0.166 [0.108, 0.225] | 0.165 [0.115, 0.202] |
+
+Per type, the ratio of predicted to true contrast (median over replicates):
+
+**G1**
+
+| type | true contrast | median N | MIX pi | MIX, BASE-T | MIX, BASE-O | NB-c, BASE-T | NB-c, BASE-O | LOG-T | LOG-O | LOG-S |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Endothelial | 1.621 | 48.000 | 0.907 | 0.604 | 0.152 | 0.419 | 0.205 | 0.636 | 0.105 | 0.078 |
+| CAFs | 1.491 | 60.000 | 1.001 | 0.575 | 0.029 | 0.245 | 0.103 | 0.692 | -0.012 | 0.046 |
+| PVL | 3.527 | 46.000 | 0.854 | 0.505 | 0.142 | 0.319 | 0.156 | 0.507 | 0.129 | 0.146 |
+| B-cells | 0.814 | 36.000 | 0.990 | 0.619 | 0.227 | 0.538 | 0.237 | 0.708 | 0.287 | 0.278 |
+| T-cells | 0.900 | 44.000 | 0.957 | 0.784 | 0.405 | 0.770 | 0.399 | 0.762 | 0.425 | 0.436 |
+| Myeloid | 1.724 | 50.000 | 0.921 | 0.676 | 0.193 | 0.507 | 0.247 | 0.749 | 0.190 | 0.177 |
+| Normal Epithelial | 0.727 | 81.000 | 0.856 | 1.719 | 0.191 | 1.060 | 0.435 | 1.583 | 0.177 | 0.555 |
+| Plasmablasts | 0.742 | 61.000 | 1.040 | 1.552 | 0.244 | 1.014 | 0.412 | 1.500 | 0.168 | 0.503 |
+| Cancer Epithelial | -0.004 | 216.000 | 0.685 | 1.325 | 0.655 | 1.254 | 1.009 | 1.063 | -0.143 | 0.905 |
+
+**G2**
+
+| type | true contrast | median N | MIX pi | MIX, BASE-T | MIX, BASE-O | NB-c, BASE-T | NB-c, BASE-O | LOG-T | LOG-O | LOG-S |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Endothelial | 1.621 | 48.000 | 1.030 | 0.607 | 0.104 | 0.397 | 0.211 | 0.712 | 0.107 | 0.085 |
+| CAFs | 1.491 | 60.000 | 0.948 | 0.511 | 0.009 | 0.236 | 0.095 | 0.502 | -0.046 | 0.048 |
+| PVL | 3.527 | 46.000 | 0.971 | 0.472 | 0.111 | 0.420 | 0.209 | 0.622 | 0.136 | 0.144 |
+| B-cells | 0.814 | 36.000 | 0.967 | 0.611 | 0.173 | 0.582 | 0.268 | 0.734 | 0.259 | 0.243 |
+| T-cells | 0.900 | 44.000 | 0.970 | 0.841 | 0.357 | 0.820 | 0.410 | 0.815 | 0.403 | 0.398 |
+| Myeloid | 1.724 | 50.000 | 0.941 | 0.686 | 0.151 | 0.493 | 0.262 | 0.861 | 0.120 | 0.140 |
+| Normal Epithelial | 0.727 | 81.000 | 0.984 | 1.775 | 0.062 | 1.250 | 0.447 | 1.587 | -0.083 | 0.504 |
+| Plasmablasts | 0.742 | 61.000 | 0.999 | 1.530 | 0.032 | 1.003 | 0.358 | 1.352 | 0.075 | 0.458 |
+| Cancer Epithelial | -0.004 | 216.000 | 1.548 | 1.583 | 1.397 | 1.418 | 0.693 | 1.332 | 1.064 | 0.504 |
+
+**3. Fraction error** (mean over types of |mean prediction - realised cycling
+fraction|; only MIX's pi targets this quantity):
+
+| prediction | G1 | G2 |
+| --- | --- | --- |
+| MIX pi | 0.008 [0.005, 0.009] | 0.034 [0.030, 0.039] |
+| MIX, BASE-T | 0.080 [0.077, 0.083] | 0.078 [0.073, 0.081] |
+| MIX, BASE-O | 0.067 [0.065, 0.069] | 0.062 [0.058, 0.069] |
+| NB-c, BASE-T | 0.087 [0.085, 0.089] | 0.084 [0.079, 0.087] |
+| NB-c, BASE-O | 0.078 [0.074, 0.080] | 0.068 [0.064, 0.075] |
+| LOG-T | 0.080 [0.077, 0.083] | 0.081 [0.075, 0.084] |
+| LOG-O | 0.067 [0.062, 0.069] | 0.058 [0.053, 0.065] |
+| LOG-S | 0.101 [0.094, 0.109] | 0.093 [0.091, 0.100] |
+
+**G3 (no latent classes): implied cycling fraction by type** (median over
+replicates; the truth has no cycling class):
+
+| prediction | Endothelial | CAFs | PVL | B-cells | T-cells | Myeloid | Normal Epithelial | Plasmablasts | Cancer Epithelial |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| MIX pi | 0.114 | 0.077 | 0.163 | 0.268 | 0.305 | 0.141 | 0.243 | 0.288 | 0.373 |
+| MIX, BASE-T | 0.013 | 0.011 | 0.019 | 0.027 | 0.034 | 0.017 | 0.030 | 0.035 | 0.048 |
+| MIX, BASE-O | 0.138 | 0.145 | 0.163 | 0.204 | 0.230 | 0.159 | 0.201 | 0.226 | 0.281 |
+| NB-c, BASE-T | 0.012 | 0.009 | 0.018 | 0.029 | 0.037 | 0.016 | 0.029 | 0.037 | 0.060 |
+| NB-c, BASE-O | 0.132 | 0.134 | 0.162 | 0.205 | 0.231 | 0.154 | 0.195 | 0.223 | 0.260 |
+| LOG-T | 0.012 | 0.010 | 0.018 | 0.028 | 0.037 | 0.016 | 0.030 | 0.036 | 0.059 |
+| LOG-O | 0.132 | 0.128 | 0.158 | 0.205 | 0.231 | 0.154 | 0.194 | 0.222 | 0.262 |
+| LOG-S | 0.152 | 0.155 | 0.189 | 0.225 | 0.260 | 0.177 | 0.255 | 0.283 | 0.381 |
+
+**Label-scale scores, held-out fold:**
+
+| generator | prediction | log loss | AUPRC | mean p / rate |
+| --- | --- | --- | --- | --- |
+| G1 | MIX, BASE-T | 0.146 [0.134, 0.158] | 0.104 [0.095, 0.120] | 1.017 [0.967, 1.062] |
+| G1 | MIX, BASE-O | 0.459 [0.452, 0.464] | 0.291 [0.284, 0.298] | 1.004 [0.983, 1.017] |
+| G1 | NB-c, BASE-T | 0.149 [0.135, 0.163] | 0.100 [0.090, 0.112] | 0.783 [0.715, 0.834] |
+| G1 | NB-c, BASE-O | 0.461 [0.455, 0.466] | 0.286 [0.278, 0.295] | 1.068 [1.038, 1.088] |
+| G1 | LOG-T | 0.149 [0.135, 0.161] | 0.100 [0.088, 0.109] | 1.013 [0.987, 1.049] |
+| G1 | LOG-O | 0.472 [0.467, 0.477] | 0.250 [0.239, 0.256] | 1.003 [0.973, 1.027] |
+| G1 | LOG-S | 0.517 [0.514, 0.528] | 0.302 [0.285, 0.314] | 1.001 [0.975, 1.018] |
+| G2 | MIX, BASE-T | 0.151 [0.139, 0.157] | 0.103 [0.096, 0.106] | 1.069 [1.031, 1.153] |
+| G2 | MIX, BASE-O | 0.432 [0.425, 0.438] | 0.262 [0.247, 0.272] | 1.006 [0.974, 1.054] |
+| G2 | NB-c, BASE-T | 0.152 [0.140, 0.158] | 0.100 [0.093, 0.104] | 0.859 [0.820, 0.927] |
+| G2 | NB-c, BASE-O | 0.436 [0.428, 0.441] | 0.258 [0.241, 0.268] | 1.109 [1.074, 1.141] |
+| G2 | LOG-T | 0.153 [0.140, 0.158] | 0.098 [0.089, 0.102] | 0.979 [0.952, 1.052] |
+| G2 | LOG-O | 0.445 [0.439, 0.453] | 0.216 [0.210, 0.222] | 0.998 [0.961, 1.046] |
+| G2 | LOG-S | 0.512 [0.502, 0.522] | 0.287 [0.278, 0.295] | 0.994 [0.979, 1.027] |
+| G3 | MIX, BASE-T | 0.126 [0.121, 0.131] | 0.081 [0.069, 0.088] | 0.929 [0.893, 0.960] |
+| G3 | MIX, BASE-O | 0.469 [0.464, 0.474] | 0.313 [0.300, 0.322] | 1.041 [1.002, 1.065] |
+| G3 | NB-c, BASE-T | 0.125 [0.121, 0.130] | 0.087 [0.076, 0.095] | 0.999 [0.974, 1.049] |
+| G3 | NB-c, BASE-O | 0.468 [0.463, 0.472] | 0.317 [0.303, 0.324] | 1.004 [0.972, 1.020] |
+| G3 | LOG-T | 0.127 [0.125, 0.132] | 0.077 [0.069, 0.086] | 1.003 [0.974, 1.073] |
+| G3 | LOG-O | 0.479 [0.473, 0.483] | 0.282 [0.277, 0.292] | 1.001 [0.967, 1.036] |
+| G3 | LOG-S | 0.524 [0.513, 0.532] | 0.386 [0.364, 0.402] | 0.997 [0.969, 1.022] |
+
+**X8** (under G2, LOG-O and LOG-S have neighbourhood-effect ratios further from
+1 than MIX, with the largest distortion in small, low-depth types), judged
+clause by clause: median |log ratio| over the 8 types with a true contrast of at least 0.1: MIX pi 0.030, LOG-O 2.178, LOG-S 1.676 (both further from 1); largest distortion in CAFs (LOG-O) and CAFs (LOG-S); low-depth types (median N below the overall 57): B-cells, Endothelial, Myeloid, PVL, T-cells. **partly holds**.
+
+Figure: `sim_recovery.png`, the neighbourhood-effect ratio by arm and
+generator, and the rank agreement. Every replicate value is in
+`sim_recovery.csv`. **Review point** (stages 1, 3 and 6 pause for review).
+
+### Stage 6 reading
+
+**Spec 7.4's question is answered: LOG-O and LOG-S fall well short of MIX on
+both state-recovery metrics, under both generators.**
+- **Rank agreement.** MIX's pi ranks cells against pi_true at Spearman 0.965
+  (G1 and G2). LOG-O reaches 0.74 and 0.66, LOG-S 0.70 and 0.69.
+- **Neighbourhood effect.** MIX recovers 93% (G1) and 98% (G2) of the true
+  contrast between tumour-rich and tumour-poor neighbourhoods. LOG-O recovers
+  14% and 11%, LOG-S 17%.
+
+So replacing OSDR's threshold-then-logistic step is justified on these data,
+including under G2, where MIX is misspecified.
+
+**The attenuation comes from the label, not the logistic link.** MIX itself,
+pushed through BASE-O, recovers only 11-17% of the neighbourhood effect, the
+same as LOG-O. NB-c pushed through BASE-O recovers 20-22%. BASE-O calls 18% of
+cells against a true cycling fraction near 13%, with many false positives in
+the quiet types. That non-differential noise pulls every label-scale contrast
+toward zero. BASE-T, which controls false positives, keeps more: LOG-T recovers
+63-72%, and MIX through BASE-T 59-63%.
+
+**X8 partly holds.**
+- **Clause 1 holds, decisively.** Median |log ratio| is 2.18 (LOG-O) and 1.68
+  (LOG-S), against 0.03 for MIX.
+- **Clause 2 fails.** The largest distortion is in CAFs, the type with the
+  fewest cycling cells (3%), not in a low-depth type. CAFs' median N of 60 sits
+  at the overall median. There, LOG-O's ratio is about 0: BASE-O in CAFs is
+  almost all false positives.
+
+**Fraction error.** MIX's pi is within 0.008 of the realised per-type fraction
+under G1, and 0.034 under G2. That is the cost of misspecification (an NB
+cycling class fitted as Poisson).
+
+**G3 is the caution.** With no latent classes at all (a single NB), MIX still
+reports per-type cycling fractions of 0.08-0.37 (e^delta about 1.6). A
+two-Poisson mixture can mimic NB over-dispersion, so a fitted pi is not by
+itself evidence of a latent cycling class. On the real data that evidence
+comes from elsewhere:
+- the held-out-gene test: w predicts the unseen half of the signature with a
+  rate ratio of 5.4, about 25,000x the permuted null;
+- the cell-type ordering against the Wu reference (Stage 5).
+
+**Caveats.**
+- **The truth borrows the mixture's structure.** Its pi is the production
+  mixture's prior, with the shared weight block, in both G1 and G2. The LOG arms
+  share that block too, so they can represent the truth exactly; their shortfall
+  is the label's.
+- **Cancer Epithelial has almost no true neighbourhood contrast** (-0.004 in
+  logit), so its ratios are left out of the pooled summaries.
+- **SCORE** in the simulation rests on the state-conditional allocation adopted
+  for V9.
+
+**Next: Stage 7 (sensitivities).**
+- the alpha_B and Td grids, already scored in Stage 4;
+- BASE-O-type and BASE-O-neg;
+- unpenalised NB and LOG arms, which also test the Stage 4 caveat about the
+  shared penalty;
+- MIX with theta = 1, now the production setting, so this item is moot;
+- the nucleus-only matrix, which waits for that file, as decided in Stage 1.
