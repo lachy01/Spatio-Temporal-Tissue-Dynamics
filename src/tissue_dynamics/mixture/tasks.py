@@ -98,6 +98,13 @@ def enumerate_tasks(job, cfg):
         extra = ({"n": int(cfg["sim_test03_n"])}
                  if job == "sim_single_component" and cfg.get("sim_test03_n") else {})
         return [{"job": job, "rep": r, **extra} for r in range(int(cfg.get("sim_reps", 20)))]
+    if job == "division_sim":
+        # Division classifier comparison, spec 7: the known-truth simulation.
+        # One task per generator and replicate; the replicate's cells are
+        # shared by its three generators (division/simulation.py).
+        return [{"job": job, "generator": g, "rep": r}
+                for g in ("G1", "G2", "G3")
+                for r in range(int(cfg.get("division_sim_reps", 10)))]
     if job == "sim_single_component_path":
         # Test 03 along a lambda path: on data with no class structure, which
         # weight block grows as the penalty is relaxed.
@@ -147,6 +154,10 @@ def run_task(task, cfg, verbose=False, out_dir=None):
     missing rather than as the finding it is.
     """
     job = task["job"]
+    if job == "division_sim":
+        from ..division.simulation import run_replicate
+        return {**task, **run_replicate(task, cfg,
+                                        say=(lambda *a: print(*a, flush=True)) if verbose else None)}
     try:
         return _run_sim(task, cfg) if job.startswith("sim_") else _run_real(
             task, cfg, verbose=verbose, out_dir=out_dir)

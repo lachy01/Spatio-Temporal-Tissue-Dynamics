@@ -297,6 +297,14 @@ density_knot_grid: [null, [50], [25, 50, 75], [25, 50, 75, 90]]
 # block runs away as the penalty is relaxed on data with no class structure.
 sim_lambda_grid: [0.0, 1.0, 10.0, 100.0, 1000.0, 10000.0]
 sim_path_reps: 8
+# Division classifier comparison, spec 7 (job division_sim): the known-truth
+# simulation. Three generators x division_sim_reps replicates, each on
+# division_sim_n real cells, every arm refitted; MIX with division_sim_restarts
+# starts. Inputs: outputs/division_classifier/{sim_inputs.npz, folds.parquet,
+# nb_params_nbc_full.json} and outputs/hpc/point_estimate.json.
+division_sim_n: 100000
+division_sim_reps: 10
+division_sim_restarts: 4
 # The same at the real sample size (job sim_single_component_path_full).
 sim_full_n: 561897
 # Test 03 (job sim_single_component) runs at the real n: invented structure

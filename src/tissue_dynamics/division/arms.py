@@ -151,6 +151,39 @@ def nb_objective(D, n, weight_ridge, n_reference, ridge_tau, b_penalty="frobeniu
 
 
 # --------------------------------------------------------------------------
+# LOG arms: logit P(L = 1) = b0 + theta log N + s(log A) + eta_state (spec 1)
+# --------------------------------------------------------------------------
+def logistic_eta(p, D):
+    """The LOG arms' linear predictor: the technical block g(log N, log A) with
+    a free linear log N term, plus the shared weight block."""
+    return p["b0"] + p["theta"] * D["logN"] + D["area"] @ p["s"] + eta_state(p, D)
+
+
+def logistic_objective(D, lab, n, weight_ridge, n_reference, ridge_tau, b_penalty="frobenius"):
+    """Penalised negative log-likelihood of a LOG arm, the mixture's penalty term
+    for term (as run/division_stage3_oof.py fits them)."""
+    import jax
+    import jax.numpy as jnp
+
+    def f(p):
+        eta = logistic_eta(p, D)
+        ll = jnp.sum(lab * eta - jax.nn.softplus(eta))
+        return -ll + penalty(p, n, weight_ridge, n_reference, ridge_tau, b_penalty)
+    return f
+
+
+def init_logistic(D, lab, rank, seed):
+    import jax.numpy as jnp
+
+    rng = np.random.default_rng(seed)
+    p = init_eta(D["own"].shape[1], D["nbr"].shape[1], D["hbasis"].shape[1], rank, rng)
+    m = float(np.clip(np.mean(np.asarray(lab)), 1e-6, 1 - 1e-6))
+    p.update({"b0": jnp.asarray(np.log(m / (1 - m))), "theta": jnp.asarray(0.0),
+              "s": jnp.zeros(D["area"].shape[1])})
+    return p
+
+
+# --------------------------------------------------------------------------
 # Optimiser: L-BFGS, then Newton on the exact Hessian
 # --------------------------------------------------------------------------
 def minimise(f, p0, rel_tol=1e-9, grad_tol=1e-5, lbfgs_maxiter=6000, newton_maxiter=40,
