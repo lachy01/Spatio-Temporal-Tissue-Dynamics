@@ -1249,3 +1249,154 @@ comes from elsewhere:
   shared penalty;
 - MIX with theta = 1, now the production setting, so this item is moot;
 - the nucleus-only matrix, which waits for that file, as decided in Stage 1.
+
+
+## Stage 7 -- sensitivities (2026-10-08 17:47)
+
+Out of fold, scored as in Stage 4 (250-block bootstrap, 300 replicates;
+paired differences within replicate). 65 new fits, all converged:
+**yes**. V7 at the production ridge for every new LOG
+arm: **pass** (largest sd(eta) 0.95).
+
+### 1. The threshold grids, every arm
+
+Each grid label now has its own LOG arm; the count arms are Stage 3's push-through.
+The last column is the LOG arm's paired log-loss difference against MIX
+(negative = LOG better).
+
+**BASE-T**
+
+| threshold | label rate | NB-c log loss | MIX log loss | LOG-T log loss | NB-c AUPRC | MIX AUPRC | LOG-T AUPRC | LOG-T - MIX log loss |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| alpha_B 0.01 | 0.01096 | 0.0552 [0.0516, 0.0588] | 0.0557 [0.0519, 0.0593] | 0.0545 [0.0511, 0.0579] | 0.036 [0.034, 0.039] | 0.036 [0.033, 0.038] | 0.041 [0.038, 0.044] | -0.0011 [-0.0015, -0.0008] |
+| alpha_B 0.001 | 0.001999 | 0.0136 [0.0121, 0.0148] | 0.0155 [0.0136, 0.0171] | 0.0131 [0.0118, 0.0143] | 0.008 [0.007, 0.009] | 0.005 [0.004, 0.005] | 0.010 [0.009, 0.013] | -0.0024 [-0.0029, -0.0019] |
+| alpha_B 0.0001 | 0.0003559 | 0.0030 [0.0026, 0.0036] | 0.0042 [0.0034, 0.0049] | 0.0030 [0.0026, 0.0034] | 0.002 [0.001, 0.003] | 0.001 [0.000, 0.001] | 0.002 [0.001, 0.003] | -0.0012 [-0.0015, -0.0008] |
+
+**BASE-O**
+
+| threshold | label rate | NB-c log loss | MIX log loss | LOG-O log loss | NB-c AUPRC | MIX AUPRC | LOG-O AUPRC | LOG-O - MIX log loss |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Td 0 | 0.2737 | 0.5427 [0.5350, 0.5494] | 0.5460 [0.5382, 0.5530] | 0.5528 [0.5449, 0.5600] | 0.434 [0.423, 0.445] | 0.426 [0.415, 0.436] | 0.405 [0.394, 0.415] | 0.0068 [0.0059, 0.0076] |
+| Td 0.25 | 0.2266 | 0.5037 [0.4974, 0.5103] | 0.5055 [0.4989, 0.5124] | 0.5152 [0.5086, 0.5219] | 0.353 [0.346, 0.361] | 0.349 [0.342, 0.356] | 0.320 [0.313, 0.328] | 0.0097 [0.0089, 0.0104] |
+| Td 0.75 | 0.1437 | 0.3899 [0.3840, 0.3957] | 0.3904 [0.3846, 0.3963] | 0.4015 [0.3957, 0.4074] | 0.235 [0.230, 0.239] | 0.235 [0.231, 0.239] | 0.193 [0.188, 0.197] | 0.0110 [0.0105, 0.0115] |
+| Td 1 | 0.1115 | 0.3312 [0.3254, 0.3373] | 0.3316 [0.3261, 0.3375] | 0.3408 [0.3350, 0.3467] | 0.186 [0.183, 0.190] | 0.188 [0.185, 0.193] | 0.151 [0.148, 0.155] | 0.0092 [0.0086, 0.0097] |
+
+The primary thresholds are in Stage 4; all of it is drawn in `stage7_grid.png`.
+
+### 2. BASE-O variants (Td 0.5)
+
+BASE-O-global uses one s+ for all cells; BASE-O-neg the negative-codeword floor
+(decoding noise only, effectively 1{y >= 2}).
+
+| label | arm | label rate | log loss | AUPRC | mean p / rate |
+| --- | --- | --- | --- | --- | --- |
+| BASE-O-global | NB-c | 0.1803 | 0.4446 [0.4383, 0.4508] | 0.289 [0.284, 0.295] | 1.044 [1.031, 1.057] |
+| BASE-O-global | NB-d | 0.1803 | 0.4444 [0.4382, 0.4507] | 0.289 [0.284, 0.295] | 1.042 [1.029, 1.055] |
+| BASE-O-global | MIX | 0.1803 | 0.4451 [0.4388, 0.4517] | 0.289 [0.283, 0.294] | 0.998 [0.983, 1.012] |
+| BASE-O-global | LOG-O | 0.1803 | 0.4569 [0.4504, 0.4634] | 0.251 [0.245, 0.257] | 1.001 [0.987, 1.014] |
+| BASE-O-neg | NB-c | 0.2216 | 0.4146 [0.4033, 0.4247] | 0.574 [0.553, 0.593] | 1.033 [1.021, 1.043] |
+| BASE-O-neg | NB-d | 0.2216 | 0.4146 [0.4033, 0.4246] | 0.574 [0.553, 0.593] | 1.031 [1.019, 1.042] |
+| BASE-O-neg | MIX | 0.2216 | 0.4162 [0.4051, 0.4264] | 0.568 [0.548, 0.588] | 1.021 [1.009, 1.033] |
+| BASE-O-neg | LOG-O | 0.2216 | 0.4272 [0.4158, 0.4373] | 0.553 [0.532, 0.574] | 1.000 [0.989, 1.010] |
+
+### 3. Unpenalised arms
+
+weight_ridge = 0 (balance term kept). Convergence and size of the fits:
+
+| fit | converged | max_sd_eta | max_norm_a |
+| --- | --- | --- | --- |
+| LOG-O_unpenalised | 5 | 0.420 | 0.344 |
+| LOG-S_unpenalised | 5 | 0.442 | 0.373 |
+| LOG-T_unpenalised | 5 | 0.929 | 0.648 |
+| NB-c unpenalised | 5 | 0.395 | 0.331 |
+
+| label | arm | log loss | AUPRC | mean p / rate |
+| --- | --- | --- | --- | --- |
+| BASE-T | LOG-T | 0.1365 [0.1298, 0.1433] | 0.099 [0.092, 0.105] | 1.002 [0.975, 1.028] |
+| BASE-T | LOG-T unpenalised | 0.1365 [0.1298, 0.1433] | 0.098 [0.092, 0.105] | 1.002 [0.975, 1.027] |
+| BASE-T | NB-c | 0.1358 [0.1291, 0.1429] | 0.092 [0.087, 0.098] | 0.923 [0.895, 0.950] |
+| BASE-T | NB-c unpenalised | 0.1358 [0.1290, 0.1429] | 0.092 [0.087, 0.098] | 0.924 [0.896, 0.951] |
+| BASE-T | MIX | 0.1353 [0.1287, 0.1420] | 0.102 [0.096, 0.109] | 1.123 [1.094, 1.152] |
+| BASE-O | LOG-O | 0.4622 [0.4560, 0.4688] | 0.250 [0.245, 0.255] | 1.001 [0.986, 1.014] |
+| BASE-O | LOG-O unpenalised | 0.4623 [0.4561, 0.4689] | 0.250 [0.245, 0.255] | 1.001 [0.986, 1.014] |
+| BASE-O | NB-c | 0.4501 [0.4443, 0.4564] | 0.289 [0.283, 0.294] | 1.037 [1.024, 1.049] |
+| BASE-O | NB-c unpenalised | 0.4501 [0.4443, 0.4564] | 0.289 [0.283, 0.294] | 1.037 [1.024, 1.049] |
+| BASE-O | MIX | 0.4509 [0.4450, 0.4574] | 0.288 [0.282, 0.293] | 1.006 [0.991, 1.020] |
+| SCORE | LOG-S | 0.5193 [0.5116, 0.5264] | 0.345 [0.335, 0.355] | 1.001 [0.988, 1.013] |
+| SCORE | LOG-S unpenalised | 0.5193 [0.5116, 0.5264] | 0.345 [0.335, 0.355] | 1.001 [0.988, 1.013] |
+
+Paired differences (first minus second):
+
+| label | difference | metric | estimate |
+| --- | --- | --- | --- |
+| BASE-T | LOG-T unpenalised - LOG-T | log loss | -0.0000 [-0.0000, 0.0000] |
+| BASE-T | LOG-T unpenalised - LOG-T | AUPRC | -0.0006 [-0.0008, -0.0004] |
+| BASE-T | NB-c unpenalised - NB-c | log loss | -0.0000 [-0.0000, 0.0000] |
+| BASE-T | NB-c unpenalised - NB-c | AUPRC | 0.0000 [-0.0000, 0.0001] |
+| BASE-T | LOG-T unpenalised - MIX | log loss | 0.0012 [0.0010, 0.0014] |
+| BASE-T | LOG-T unpenalised - MIX | AUPRC | -0.0042 [-0.0052, -0.0032] |
+| BASE-T | LOG-T unpenalised - NB-c unpenalised | log loss | 0.0006 [0.0003, 0.0010] |
+| BASE-T | LOG-T unpenalised - NB-c unpenalised | AUPRC | 0.0057 [0.0041, 0.0073] |
+| BASE-O | LOG-O unpenalised - LOG-O | log loss | 0.0000 [0.0000, 0.0000] |
+| BASE-O | LOG-O unpenalised - LOG-O | AUPRC | -0.0000 [-0.0001, 0.0000] |
+| BASE-O | NB-c unpenalised - NB-c | log loss | 0.0000 [-0.0000, 0.0000] |
+| BASE-O | NB-c unpenalised - NB-c | AUPRC | -0.0001 [-0.0001, -0.0000] |
+| BASE-O | LOG-O unpenalised - MIX | log loss | 0.0114 [0.0107, 0.0119] |
+| BASE-O | LOG-O unpenalised - MIX | AUPRC | -0.0379 [-0.0399, -0.0353] |
+| BASE-O | LOG-O unpenalised - NB-c unpenalised | log loss | 0.0121 [0.0115, 0.0126] |
+| BASE-O | LOG-O unpenalised - NB-c unpenalised | AUPRC | -0.0390 [-0.0410, -0.0369] |
+| SCORE | LOG-S unpenalised - LOG-S | log loss | 0.0000 [0.0000, 0.0000] |
+| SCORE | LOG-S unpenalised - LOG-S | AUPRC | -0.0000 [-0.0001, 0.0000] |
+
+X1 without the penalty: BASE-T: the unpenalised LOG arm still does not have the best log loss; BASE-O: the unpenalised LOG arm still does not have the best log loss.
+
+### 4. MIX with theta = 1
+
+The production mixture has fixed theta = 1 since 2026-10-06, so this row is
+the production row in Stages 3-6; there is nothing separate to run.
+
+### 5. Nucleus-only matrix
+
+Not run: it needs the transcript-level file (nucleus overlap per
+transcript), which is not on this machine (decided in Stage 1).
+
+Every score and interval is in `stage7_scores.csv`; every fit in
+`stage7_fits.csv`. Stage 7 complete in 115 min.
+
+### Stage 7 reading
+
+**The penalty did not handicap the label-trained arms; Stage 4's caveat is
+lifted.** Unpenalised and penalised fits are the same to within 0.0006 on
+every score, for NB-c and for all three LOG arms. At the full n, the
+production ridge barely shrinks these arms, and none separates without it
+(largest sd(eta) 0.93). X1's failure at the primary thresholds therefore stands
+as Stage 4 read it: the count likelihood carries information that binarising
+the label discards.
+
+**Across the grids, the answer depends on the label family.**
+- **BASE-O, every Td from 0 to 1, and both floor variants.** The count arms
+  beat LOG-O: log loss 0.007-0.011 lower, AUPRC 0.02-0.04 higher. The
+  BASE-O-neg label (effectively y >= 2) shows the same ordering. The OSDR-style
+  label is never better predicted by a logistic model trained on it.
+- **BASE-T, strict thresholds (alpha_B 0.01 and below).** LOG-T beats MIX
+  (log loss -0.0011 to -0.0024) and matches or beats NB-c. So X1 holds there.
+  This is the light tail again (X3): MIX predicts 0.29x and 0.10x the observed
+  rate at alpha_B 0.001 and 0.0001, NB-c about 0.5x. A logistic model fitted to
+  the rare tail calls themselves avoids that misspecification.
+- **BASE-T at the primary alpha_B 0.05.** MIX is best, as in Stage 4.
+
+**What remains.**
+- Spec item 8, the Monte Carlo push-through for SCORE (optional). It can now
+  reuse the adopted allocation model.
+- The nucleus-only spillover check, which needs the transcript-level file.
+
+With Stages 1-7 run, the comparison's findings are:
+- **Label scale.** The count arms predict the OSDR-style label better than a
+  logistic model trained on it, at every threshold. A logistic model wins only
+  on strict tail labels, where the mixture's Poisson tails are too light.
+- **State scale (Stage 6).** The mixture recovers the cycling state and its
+  neighbourhood dependence (93-98% of the true effect). The OSDR pipeline
+  recovers 11-14%, and the loss is the label's.
+- **Caution (G3).** A fitted pi is not by itself evidence of a latent class.
+  On the real data that evidence comes from the held-out-gene test and the Wu
+  ordering.
