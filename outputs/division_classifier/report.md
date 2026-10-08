@@ -626,3 +626,307 @@ matter at the label scale.
 **Next: Stage 5** (biology, spec 5, and deviation, spec 6). Spec 5.2's Wu et
 al. reference is still not on this machine; everything else in Stage 5 can run
 without it.
+
+
+## Stage 5 -- biology and deviation (2026-10-08 11:53)
+
+Out-of-fold predictions from Stage 3; intervals are the Stage 4 block bootstrap
+(250 blocks, 300 replicates). Label rates and mean p are label scale; MIX's
+pi and the Rogan-Gladen fraction are state scale; the two are not compared
+with each other.
+
+### 5.1 Fractions per cell type
+
+Rows ordered by MIX's mean pi. The Rogan-Gladen row corrects the BASE-T rate
+for its false positives (mean alpha_i) and for its sensitivity, which it
+borrows from MIX (mean P1(Y >= c^T_i)).
+
+| type | BASE-T rate | BASE-O rate | SCORE rate | MIX mean pi | Rogan-Gladen BASE-T (borrows from MIX) | Wu S/G2M, all patients | Wu S/G2M, ER+ patients |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Cancer Epithelial | 0.081 [0.076, 0.086] | 0.221 [0.214, 0.230] | 0.349 [0.339, 0.361] | 0.219 [0.214, 0.225] | 0.121 [0.109, 0.134] | 0.251 | 0.063 |
+| T-cells | 0.032 [0.030, 0.034] | 0.238 [0.234, 0.243] | 0.266 [0.260, 0.273] | 0.162 [0.158, 0.167] | 0.037 [0.028, 0.045] | 0.297 | 0.330 |
+| Plasmablasts | 0.043 [0.040, 0.046] | 0.201 [0.195, 0.207] | 0.272 [0.263, 0.281] | 0.149 [0.145, 0.153] | 0.055 [0.044, 0.066] | 0.087 | 0.089 |
+| B-cells | 0.024 [0.022, 0.027] | 0.211 [0.206, 0.216] | 0.227 [0.221, 0.233] | 0.136 [0.132, 0.140] | 0.003 [-0.010, 0.018] | 0.219 | 0.277 |
+| Normal Epithelial | 0.034 [0.031, 0.037] | 0.167 [0.160, 0.175] | 0.237 [0.228, 0.247] | 0.123 [0.119, 0.128] | 0.012 [0.003, 0.022] | 0.055 | 0.047 |
+| PVL | 0.019 [0.017, 0.021] | 0.148 [0.143, 0.152] | 0.182 [0.176, 0.188] | 0.082 [0.078, 0.086] | -0.038 [-0.046, -0.028] | 0.068 | 0.038 |
+| Myeloid | 0.015 [0.013, 0.016] | 0.137 [0.133, 0.141] | 0.160 [0.156, 0.164] | 0.066 [0.063, 0.068] | -0.060 [-0.065, -0.054] | 0.137 | 0.186 |
+| Endothelial | 0.012 [0.011, 0.013] | 0.122 [0.118, 0.125] | 0.141 [0.137, 0.145] | 0.055 [0.052, 0.058] | -0.074 [-0.079, -0.068] | 0.055 | 0.035 |
+| CAFs | 0.010 [0.009, 0.011] | 0.129 [0.124, 0.133] | 0.153 [0.148, 0.158] | 0.033 [0.031, 0.035] | -0.085 [-0.089, -0.080] | 0.035 | 0.026 |
+| all | 0.034 [0.032, 0.037] | 0.183 [0.179, 0.187] | 0.234 [0.227, 0.241] | 0.126 [0.122, 0.130] | 0.024 [0.016, 0.032] |  |  |
+
+The Rogan-Gladen fraction is negative, with its interval below 0, in
+4 types (Endothelial, CAFs, PVL, Myeloid). There the BASE-T label
+fires less often than its own mean alpha_i: the technical null, fitted across
+all types with one dispersion (alpha0 = 0.83, widened by the cycling cells),
+overstates those types' false-positive rate. The correction is not usable
+there; it says the label's false positives are type-dependent, not that the
+fraction is below zero.
+
+Each arm's mean p against its label (label scale):
+
+| type | BASE-T rate | NB-c p, BASE-T | MIX p, BASE-T | LOG-T p, BASE-T | BASE-O rate | NB-c p, BASE-O | MIX p, BASE-O | LOG-O p, BASE-O |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Cancer Epithelial | 0.0812 | 0.0622 | 0.0867 | 0.0762 | 0.2215 | 0.2361 | 0.2150 | 0.2193 |
+| T-cells | 0.0320 | 0.0379 | 0.0373 | 0.0314 | 0.2384 | 0.2362 | 0.2210 | 0.2336 |
+| Plasmablasts | 0.0427 | 0.0379 | 0.0445 | 0.0404 | 0.2007 | 0.2114 | 0.1919 | 0.1971 |
+| B-cells | 0.0243 | 0.0290 | 0.0290 | 0.0248 | 0.2112 | 0.2069 | 0.1961 | 0.2089 |
+| Normal Epithelial | 0.0337 | 0.0304 | 0.0408 | 0.0365 | 0.1670 | 0.1803 | 0.1640 | 0.1724 |
+| PVL | 0.0187 | 0.0186 | 0.0208 | 0.0196 | 0.1476 | 0.1539 | 0.1580 | 0.1486 |
+| Myeloid | 0.0146 | 0.0164 | 0.0186 | 0.0185 | 0.1372 | 0.1514 | 0.1577 | 0.1469 |
+| Endothelial | 0.0116 | 0.0117 | 0.0141 | 0.0141 | 0.1215 | 0.1268 | 0.1425 | 0.1260 |
+| CAFs | 0.0097 | 0.0093 | 0.0116 | 0.0112 | 0.1288 | 0.1290 | 0.1550 | 0.1241 |
+| all | 0.0344 | 0.0317 | 0.0386 | 0.0344 | 0.1828 | 0.1896 | 0.1839 | 0.1829 |
+
+### 5.2 Anchors
+
+**The section, in situ.** Receptor genes in Cancer Epithelial cells, against a
+per-gene technical null (log N offset, area spline, robustly trimmed, as the
+labels' null). Descriptive only; no clinical subtype is assigned.
+
+| gene | detected (y >= 1) | above null, p < 0.05 | above null, p < 0.001 | transcripts per 1,000 captured |
+| --- | --- | --- | --- | --- |
+| ESR1 | 0.4048 | 0.0573 | 0.0045 | 2.9009 |
+| PGR | 0.0324 | 0.0215 | 0.0008 | 0.1426 |
+| ERBB2 | 0.2335 | 0.0392 | 0.0018 | 1.2379 |
+
+For reference, Normal Epithelial and all other types:
+
+| gene | stratum | detected (y >= 1) | above null, p < 0.05 | transcripts per 1,000 captured |
+| --- | --- | --- | --- | --- |
+| ESR1 | Normal Epithelial | 0.1960 | 0.0363 | 2.3307 |
+| ESR1 | all other types | 0.0274 | 0.0083 | 0.5853 |
+| PGR | Normal Epithelial | 0.0149 | 0.0121 | 0.1178 |
+| PGR | all other types | 0.0024 | 0.0022 | 0.0381 |
+| ERBB2 | Normal Epithelial | 0.1190 | 0.0271 | 1.1226 |
+| ERBB2 | all other types | 0.0148 | 0.0056 | 0.2631 |
+
+**The closest Wu subtype.** log2 enrichment of each receptor gene in Cancer
+Epithelial over Normal Epithelial (pooled transcripts per transcript
+captured), here and in each Wu subtype; distance is Euclidean over the three
+genes. Closest: **ER+**. Wu's subtype is the clinical label per patient
+(its HER2+ group includes HER2+/ER+ tumours).
+
+| profile | ESR1 | PGR | ERBB2 | distance |
+| --- | --- | --- | --- | --- |
+| this section (Xenium) | +0.316 | +0.275 | +0.141 | +0.000 |
+| Wu ER+ | +1.030 | +1.044 | +0.272 | +1.058 |
+| Wu HER2+ | -3.005 | -4.523 | +5.536 | +7.947 |
+| Wu TNBC | -5.233 | -5.982 | -0.686 | +8.404 |
+
+**Wu et al. 2021 (GSE176078).** 100,064 cells from 26
+primary tumours (10x Chromium). Phase from Seurat's CellCycleScoring via
+scanpy's port (43 S and 54 G2M
+genes; MLF1IP as CENPU), on LogNormalize expression. S/G2M fraction per type,
+pooled over cells and as the median and IQR over patients with at least 20
+cells of the type:
+
+| scope | stratum | cells | patients | S/G2M fraction (pooled) | patient median | patient IQR |
+| --- | --- | --- | --- | --- | --- | --- |
+| all patients | Endothelial | 7605 | 26 | 0.055 | 0.069 | 0.038-0.087 |
+| all patients | CAFs | 6573 | 26 | 0.035 | 0.024 | 0.015-0.073 |
+| all patients | PVL | 5423 | 26 | 0.068 | 0.096 | 0.036-0.171 |
+| all patients | B-cells | 3206 | 20 | 0.219 | 0.212 | 0.158-0.340 |
+| all patients | T-cells | 35214 | 26 | 0.297 | 0.329 | 0.263-0.379 |
+| all patients | Myeloid | 9675 | 26 | 0.137 | 0.153 | 0.110-0.202 |
+| all patients | Normal Epithelial | 4355 | 13 | 0.055 | 0.045 | 0.037-0.073 |
+| all patients | Plasmablasts | 3524 | 14 | 0.087 | 0.078 | 0.047-0.137 |
+| all patients | Cancer Epithelial | 24489 | 20 | 0.251 | 0.192 | 0.108-0.449 |
+| ER+ patients | Endothelial | 5206 | 11 | 0.035 | 0.045 | 0.022-0.080 |
+| ER+ patients | CAFs | 2573 | 11 | 0.026 | 0.039 | 0.015-0.073 |
+| ER+ patients | PVL | 3265 | 11 | 0.038 | 0.113 | 0.027-0.149 |
+| ER+ patients | B-cells | 606 | 8 | 0.277 | 0.274 | 0.169-0.379 |
+| ER+ patients | T-cells | 9821 | 11 | 0.330 | 0.301 | 0.270-0.401 |
+| ER+ patients | Myeloid | 1831 | 11 | 0.186 | 0.168 | 0.135-0.229 |
+| ER+ patients | Normal Epithelial | 2430 | 5 | 0.047 | 0.045 | 0.044-0.046 |
+| ER+ patients | Plasmablasts | 631 | 7 | 0.089 | 0.073 | 0.041-0.120 |
+| ER+ patients | Cancer Epithelial | 11878 | 9 | 0.063 | 0.099 | 0.054-0.118 |
+
+Platform gap: droplet scRNA-seq at much higher depth (median
+3,573 UMIs per cell, against a median N of
+57 here), and a score-based phase call that is relative
+to control genes, so it calls many non-cycling cells S or G2M. Read the Wu
+fractions as an ordering of types more than as absolute rates.
+
+**Literature Ki67 index.** As a range only, and approximate (from memory; to
+be checked against a cited source before use): roughly 10-20% in luminal-A-like
+tumours, rising to 30-60% or more in HER2-positive and triple-negative ones.
+Ki67 protein marks G1 as well as S/G2/M, so a transcript S/G2M fraction should
+sit below it; it is an upper bound for Cancer Epithelial, not a target.
+
+### 5.3 Qualitative checks
+
+Rules, fixed before any result was seen: Cancer Epithelial highest -- pass if
+ranked first, unclear if second. Plasmablasts and T-cells intermediate -- pass
+if both are below Cancer Epithelial and above all four low types, unclear if
+each is above at least two of them. CAFs, PVL, Endothelial and Normal
+Epithelial low -- pass if all four are in the bottom five of nine, unclear if
+three are. Consistency with Wu -- Spearman correlation across the nine types
+with the closest-subtype Wu fractions: pass at 0.6 or above, unclear from 0.3.
+
+| source | Cancer Epithelial highest | Plasmablasts, T-cells intermediate | CAFs, PVL, Endothelial, Normal Epi. low | Spearman with Wu ER+ |
+| --- | --- | --- | --- | --- |
+| MIX mean pi | pass (rank 1) | pass | pass (4/4 in bottom 5) | +0.67 (pass) |
+| Rogan-Gladen BASE-T (borrows from MIX) | pass (rank 1) | pass | unclear (3/4 in bottom 5) | +0.55 (unclear) |
+| BASE-T rate | pass (rank 1) | unclear | unclear (3/4 in bottom 5) | +0.47 (unclear) |
+| BASE-O rate | unclear (rank 2) | unclear | pass (4/4 in bottom 5) | +0.75 (pass) |
+| SCORE rate | pass (rank 1) | pass | unclear (3/4 in bottom 5) | +0.53 (unclear) |
+| Wu S/G2M, all patients | unclear (rank 2) | unclear | pass (4/4 in bottom 5) |  |
+| Wu S/G2M, ER+ patients | fail (rank 5) | unclear | pass (4/4 in bottom 5) |  |
+
+### 6.1-6.2 Where the arms disagree
+
+Mean out-of-fold difference by cell type (* = 95% interval excludes 0):
+
+| type | MIX - NB-c, BASE-T | MIX - NB-c, BASE-O | MIX - LOG-T, BASE-T | MIX - LOG-O, BASE-O | NB-c - NB-d, BASE-T | NB-c - NB-d, BASE-O | LOG-O - LOG-S (percentile rank) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Endothelial | +0.0023* | +0.0157* | -0.0000 | +0.0165* | -0.0001* | -0.0001* | +0.0167* |
+| CAFs | +0.0023* | +0.0260* | +0.0004* | +0.0309* | +0.0013* | +0.0008* | -0.0156* |
+| PVL | +0.0021* | +0.0041* | +0.0012* | +0.0093* | +0.0001* | +0.0003* | -0.0042 |
+| B-cells | -0.0000 | -0.0108* | +0.0042* | -0.0128* | +0.0006* | -0.0008* | +0.1399* |
+| T-cells | -0.0006* | -0.0153* | +0.0059* | -0.0126* | +0.0000 | -0.0001* | +0.1325* |
+| Myeloid | +0.0022* | +0.0063* | +0.0001 | +0.0108* | -0.0008* | -0.0001* | +0.0254* |
+| Normal Epithelial | +0.0104* | -0.0163* | +0.0043* | -0.0084* | +0.0017* | +0.0006* | -0.0824* |
+| Plasmablasts | +0.0066* | -0.0195* | +0.0040* | -0.0052* | +0.0017* | -0.0003* | -0.0478* |
+| Cancer Epithelial | +0.0246* | -0.0211* | +0.0105* | -0.0043* | -0.0015* | +0.0008* | -0.1410* |
+
+Along the continuous strata, first level to last (decile 1 to 10; tumour
+edge from 100 um or more inside to 300 um or more outside):
+
+| difference | neighbourhood tumour fraction decile | density decile | vascular proximity decile (u) | distance to tumour edge (um; inside < 0) |
+| --- | --- | --- | --- | --- |
+| MIX - NB-c, BASE-T | +0.0009 to +0.0226 | +0.0014 to +0.0010 | +0.0089 to +0.0022 | +0.0238 to +0.0023 |
+| MIX - NB-c, BASE-O | +0.0086 to -0.0238 | +0.0213 to -0.0072 | -0.0151 to +0.0162 | -0.0239 to +0.0033 |
+| MIX - LOG-T, BASE-T | +0.0024 to +0.0092 | +0.0007 to +0.0041 | +0.0067 to +0.0006 | +0.0092 to +0.0024 |
+| MIX - LOG-O, BASE-O | +0.0089 to -0.0035 | +0.0255 to -0.0106 | -0.0063 to +0.0191 | -0.0084 to +0.0067 |
+| NB-c - NB-d, BASE-T | +0.0003 to -0.0006 | +0.0002 to +0.0003 | -0.0001 to +0.0002 | -0.0010 to +0.0003 |
+| NB-c - NB-d, BASE-O | -0.0002 to +0.0006 | +0.0000 to -0.0004 | +0.0001 to -0.0000 | +0.0003 to +0.0000 |
+| LOG-O - LOG-S (percentile rank) | +0.0609 to -0.1588 | -0.0017 to +0.1211 | -0.0093 to -0.0049 | -0.1619 to +0.0336 |
+
+The tumour region (100 um bins with Cancer Epithelial share >= 0.5) holds
+13.1% of cells. Every level, with intervals and mean
+|difference|, is in `deviation.csv`; the trends are drawn in
+`deviation_strata.png`.
+
+**X4** (NB-d moves predictions mainly in Cancer Epithelial): largest mean
+|NB-c - NB-d| in Cancer Epithelial (BASE-T) and CAFs (BASE-O) --
+**does not hold**.
+**X5** (NB-MIX disagreement concentrates in Cancer Epithelial and
+Plasmablasts): the two largest mean |MIX - NB-c| are
+Cancer Epithelial, Normal Epithelial (BASE-T) and
+CAFs, Cancer Epithelial (BASE-O) --
+**does not hold**.
+
+### 6.3 Residual maps
+
+Local Moran's I of the out-of-fold label residual L - p on 100 um bins, as
+`run/spatial_analysis.py` computes it. HH bins are under-prediction (more
+labelled cells than predicted), LL bins over-prediction. The reference is the
+mixture's count-residual clustering from the spatial analysis: HH by quadrant
+lower-right 46%, lower-left 34%, upper-left 15%, upper-right 5%; LL by quadrant lower-right 46%, upper-left 23%, upper-right 22%, lower-left 10% (quadrants in plotted
+coordinates, y upward).
+
+| label | arm | global I | HH bins (under-prediction) | LL bins (over-prediction) | HH overlap with count-residual HH (Jaccard) | LL overlap with count-residual LL (Jaccard) | HH by quadrant | LL by quadrant |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BASE-T | NB-c | 0.116 | 62 | 30 | 0.261 | 0.072 | lower-left 58%, lower-right 42% | lower-left 63%, lower-right 17%, upper-right 17%, upper-left 3% |
+| BASE-T | NB-d | 0.114 | 61 | 31 | 0.281 | 0.079 | lower-left 57%, lower-right 43% | lower-left 65%, lower-right 19%, upper-right 13%, upper-left 3% |
+| BASE-T | MIX | 0.099 | 33 | 66 | 0.160 | 0.185 | lower-left 55%, lower-right 45% | lower-right 48%, lower-left 41%, upper-right 9%, upper-left 2% |
+| BASE-T | LOG-T | 0.094 | 47 | 51 | 0.242 | 0.187 | lower-left 60%, lower-right 40% | lower-right 51%, lower-left 31%, upper-right 16%, upper-left 2% |
+| BASE-O | NB-c | 0.157 | 60 | 138 | 0.303 | 0.335 | lower-right 47%, upper-left 27%, lower-left 17%, upper-right 10% | lower-right 43%, upper-right 33%, lower-left 20%, upper-left 4% |
+| BASE-O | NB-d | 0.156 | 62 | 142 | 0.308 | 0.335 | lower-right 47%, upper-left 26%, lower-left 18%, upper-right 10% | lower-right 44%, upper-right 32%, lower-left 19%, upper-left 4% |
+| BASE-O | MIX | 0.169 | 109 | 112 | 0.408 | 0.392 | lower-right 44%, lower-left 29%, upper-left 21%, upper-right 6% | upper-right 36%, lower-right 31%, lower-left 21%, upper-left 12% |
+| BASE-O | LOG-O | 0.153 | 81 | 125 | 0.369 | 0.365 | lower-right 40%, upper-left 27%, lower-left 25%, upper-right 9% | lower-right 48%, upper-right 30%, lower-left 17%, upper-left 5% |
+| SCORE | LOG-S | 0.179 | 106 | 154 | 0.267 | 0.380 | lower-right 33%, upper-left 32%, lower-left 31%, upper-right 4% | lower-right 54%, upper-right 23%, lower-left 14%, upper-left 10% |
+
+### 6.4 Over-dispersed types
+
+Stage 4's scores for Cancer Epithelial and Plasmablasts:
+
+| label | type | arm | log loss | AUROC | AUPRC | mean p / rate |
+| --- | --- | --- | --- | --- | --- | --- |
+| BASE-T | Plasmablasts | NB-c | 0.1684 [0.1600, 0.1779] | 0.6833 [0.6711, 0.6949] | 0.0812 [0.0748, 0.0895] | 0.8879 [0.8360, 0.9341] |
+| BASE-T | Cancer Epithelial | NB-c | 0.2735 [0.2611, 0.2860] | 0.6554 [0.6469, 0.6631] | 0.1302 [0.1238, 0.1358] | 0.7658 [0.7363, 0.7979] |
+| BASE-T | Plasmablasts | NB-d | 0.1687 [0.1601, 0.1782] | 0.6841 [0.6721, 0.6952] | 0.0814 [0.0749, 0.0896] | 0.8480 [0.7983, 0.8924] |
+| BASE-T | Cancer Epithelial | NB-d | 0.2732 [0.2608, 0.2855] | 0.6541 [0.6456, 0.6614] | 0.1297 [0.1233, 0.1353] | 0.7841 [0.7536, 0.8171] |
+| BASE-T | Plasmablasts | MIX | 0.1683 [0.1602, 0.1775] | 0.6801 [0.6674, 0.6922] | 0.0844 [0.0772, 0.0938] | 1.0415 [0.9856, 1.0988] |
+| BASE-T | Cancer Epithelial | MIX | 0.2705 [0.2597, 0.2819] | 0.6597 [0.6515, 0.6665] | 0.1411 [0.1340, 0.1474] | 1.0688 [1.0227, 1.1100] |
+| BASE-T | Plasmablasts | LOG-T | 0.1698 [0.1615, 0.1792] | 0.6615 [0.6474, 0.6770] | 0.0809 [0.0731, 0.0906] | 0.9468 [0.8938, 0.9998] |
+| BASE-T | Cancer Epithelial | LOG-T | 0.2707 [0.2592, 0.2825] | 0.6607 [0.6529, 0.6671] | 0.1429 [0.1354, 0.1494] | 0.9390 [0.8986, 0.9745] |
+| BASE-O | Plasmablasts | NB-c | 0.4847 [0.4767, 0.4923] | 0.6316 [0.6248, 0.6381] | 0.2894 [0.2792, 0.2991] | 1.0533 [1.0279, 1.0803] |
+| BASE-O | Cancer Epithelial | NB-c | 0.5147 [0.5051, 0.5252] | 0.6183 [0.6126, 0.6245] | 0.2986 [0.2905, 0.3074] | 1.0660 [1.0366, 1.0945] |
+| BASE-O | Plasmablasts | NB-d | 0.4846 [0.4766, 0.4922] | 0.6321 [0.6253, 0.6386] | 0.2893 [0.2791, 0.2990] | 1.0548 [1.0294, 1.0818] |
+| BASE-O | Cancer Epithelial | NB-d | 0.5146 [0.5050, 0.5251] | 0.6185 [0.6127, 0.6245] | 0.2988 [0.2906, 0.3076] | 1.0624 [1.0328, 1.0909] |
+| BASE-O | Plasmablasts | MIX | 0.4836 [0.4750, 0.4919] | 0.6346 [0.6279, 0.6411] | 0.2917 [0.2821, 0.3012] | 0.9560 [0.9331, 0.9787] |
+| BASE-O | Cancer Epithelial | MIX | 0.5129 [0.5026, 0.5239] | 0.6253 [0.6193, 0.6314] | 0.3028 [0.2947, 0.3115] | 0.9709 [0.9448, 0.9983] |
+| BASE-O | Plasmablasts | LOG-O | 0.4956 [0.4870, 0.5039] | 0.5772 [0.5702, 0.5846] | 0.2470 [0.2384, 0.2561] | 0.9821 [0.9566, 1.0088] |
+| BASE-O | Cancer Epithelial | LOG-O | 0.5202 [0.5104, 0.5314] | 0.5936 [0.5866, 0.6009] | 0.2768 [0.2684, 0.2856] | 0.9903 [0.9621, 1.0187] |
+| SCORE | Plasmablasts | LOG-S | 0.5741 [0.5652, 0.5824] | 0.5965 [0.5893, 0.6041] | 0.3348 [0.3223, 0.3485] | 0.9850 [0.9572, 1.0127] |
+| SCORE | Cancer Epithelial | LOG-S | 0.6354 [0.6289, 0.6428] | 0.5886 [0.5821, 0.5948] | 0.4211 [0.4095, 0.4338] | 0.9890 [0.9671, 1.0125] |
+
+Figures: `fraction_ladder.png`, `deviation_strata.png`, `residual_maps.png`.
+Stage 5 complete in 3 min.
+
+### Stage 5 reading
+
+**Only the mixture's state scale passes every biological check.** MIX's mean pi
+puts Cancer Epithelial first (0.219), then T-cells, Plasmablasts, B-cells and
+Normal Epithelial (0.16-0.12), then PVL, Myeloid, Endothelial and CAFs
+(0.08-0.03). That passes all three ordering checks and correlates +0.67 with
+the Wu ER+ fractions.
+
+The labels each miss a check:
+- **BASE-O** ranks T-cells above Cancer Epithelial (0.238 against 0.221). This
+  is the depth floor found in Stage 1: where mu0 is below 1, one or two counts
+  clear the threshold.
+- **BASE-T and SCORE** put Cancer Epithelial first but do not separate Normal
+  Epithelial from the low group.
+
+**The BASE-T label's false-positive rate depends on cell type.** In
+Endothelial, CAFs, PVL and Myeloid cells the label fires less often than the
+null's own alpha_i, so the Rogan-Gladen correction goes negative. The
+technical null, with one dispersion fitted across all types, is too wide for
+the quiet types.
+
+**Anchors.** The section's receptor profile is closest to Wu's ER+ tumours,
+and far from HER2+ and TNBC (distance 1.1 against about 8). This is
+descriptive only:
+- ESR1 is detected in 40% of Cancer Epithelial cells, against 20% of Normal
+  Epithelial;
+- ERBB2 is detected in 23%, against 12%;
+- PGR is rare (3%).
+
+In Wu's ER+ patients, Cancer Epithelial is only fifth by S/G2M fraction
+(0.063). T-cells (0.33) and B-cells (0.28) top the list. That ordering is
+partly the score-based phase call, which is generous to lymphocytes. Read the
+Wu fractions as an ordering, and not on the same scale as pi (a mixture
+weight, not an S/G2M fraction).
+
+**Where the arms disagree.**
+- **MIX against NB-c.** The difference is largest in Cancer Epithelial and in
+  tumour-rich neighbourhoods, with opposite signs on the two labels. MIX
+  predicts more BASE-T calls (+0.025 in Cancer Epithelial; +0.001 rising to
+  +0.023 across neighbourhood tumour deciles) and fewer BASE-O calls (-0.021).
+  On BASE-O it also predicts more calls in sparse tissue and fewer in dense
+  (+0.021 falling to -0.007 across density deciles).
+- **LOG-O against LOG-S.** Ranked against each other, LOG-O puts T- and B-cells
+  higher (+0.13 to +0.14 percentile) and LOG-S puts Cancer Epithelial higher
+  (-0.14). The OSDR-style label leans to lymphocytes, the module score to
+  tumour.
+- **X4 does not hold.** NB-d's largest shift is in Cancer Epithelial for BASE-T
+  but in CAFs for BASE-O, and every NB-c - NB-d difference is at most 0.002.
+- **X5 partly holds.** Cancer Epithelial is in the top two on both labels;
+  Plasmablasts are not (Normal Epithelial for BASE-T, CAFs for BASE-O).
+
+**Residual maps.** Every arm, on every label, shows the same two persistent
+regions as the mixture's count residuals: under-prediction at the lower left
+and over-prediction at the lower right. Overlap with the count-residual
+clusters reaches Jaccard 0.41 (BASE-O, MIX). The clustering belongs to the
+tissue, not to any one model. Global I runs from 0.09 to 0.18, lowest for
+BASE-T under MIX and LOG-T.
+
+**Over-dispersed types (6.4).** In Cancer Epithelial and Plasmablasts, MIX ties
+or leads on log loss and AUPRC for both labels, and LOG-O is last.
+
+**Next: Stage 6**, the known-truth simulation (spec 7). It needs the
+allocation model and its test V9, then a Spartan array: 10 replicates per
+generator (G1-G3) at n = 100,000, refitting NB-c, MIX, LOG-T, LOG-O and LOG-S
+in each. Stage 6 is a review point.

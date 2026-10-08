@@ -1,0 +1,10 @@
+label,arm,global I,HH bins (under-prediction),LL bins (over-prediction),HH overlap with count-residual HH (Jaccard),LL overlap with count-residual LL (Jaccard),HH by quadrant,LL by quadrant
+BASE-T,NB-c,0.11624784351554718,62,30,0.2608695652173913,0.07236842105263158,"lower-left 58%, lower-right 42%","lower-left 63%, lower-right 17%, upper-right 17%, upper-left 3%"
+BASE-T,NB-d,0.11429995299628483,61,31,0.2814814814814815,0.07894736842105263,"lower-left 57%, lower-right 43%","lower-left 65%, lower-right 19%, upper-right 13%, upper-left 3%"
+BASE-T,MIX,0.0989282893148196,33,66,0.16,0.18452380952380953,"lower-left 55%, lower-right 45%","lower-right 48%, lower-left 41%, upper-right 9%, upper-left 2%"
+BASE-T,LOG-T,0.09449801948794954,47,51,0.2421875,0.1870967741935484,"lower-left 60%, lower-right 40%","lower-right 51%, lower-left 31%, upper-right 16%, upper-left 2%"
+BASE-O,NB-c,0.15656279210432253,60,138,0.30303030303030304,0.33497536945812806,"lower-right 47%, upper-left 27%, lower-left 17%, upper-right 10%","lower-right 43%, upper-right 33%, lower-left 20%, upper-left 4%"
+BASE-O,NB-d,0.15639521975751808,62,142,0.3082706766917293,0.33495145631067963,"lower-right 47%, upper-left 26%, lower-left 18%, upper-right 10%","lower-right 44%, upper-right 32%, lower-left 19%, upper-left 4%"
+BASE-O,MIX,0.16935804886231026,109,112,0.40764331210191085,0.39204545454545453,"lower-right 44%, lower-left 29%, upper-left 21%, upper-right 6%","upper-right 36%, lower-right 31%, lower-left 21%, upper-left 12%"
+BASE-O,LOG-O,0.15263410927011672,81,125,0.36879432624113473,0.36507936507936506,"lower-right 40%, upper-left 27%, lower-left 25%, upper-right 9%","lower-right 48%, upper-right 30%, lower-left 17%, upper-left 5%"
+SCORE,LOG-S,0.17856718646555458,106,154,0.26744186046511625,0.3798076923076923,"lower-right 33%, upper-left 32%, lower-left 31%, upper-right 4%","lower-right 54%, upper-right 23%, lower-left 14%, upper-left 10%"
