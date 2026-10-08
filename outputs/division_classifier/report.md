@@ -388,3 +388,241 @@ Brier, AUPRC, calibration by type, intervals) is Stage 4.
 Out-of-fold predictions for every arm and threshold are in
 `oof_predictions.parquet`. Stage 3 complete in 51 min.
 **Review point** (stages 1, 3 and 6 pause for review).
+
+
+## Stage 4 -- label-scale scoring (2026-10-08 11:25)
+
+Every score is out of fold (Stage 3's predictions; nothing refitted). Intervals
+are 95% spatial block bootstrap: the 250 stored blocks resampled with
+replacement, 300 replicates, every arm scored on the same resampled cells,
+so a paired difference is taken within each replicate. Per the interpretive
+rule, each LOG arm was trained on the label it is scored against, and a
+label-scale win for it is not evidence that it infers division better.
+Calibration-in-the-large is reported as mean p / label rate (1 = calibrated).
+Cell types are the Stage 1 standardised argmax.
+
+### BASE-T (LT_a05, label rate 0.0344)
+
+| arm | log loss | Brier | AUROC | AUPRC | mean p / rate |
+| --- | --- | --- | --- | --- | --- |
+| NB-c | 0.1358 [0.1291, 0.1429] | 0.0322 [0.0302, 0.0342] | 0.7544 [0.7484, 0.7607] | 0.0923 [0.0873, 0.0975] | 0.923 [0.895, 0.950] |
+| NB-d | 0.1358 [0.1291, 0.1429] | 0.0322 [0.0302, 0.0342] | 0.7541 [0.7482, 0.7603] | 0.0923 [0.0873, 0.0975] | 0.920 [0.893, 0.947] |
+| MIX | 0.1353 [0.1287, 0.1420] | 0.0320 [0.0301, 0.0340] | 0.7558 [0.7496, 0.7623] | 0.1023 [0.0963, 0.1086] | 1.123 [1.094, 1.152] |
+| LOG-T | 0.1365 [0.1298, 0.1433] | 0.0321 [0.0302, 0.0341] | 0.7424 [0.7350, 0.7497] | 0.0987 [0.0923, 0.1053] | 1.002 [0.975, 1.028] |
+
+Paired differences (first minus second; for log loss and Brier, negative means
+the first arm is better; for AUROC and AUPRC, positive):
+
+| difference | log loss | Brier | AUROC | AUPRC |
+| --- | --- | --- | --- | --- |
+| MIX - NB-c | -0.0006 [-0.0009, -0.0002] | -0.0002 [-0.0002, -0.0001] | 0.0015 [0.0002, 0.0029] | 0.0100 [0.0083, 0.0114] |
+| NB-d - NB-c | 0.0000 [-0.0000, 0.0000] | -0.0000 [-0.0000, -0.0000] | -0.0002 [-0.0005, 0.0001] | 0.0000 [-0.0001, 0.0002] |
+| LOG-T - MIX | 0.0012 [0.0010, 0.0015] | 0.0001 [0.0000, 0.0001] | -0.0134 [-0.0159, -0.0112] | -0.0036 [-0.0046, -0.0027] |
+| LOG-T - NB-c | 0.0006 [0.0003, 0.0010] | -0.0001 [-0.0001, -0.0001] | -0.0119 [-0.0150, -0.0093] | 0.0063 [0.0047, 0.0080] |
+
+### BASE-O (LO_td050, label rate 0.1828)
+
+| arm | log loss | Brier | AUROC | AUPRC | mean p / rate |
+| --- | --- | --- | --- | --- | --- |
+| NB-c | 0.4501 [0.4443, 0.4564] | 0.1420 [0.1396, 0.1447] | 0.6658 [0.6631, 0.6685] | 0.2887 [0.2835, 0.2941] | 1.037 [1.024, 1.049] |
+| NB-d | 0.4500 [0.4442, 0.4563] | 0.1420 [0.1396, 0.1446] | 0.6661 [0.6633, 0.6688] | 0.2890 [0.2837, 0.2943] | 1.036 [1.023, 1.048] |
+| MIX | 0.4509 [0.4450, 0.4574] | 0.1422 [0.1397, 0.1448] | 0.6638 [0.6613, 0.6665] | 0.2876 [0.2820, 0.2926] | 1.006 [0.991, 1.020] |
+| LOG-O | 0.4622 [0.4560, 0.4688] | 0.1455 [0.1430, 0.1483] | 0.6216 [0.6179, 0.6254] | 0.2497 [0.2445, 0.2554] | 1.001 [0.986, 1.014] |
+
+| difference | log loss | Brier | AUROC | AUPRC |
+| --- | --- | --- | --- | --- |
+| MIX - NB-c | 0.0008 [0.0004, 0.0012] | 0.0001 [0.0000, 0.0003] | -0.0020 [-0.0031, -0.0011] | -0.0012 [-0.0019, -0.0004] |
+| NB-d - NB-c | -0.0001 [-0.0002, -0.0001] | -0.0000 [-0.0000, -0.0000] | 0.0003 [0.0002, 0.0003] | 0.0002 [0.0001, 0.0003] |
+| LOG-O - MIX | 0.0114 [0.0107, 0.0119] | 0.0034 [0.0032, 0.0036] | -0.0421 [-0.0445, -0.0394] | -0.0379 [-0.0399, -0.0353] |
+| LOG-O - NB-c | 0.0121 [0.0115, 0.0126] | 0.0035 [0.0033, 0.0037] | -0.0441 [-0.0462, -0.0421] | -0.0390 [-0.0410, -0.0369] |
+
+### SCORE (LOG-S only; not comparable with the tables above)
+
+Label rate 0.2342. Log loss 0.5193 [0.5116, 0.5264];
+Brier 0.1705 [0.1672, 0.1736];
+AUROC 0.6502 [0.6459, 0.6548];
+AUPRC 0.3450 [0.3347, 0.3554].
+
+### Murphy decomposition of the Brier score
+
+Brier = reliability - resolution + uncertainty + within-bin, on 20
+equal-count bins of each arm's own p. Lower reliability is better calibration;
+higher resolution is better discrimination.
+
+**BASE-T**
+
+| arm | Brier | reliability | resolution | uncertainty | within-bin |
+| --- | --- | --- | --- | --- | --- |
+| NB-c | 0.032200 | 0.000033 | 0.001083 | 0.033185 | 0.000065 |
+| NB-d | 0.032194 | 0.000029 | 0.001083 | 0.033185 | 0.000064 |
+| MIX | 0.032034 | 0.000043 | 0.001169 | 0.033185 | -0.000025 |
+| LOG-T | 0.032105 | 0.000026 | 0.001111 | 0.033185 | 0.000007 |
+
+**BASE-O**
+
+| arm | Brier | reliability | resolution | uncertainty | within-bin |
+| --- | --- | --- | --- | --- | --- |
+| NB-c | 0.142018 | 0.000103 | 0.007522 | 0.149397 | 0.000040 |
+| NB-d | 0.141981 | 0.000101 | 0.007548 | 0.149397 | 0.000031 |
+| MIX | 0.142153 | 0.000045 | 0.007341 | 0.149397 | 0.000052 |
+| LOG-O | 0.145549 | 0.000087 | 0.003965 | 0.149397 | 0.000030 |
+
+### Noise ceilings (spec 4.4)
+
+What each arm would score if it were the true model (labels drawn as
+L ~ Bernoulli(p); for a count arm, the same as simulating y and applying c_i).
+A gap near zero means the arm's errors are what its own uncertainty predicts.
+The ceiling is computed from the arm's own p, so it moves with the arm's
+calibration: an arm that over-predicts a rare label raises its own expected log
+loss and shows a negative gap (MIX on BASE-T, mean p / rate 1.12), and one that
+under-predicts lowers it. Read a gap together with the arm's calibration; only
+for a calibrated arm does a log-loss gap above zero, or an AUPRC gap below,
+mean the label carries structure the arm does not.
+
+| label | arm | log loss observed | log loss ceiling | log loss gap | AUPRC observed | AUPRC ceiling | AUPRC gap | AUROC observed | AUROC ceiling |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BASE-T | NB-c | 0.1358 | 0.1281 | 0.0077 | 0.0923 | 0.0905 | 0.0018 | 0.7544 | 0.7464 |
+| BASE-T | NB-d | 0.1358 | 0.1274 | 0.0084 | 0.0923 | 0.0921 | 0.0003 | 0.7541 | 0.7508 |
+| BASE-T | MIX | 0.1353 | 0.1470 | -0.0117 | 0.1023 | 0.1094 | -0.0070 | 0.7558 | 0.7579 |
+| BASE-T | LOG-T | 0.1365 | 0.1369 | -0.0004 | 0.0987 | 0.0941 | 0.0045 | 0.7424 | 0.7415 |
+| BASE-O | NB-c | 0.4501 | 0.4580 | -0.0079 | 0.2887 | 0.3070 | -0.0183 | 0.6658 | 0.6676 |
+| BASE-O | NB-d | 0.4500 | 0.4576 | -0.0076 | 0.2890 | 0.3067 | -0.0177 | 0.6661 | 0.6679 |
+| BASE-O | MIX | 0.4509 | 0.4546 | -0.0038 | 0.2876 | 0.2891 | -0.0015 | 0.6638 | 0.6544 |
+| BASE-O | LOG-O | 0.4622 | 0.4621 | 0.0001 | 0.2497 | 0.2557 | -0.0060 | 0.6216 | 0.6190 |
+| SCORE | LOG-S | 0.5193 | 0.5190 | 0.0003 | 0.3450 | 0.3485 | -0.0035 | 0.6502 | 0.6508 |
+
+### Calibration-in-the-large by cell type (mean p / rate; * = 95% interval excludes 1)
+
+**BASE-T**
+
+| stratum | NB-c | NB-d | MIX | LOG-T |
+| --- | --- | --- | --- | --- |
+| all | 0.923* | 0.920* | 1.123* | 1.002 |
+| Endothelial | 1.014 | 1.022 | 1.216* | 1.221* |
+| CAFs | 0.957 | 0.827* | 1.192* | 1.151* |
+| PVL | 0.998 | 0.993 | 1.112* | 1.050 |
+| B-cells | 1.190* | 1.167* | 1.190* | 1.019 |
+| T-cells | 1.185* | 1.184* | 1.168* | 0.984 |
+| Myeloid | 1.127* | 1.181* | 1.277* | 1.272* |
+| Normal Epithelial | 0.903* | 0.853* | 1.211* | 1.083* |
+| Plasmablasts | 0.888* | 0.848* | 1.041 | 0.947* |
+| Cancer Epithelial | 0.766* | 0.784* | 1.069* | 0.939* |
+
+**BASE-O**
+
+| stratum | NB-c | NB-d | MIX | LOG-O |
+| --- | --- | --- | --- | --- |
+| all | 1.037* | 1.036* | 1.006 | 1.001 |
+| Endothelial | 1.043* | 1.044* | 1.172* | 1.037* |
+| CAFs | 1.002 | 0.996 | 1.203* | 0.963* |
+| PVL | 1.042* | 1.040* | 1.070* | 1.007 |
+| B-cells | 0.980* | 0.984 | 0.929* | 0.989 |
+| T-cells | 0.991 | 0.991 | 0.927* | 0.980* |
+| Myeloid | 1.104* | 1.104* | 1.149* | 1.071* |
+| Normal Epithelial | 1.079* | 1.075* | 0.982 | 1.032 |
+| Plasmablasts | 1.053* | 1.055* | 0.956* | 0.982 |
+| Cancer Epithelial | 1.066* | 1.062* | 0.971* | 0.990 |
+
+### Threshold sweep (count arms, all cells)
+
+**BASE-T**
+
+| threshold | label rate | NB-c p / rate | NB-d p / rate | MIX p / rate |
+| --- | --- | --- | --- | --- |
+| alpha_B 0.05 (primary) | 0.03437 | 0.923 [0.895, 0.950] | 0.920 [0.893, 0.947] | 1.123 [1.094, 1.152] |
+| alpha_B 0.01 | 0.01096 | 0.702 [0.668, 0.731] | 0.709 [0.676, 0.737] | 0.743 [0.708, 0.780] |
+| alpha_B 0.001 | 0.001999 | 0.544 [0.501, 0.594] | 0.572 [0.528, 0.626] | 0.288 [0.260, 0.324] |
+| alpha_B 0.0001 | 0.0003559 | 0.508 [0.438, 0.594] | 0.569 [0.491, 0.664] | 0.101 [0.085, 0.120] |
+
+**BASE-O**
+
+| threshold | label rate | NB-c p / rate | NB-d p / rate | MIX p / rate |
+| --- | --- | --- | --- | --- |
+| Td 0 | 0.2737 | 1.026 [1.016, 1.037] | 1.026 [1.016, 1.037] | 0.994 [0.980, 1.007] |
+| Td 0.25 | 0.2266 | 1.037 [1.026, 1.049] | 1.037 [1.026, 1.049] | 0.992 [0.978, 1.006] |
+| Td 0.5 (primary) | 0.1828 | 1.037 [1.024, 1.049] | 1.036 [1.023, 1.048] | 1.006 [0.991, 1.020] |
+| Td 0.75 | 0.1437 | 1.032 [1.017, 1.046] | 1.031 [1.016, 1.044] | 1.031 [1.015, 1.045] |
+| Td 1 | 0.1115 | 1.025 [1.008, 1.040] | 1.023 [1.006, 1.038] | 1.059 [1.040, 1.076] |
+
+By cell type, in `calibration_sweep_BASE-T.png` and `calibration_sweep_BASE-O.png`;
+by the cell's own threshold c_i, in `calibration_by_threshold.csv`.
+
+### Pre-stated expectations X1-X3
+
+- **X1** (each LOG arm has the best log loss on its own label): BASE-T
+  **does not hold**; BASE-O **does not hold**
+  (every paired log-loss difference against the LOG arm, interval excluding 0).
+- **X2** (NB-c over-predicts where c_i is 5-10 and under-predicts where it is
+  15-30, pooled over both grids): mean p - rate +0.00485 at c_i 5-10 and
+  -0.01466 at 15-30: **holds**.
+- **X3** (MIX better calibrated than NB-c across the grids, but under-predicting
+  at the strictest thresholds). The two clauses are judged separately, since
+  the second concerns the strictest thresholds. Mean |log(p / rate)| over the
+  seven grid thresholds other than alpha_B 0.001 and 0.0001: 0.074 for
+  MIX against 0.084 for NB-c (**better**).
+  At alpha_B 0.001 and 0.0001 MIX's p / rate is
+  0.29, 0.10 (**under-predicts**),
+  far below NB-c's, so over all nine thresholds MIX is the worse calibrated
+  (0.450 against 0.208). Overall: **holds**.
+
+Figures: `reliability_BASE-T.png`, `reliability_BASE-O.png`,
+`reliability_SCORE.png`, `calibration_sweep_BASE-T.png`,
+`calibration_sweep_BASE-O.png`. Every score and interval is in `scores.csv`
+(including the full per-type metrics and the Murphy components for every
+stratum); ceilings in `ceilings.csv`. Stage 4 complete in
+2 min.
+
+### Stage 4 reading
+
+**The count arms beat the label-trained logistic arms on their own labels (X1
+fails on both).** On BASE-O the margin is wide: LOG-O's log loss is 0.012
+worse than NB-c's and its AUPRC is 0.250 against 0.289. On BASE-T, LOG-T's log
+loss is worse than both NB-c's and MIX's. Its AUPRC beats NB-c's (0.099
+against 0.092) but not MIX's (0.102). By the interpretive rule, this means the
+count likelihood carries information that binarisation discards. Two
+mechanisms contribute:
+- the push-through knows each cell's threshold c_i exactly, which steps with
+  depth and area in a way a smooth g(log N, log A) cannot reproduce;
+- the count likelihood uses the whole count, not only whether it crosses c_i.
+
+One caveat: the LOG arms carry the mixture's penalty (lambda = 300 at the
+mixture's scaling), which was chosen for the mixture's weight model. The
+Stage 7 sensitivity with unpenalised NB and LOG arms tests whether the shared
+penalty handicaps them.
+
+**MIX against NB is close, and the sign depends on the label.**
+- **BASE-T.** MIX is better: log loss -0.0006, AUPRC +0.010 [0.008, 0.011].
+  But it over-predicts the label by 12%, where NB-c under-predicts by 8%.
+- **BASE-O.** NB-c is marginally better on every score (log loss -0.0008,
+  AUROC +0.002), while MIX is the better calibrated (1.006 against 1.037).
+
+These differences are small beside the LOG gap. NB-d is indistinguishable from
+NB-c on every score (at most 0.0003 apart): state-dependent dispersion does not
+matter at the label scale.
+
+**Calibration by type.**
+- **BASE-T, NB-c.** Under-predicts Cancer Epithelial (0.77) and over-predicts
+  B- and T-cells (1.19).
+- **BASE-T, MIX.** Over-predicts most types by 4-28%. Plasmablasts are
+  calibrated.
+- **BASE-O.** Every count arm is within 0.93-1.20 by type.
+- **Strict BASE-T thresholds.** Both count arms under-predict at alpha_B 0.01
+  and below. MIX collapses at the two strictest (0.29, 0.10). This is X3's tail
+  shortfall: the mixture's Poisson components are too light-tailed for counts
+  far above the null. NB-c holds at about 0.5.
+
+**Noise ceilings.**
+- **LOG arms.** LOG-T, LOG-O and LOG-S sit at their own ceilings (|log-loss
+  gap| <= 0.0004). They are calibrated, and extract what a model of their form
+  can from their label.
+- **Count arms.** Their gaps mostly track calibration: NB-c +0.008 on BASE-T,
+  where it under-predicts, and MIX -0.012, where it over-predicts. On BASE-O,
+  MIX sits close to its ceiling (AUPRC gap -0.0015). NB-c, which over-predicts
+  BASE-O by 4%, has a ceiling AUPRC of 0.307 against an observed 0.289.
+
+**X2 holds.** NB-c over-predicts at c_i 5-10 and under-predicts at 15-30.
+**X3 holds**, narrowly on its first clause.
+
+**Next: Stage 5** (biology, spec 5, and deviation, spec 6). Spec 5.2's Wu et
+al. reference is still not on this machine; everything else in Stage 5 can run
+without it.
