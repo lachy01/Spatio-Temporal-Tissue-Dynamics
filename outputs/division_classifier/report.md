@@ -930,3 +930,89 @@ or leads on log loss and AUPRC for both labels, and LOG-O is last.
 allocation model and its test V9, then a Spartan array: 10 replicates per
 generator (G1-G3) at n = 100,000, refitting NB-c, MIX, LOG-T, LOG-O and LOG-S
 in each. Stage 6 is a review point.
+
+
+## Stage 6 -- known-truth simulation (2026-10-08 12:03)
+
+### Allocation model and V9
+
+SCORE is rebuilt in the simulation by splitting each simulated total across
+the 53 Tirosh genes in the panel: per cell type, the gene proportions
+of the observed counts (pooled over cells with y >= 1) and one
+Dirichlet-multinomial concentration, fitted so the per-gene detection rates
+match (exact under the model: each gene's count is beta-binomial). Control
+genes are held at their observed values, which holds each cell's control term
+fixed: scanpy's score is the scored genes' mean log1p(X s / N) minus the
+control genes', and N excludes the Tirosh genes. That decomposition
+reproduces scanpy's own score, recomputed with the Tirosh columns permuted
+among cells of equal N (which leaves every gene's mean, and so scanpy's control
+draw, unchanged), to 1.8e-08.
+
+| type | cells | cells with y >= 1 | concentration a | genes tested | max |rel. error| | within 10% |
+| --- | --- | --- | --- | --- | --- | --- |
+| Endothelial | 48729 | 11797 | 17.38 | 12 | 0.1063 | 11/12 |
+| CAFs | 52079 | 13730 | 13.58 | 13 | 0.07335 | 13/13 |
+| PVL | 42834 | 11322 | 14.77 | 14 | 0.1156 | 13/14 |
+| B-cells | 59119 | 15576 | 29.13 | 12 | 0.05726 | 12/12 |
+| T-cells | 87004 | 26916 | 40.58 | 13 | 0.07692 | 13/13 |
+| Myeloid | 69669 | 18058 | 18.69 | 12 | 0.1099 | 11/12 |
+| Normal Epithelial | 54508 | 24705 | 28.63 | 38 | 0.1482 | 34/38 |
+| Plasmablasts | 42523 | 17776 | 23.71 | 32 | 0.127 | 28/32 |
+| Cancer Epithelial | 105432 | 72590 | 51.17 | 51 | 0.2108 | 45/51 |
+
+**V9** (a simulated split of the observed totals reproduces every per-type,
+per-gene detection rate within 10%, for genes detected in at least 1% of the
+type's cells): **FAIL**, over 197 type-gene pairs.
+The largest relative errors:
+
+| type | gene | observed | simulated | rel. error (simulated) |
+| --- | --- | --- | --- | --- |
+| Cancer Epithelial | BIRC5 | 0.1561 | 0.1890 | 0.2108 |
+| Cancer Epithelial | TOP2A | 0.0872 | 0.1012 | 0.1606 |
+| Normal Epithelial | BIRC5 | 0.0592 | 0.0680 | 0.1482 |
+| Normal Epithelial | TYMS | 0.0281 | 0.0321 | 0.1432 |
+| Cancer Epithelial | TYMS | 0.0795 | 0.0906 | 0.1399 |
+| Cancer Epithelial | CENPF | 0.0610 | 0.0692 | 0.1335 |
+| Plasmablasts | BIRC5 | 0.0533 | 0.0601 | 0.1270 |
+| Plasmablasts | TYMS | 0.0260 | 0.0293 | 0.1247 |
+
+The observed variance-to-mean ratio of y in Cancer Epithelial, which G2
+matches, is 9.205 (the spec's 7.29 was the SpaNorm-era table's).
+Inputs for the Spartan array are in `sim_inputs.npz`.
+
+
+### STOPPED in Stage 6: V9 (allocation model) failed
+
+Per spec section 8, nothing further was run.
+
+### V9 failure: diagnosis (2026-10-08)
+
+**Two separate problems.**
+- **Real misfit, in the canonical proliferation markers.** The single DM
+  over-predicts their detection in Cancer Epithelial: BIRC5 +21%, TOP2A +16%,
+  CENPF +13%, TYMS +14%. Smaller misses of the same kind appear in Normal
+  Epithelial and Plasmablasts. In real cells these genes come together, in the
+  minority that are cycling; one profile per type spreads them too thinly.
+- **Simulation noise.** The rest of the 17 failures are at detection rates of
+  1-3%. There one simulated draw has a relative error of about 4% (1 SD), so a
+  10% tolerance on a single draw flags some of 197 pairs by chance.
+
+**Alternatives tried** (`run/division_stage6_v9_diagnosis.py` holds the second):
+- **A free two-component DM mixture per type,** with constant weights fitted
+  by EM: 27/197 pairs beyond 10%. No better.
+- **A state-conditional allocation:** one DM profile for cycling and one for
+  non-cycling cells per type, weighted by the mixture's posterior w.
+  - Expected (exact) detection rates are within 10% for **all 197 pairs**
+    (largest 10.0%, Cancer Epithelial CENPF).
+  - One simulated draw misses 5 of 197, all at low detection rates.
+  - The cycling profile is markedly more concentrated in every type
+    (concentration a1 about 2x a0).
+
+**Decision needed** (the user's):
+1. **Allocation model.** The state-conditional allocation would be adopted,
+   as a deviation from spec 3.4, and V9 judged on the expected detection rates,
+   or the average of many draws, instead of one draw.
+2. **Generators.** G1 and G2 would allocate by the simulated Z. G3, with no Z,
+   would allocate by the fitted mixture's posterior given the simulated count.
+
+Until then, Stage 6 stops here.
