@@ -97,6 +97,31 @@ calibration. Training uses MisTIC's own priors and defaults
   the PhiSpace input for spec 3.1, which runs in R.
 - **`tiles_summary.csv`**: one row per tile.
 
+## Order of work after the MisTIC array
+
+Steps 1, 4 and 5 run on Spartan; the rest run locally.
+
+1. **Join.** Once all 36 tiles are done, run `python run/mistic_gather.py` (any
+   env), then copy back `data/mistic/transcripts_mistic.parquet` and
+   `tiles_summary.csv`.
+2. **Covariates and T2.** Run `python run/mistic_covariates.py`, then
+   `python run/mistic_t2_sanity.py`. T2 is blocking: if the curve is flat, stop here.
+3. **Table and the null's tests.** Run `python run/add_mistic_columns.py`, then
+   `run/mistic_t1_recovery.py`, `run/mistic_t3_negative_control.py` and
+   `run/mistic_t4_spillover.py`. T1 and T3 are blocking.
+4. **Switch to MisTIC.**
+   - Set `model.technical: mistic`, then commit and push.
+   - Copy the updated `data/mixture_cells_major.parquet` to Spartan.
+   - Archive the area fits: `mv outputs/hpc outputs/hpc_area`, on Spartan and
+     locally (`hpc_area` is gitignored).
+5. **Refit the mixture under MisTIC.** Run the multistart job,
+   `run/collect_point_estimate.py`, then the bootstrap job, as before.
+6. **Compare and report.** Sync `outputs/hpc` back, then run
+   `python run/mistic_t6_old_vs_new.py` and `python run/mistic_report.py`.
+
+Run every test locally with `MISTIC_TABLE=<table> MISTIC_OUT=<dir>` to dry-run
+it on another table without writing into `outputs/mistic`.
+
 ## Known limitation
 
 MisTIC's internal model still sees cycle-gene transcripts when it estimates p
