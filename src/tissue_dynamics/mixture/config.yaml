@@ -312,3 +312,27 @@ sim_full_n: 561897
 sim_test03_n: 561897
 sim_full_lambda_grid: [30.0, 100.0, 300.0, 1000.0, 3000.0]
 sim_full_reps: 4
+
+# MisTIC (Yang et al. 2025, txMisTIC 0.0.2), 2026-10-12: per-transcript
+# misassignment probabilities replace cell area as the technical covariate
+# (instructions/mistic_implementation_spec.md). MisTIC runs in its own conda env
+# (hpc/mistic_setup_env.sh): its pins (torch 1.13, numpy<2, anndata<0.11,
+# scanpy 1.10) clash with this one.
+mistic:
+  dir: data/mistic                 # inputs/, tiles/ and the joined outputs
+  min_qv: 20
+  gene_categories: [predesigned_gene, custom_gene]
+  # The section is fitted in spatial tiles. MisTIC's prior-expression feature
+  # materialises a long table with one row per (cell, gene) pair -- 3.5 billion
+  # rows for the whole section -- and holds several dense cells x genes copies,
+  # so a single fit would need far more memory than a node has. Each tile is
+  # fitted on its core cells plus a halo; p is kept only for transcripts whose
+  # host cell's centroid lies in the core, so every transcript gets exactly one
+  # value. The halo matches MisTIC's own neighbour search, which stops at 50 um
+  # between centroids (max_centroid_dist). Tiles split the cells into equal
+  # counts (x quantiles, then y quantiles within each column).
+  tiles_x: 6
+  tiles_y: 6
+  halo_um: 50.0
+  n_epochs: 50                     # early stopping applies
+  seed: 0
