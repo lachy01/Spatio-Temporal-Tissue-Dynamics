@@ -33,7 +33,8 @@ def _spline(x, df):
     return b / np.where(sd > 0, sd, 1.0)      # unit scale, natural shape preserved
 
 
-def _design(n, d_own, d_nbr, df_area=4, df_weight=3, df_bg=3, rng=None, mistic=False):
+def _design(n, d_own, d_nbr, df_area=4, df_weight=3, df_bg=3, rng=None, mistic=False,
+            area=True):
     """Design blocks on the real sample's scale.
 
     `mistic`: no area basis, and `m`, the expected misassigned outcome count,
@@ -43,7 +44,7 @@ def _design(n, d_own, d_nbr, df_area=4, df_weight=3, df_bg=3, rng=None, mistic=F
     rng = np.random.default_rng(0) if rng is None else rng
     logN = rng.normal(0.0, 0.9, n)                 # centred; sd near the real 1.0
     la = rng.normal(0.0, 0.5, n)                   # standing in for log area
-    area = np.zeros((n, 0)) if mistic else _spline(la, df_area)
+    area = _spline(la, df_area) if area and not mistic else np.zeros((n, 0))
     dens = rng.normal(0.0, 1.0, n)
     hb = _spline(dens, df_weight)
     gb = _spline(dens, df_bg)
@@ -124,22 +125,23 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
         Whether the weight carries `psi * oxygen`. `None` reads `model.oxygen`
         from the config, so simulations follow the production weight model
         (which dropped the term on 2026-10-06).
-    technical : "area", "mistic" or None
+    technical : "area", "mistic", "plain" or None
         The technical covariates (`model.technical`; None reads the config).
         "mistic" drops the area spline and adds `theta_m * m_i` to every
         component's mean, with `m` drawn by `_design` and truth
-        `eta_m = log(theta_m)`. The size-confound generator (`wiggly_area_df`)
-        is an area construction and needs "area".
+        `eta_m = log(theta_m)`; "plain" has neither term. The size-confound
+        generator (`wiggly_area_df`) is an area construction and needs "area".
     """
     from .data import load_config as _lc
 
     if technical is None:
         technical = str(_lc()["model"].get("technical", "area"))
     mistic = technical == "mistic"
-    if mistic and wiggly_area_df is not None:
+    if technical != "area" and wiggly_area_df is not None:
         raise ValueError("the size-confound generator is built on area; use technical='area'")
     rng = np.random.default_rng(seed)
-    blocks = _design(n, d_own, d_nbr, df_area=fit_area_df, rng=rng, mistic=mistic)
+    blocks = _design(n, d_own, d_nbr, df_area=fit_area_df, rng=rng, mistic=mistic,
+                     area=technical == "area")
     # the spline bases carry df-1 columns (the constant is projected out), so the
     # spec's column counts are read off the blocks rather than assumed
     if weight_ridge is None:
@@ -166,7 +168,7 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
                      df_weight=blocks["hbasis"].shape[1],
                      df_bg=blocks["gbasis"].shape[1],
                      weight_ridge=weight_ridge, n_reference=n_reference,
-                     mistic=mistic)
+                     mistic=mistic, technical=technical)
 
     a0 = float(np.log(mean_pi / (1 - mean_pi)))
     truth = {

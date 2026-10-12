@@ -183,7 +183,8 @@ def _summarise(res, data, spec, extra=None, include_params=False):
         "weight_ridge": float(spec.weight_ridge), "rank": int(spec.rank),
         "df_area": int(spec.df_area), "stage": spec.stage,
         "theta_free": bool(spec.theta_free),
-        "technical": "mistic" if getattr(spec, "mistic", False) else "area",
+        "technical": getattr(spec, "technical", "mistic" if getattr(spec, "mistic", False)
+                             else "area"),
         "loglik": float(res.loglik), "grad_inf": float(res.grad_inf),
         "n_iter": int(res.n_iter), "converged": bool(res.converged),
         "diverged": bool(res.diverged), "wall_time": float(res.wall_time),

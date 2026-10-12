@@ -449,4 +449,4 @@ def spec_from_basis(basis, cfg, stage="B", theta_free=None, weight_ridge=0.0,
         n_reference=int(mc.get("weight_ridge_n_reference", 0)
                         if n_reference is None else n_reference),
         oxygen=bool(mc.get("oxygen", True)),
-        mistic=basis.technical == "mistic")
+        mistic=basis.technical == "mistic", technical=basis.technical)

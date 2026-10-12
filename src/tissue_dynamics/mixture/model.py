@@ -81,6 +81,9 @@ class ModelSpec:
     # theta_m * m_i in every component's mean (model.technical: mistic); the
     # area spline is then absent (df_area = 0)
     mistic: bool = False
+    # model.technical, for the record ("mistic", "plain" or "area"); the terms
+    # themselves follow `mistic` and `df_area`
+    technical: str = "area"
 
     @property
     def has_state(self):
@@ -97,7 +100,8 @@ class ModelSpec:
             bits.append(f"state {self.d_own}x{self.d_nbr}, rank {self.rank}")
         if self.has_background:
             bits.append(f"additive background, df {self.df_bg}")
-        bits.append("MisTIC theta_m m, no area" if self.mistic else f"area spline, df {self.df_area}")
+        bits.append("MisTIC theta_m m, no area" if self.mistic else
+                    f"area spline, df {self.df_area}" if self.df_area > 0 else "no area, no MisTIC")
         return "; ".join(bits)
 
 
