@@ -253,8 +253,7 @@ only on y, N, A and the technical null.
 
 NB-c and NB-d, matched to the mixture's covariates and penalty: the shared weight
 block ({D['own'].shape[1]} own and {D['nbr'].shape[1]} neighbour coordinates,
-rank {spec.rank}), log N {"free" if spec.theta_free else "as an offset"}, the same
-df-{cfg["model"]["area_spline_df"]} area spline, weight_ridge {spec.weight_ridge:g} x n /
+rank {spec.rank}), log N {"free" if spec.theta_free else "as an offset"}, {("the MisTIC-weighted library size and theta_m m in the mean (no area term)" if spec.mistic else "the same df-" + str(cfg["model"]["area_spline_df"]) + " area spline")}, weight_ridge {spec.weight_ridge:g} x n /
 {spec.n_reference:,} on every eta coefficient ({spec.b_penalty} form on B) and
 the balance term at tau = {spec.ridge_tau:g}. NB-d adds log alpha_i = gamma0 +
 phi_i' gamma on the projected own state (gamma not penalised). Optimiser:

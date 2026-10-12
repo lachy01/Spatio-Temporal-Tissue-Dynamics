@@ -33,12 +33,17 @@ def _spline(x, df):
     return b / np.where(sd > 0, sd, 1.0)      # unit scale, natural shape preserved
 
 
-def _design(n, d_own, d_nbr, df_area=4, df_weight=3, df_bg=3, rng=None):
-    """Design blocks on the real sample's scale."""
+def _design(n, d_own, d_nbr, df_area=4, df_weight=3, df_bg=3, rng=None, mistic=False):
+    """Design blocks on the real sample's scale.
+
+    `mistic`: no area basis, and `m`, the expected misassigned outcome count,
+    drawn like the real m = f N s -- proportional to the library size times a
+    cell-to-cell factor (mean 0.1 x N here, so theta_m m is ~20% of lambda_0).
+    """
     rng = np.random.default_rng(0) if rng is None else rng
     logN = rng.normal(0.0, 0.9, n)                 # centred; sd near the real 1.0
     la = rng.normal(0.0, 0.5, n)                   # standing in for log area
-    area = _spline(la, df_area)
+    area = np.zeros((n, 0)) if mistic else _spline(la, df_area)
     dens = rng.normal(0.0, 1.0, n)
     hb = _spline(dens, df_weight)
     gb = _spline(dens, df_bg)
@@ -47,15 +52,18 @@ def _design(n, d_own, d_nbr, df_area=4, df_weight=3, df_bg=3, rng=None):
     own -= own.mean(0)
     nbr -= nbr.mean(0)
     ox = rng.uniform(0.0, 1.0, n)
+    m = 0.1 * np.exp(logN) * rng.gamma(2.0, 0.5, n) if mistic else None
     return dict(logN=logN, area=area, own=own, nbr=nbr, hbasis=hb, oxygen=ox,
-                gbasis=gb)
+                gbasis=gb, m=m)
 
 
 def _draw(truth, blocks, spec, rng, wiggly_area=None):
     """Sample counts from the generative model of spec 2.1."""
     n = len(blocks["logN"])
     theta = truth.get("theta", 1.0)
-    base = truth["b0"] + theta * blocks["logN"] + blocks["area"] @ truth["s"]
+    base = truth["b0"] + theta * blocks["logN"]
+    if spec.df_area > 0:
+        base = base + blocks["area"] @ truth["s"]
     if wiggly_area is not None:                    # spec 6.7: misspecified area effect
         base = base + wiggly_area
     lam0 = np.exp(base)
@@ -71,6 +79,8 @@ def _draw(truth, blocks, spec, rng, wiggly_area=None):
     pi = 1.0 / (1.0 + np.exp(-eta))
     rho = (np.exp(truth["r0"] + blocks["gbasis"] @ truth["g"])
            if spec.has_background else np.zeros(n))
+    if spec.mistic:
+        rho = rho + np.exp(truth["eta_m"]) * blocks["m"]
 
     z = rng.random(n) < pi
     y = rng.poisson(rho + np.where(z, lam1, lam0)).astype(float)
@@ -80,7 +90,8 @@ def _draw(truth, blocks, spec, rng, wiggly_area=None):
 def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
                      e_delta=np.log(4.0), mean_pi=0.15, b_scale=0.26,
                      theta_free=True, single_component=False,
-                     wiggly_area_df=None, fit_area_df=4, weight_ridge=None, oxygen=None):
+                     wiggly_area_df=None, fit_area_df=4, weight_ridge=None, oxygen=None,
+                     technical=None, theta_m=1.0):
     """Spec 6.1/6.2/6.3/6.7 generator.
 
     Parameters
@@ -113,9 +124,22 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
         Whether the weight carries `psi * oxygen`. `None` reads `model.oxygen`
         from the config, so simulations follow the production weight model
         (which dropped the term on 2026-10-06).
+    technical : "area", "mistic" or None
+        The technical covariates (`model.technical`; None reads the config).
+        "mistic" drops the area spline and adds `theta_m * m_i` to every
+        component's mean, with `m` drawn by `_design` and truth
+        `eta_m = log(theta_m)`. The size-confound generator (`wiggly_area_df`)
+        is an area construction and needs "area".
     """
+    from .data import load_config as _lc
+
+    if technical is None:
+        technical = str(_lc()["model"].get("technical", "area"))
+    mistic = technical == "mistic"
+    if mistic and wiggly_area_df is not None:
+        raise ValueError("the size-confound generator is built on area; use technical='area'")
     rng = np.random.default_rng(seed)
-    blocks = _design(n, d_own, d_nbr, df_area=fit_area_df, rng=rng)
+    blocks = _design(n, d_own, d_nbr, df_area=fit_area_df, rng=rng, mistic=mistic)
     # the spline bases carry df-1 columns (the constant is projected out), so the
     # spec's column counts are read off the blocks rather than assumed
     if weight_ridge is None:
@@ -141,7 +165,8 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
                      df_area=blocks["area"].shape[1],
                      df_weight=blocks["hbasis"].shape[1],
                      df_bg=blocks["gbasis"].shape[1],
-                     weight_ridge=weight_ridge, n_reference=n_reference)
+                     weight_ridge=weight_ridge, n_reference=n_reference,
+                     mistic=mistic)
 
     a0 = float(np.log(mean_pi / (1 - mean_pi)))
     truth = {
@@ -155,6 +180,8 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
         truth["psi"] = 0.35
     if theta_free:
         truth["theta"] = 0.85
+    if mistic:
+        truth["eta_m"] = float(np.log(theta_m))
     U = rng.normal(0, b_scale, (d_own, rank))
     V = rng.normal(0, b_scale, (d_nbr, rank))
     truth["B"] = U @ V.T
@@ -183,7 +210,7 @@ def simulate_stage_b(n=100_000, d_own=6, d_nbr=8, rank=2, seed=0,
             truth["psi"] = 0.0
 
     y, pi, z = _draw(truth, blocks, spec, rng, wiggly_area=wig)
-    data = MixtureData(y=y, logN=blocks["logN"], area=blocks["area"],
+    data = MixtureData(y=y, logN=blocks["logN"], area=blocks["area"], m=blocks["m"],
                        own=blocks["own"], nbr=blocks["nbr"],
                        hbasis=blocks["hbasis"],
                        oxygen=blocks["oxygen"] if spec.oxygen else None)

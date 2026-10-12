@@ -47,7 +47,7 @@ import matplotlib.pyplot as plt                                       # noqa: E4
 from tissue_dynamics.mixture.basis import build_basis, spec_from_basis    # noqa: E402
 from tissue_dynamics.mixture.data import load_config                      # noqa: E402
 from tissue_dynamics.mixture.model import (build_data, loglik_terms,      # noqa: E402
-                                           pi_hat, rates)
+                                           pi_hat, component_means)
 
 OUT = "outputs/comparison"
 KMAX = 30                      # rootogram support; the tail is pooled into "KMAX+"
@@ -72,14 +72,19 @@ def _nb_logpmf(y, mu, log_alpha):
 
 def _nb_logmu(p, D, matched):
     theta = p["theta"] if "theta" in p else 1.0
-    eta = p["b0"] + theta * D["logN"] + D["area"] @ p["s"]
+    eta = p["b0"] + theta * D["logN"]
+    if "s" in p:                                   # technical: area
+        eta = eta + D["area"] @ p["s"]
     eta = eta + D["own"] @ p["a"] + D["nbr"] @ p["c"] + D["hbasis"] @ p["h"]
     if matched:
         eta = (eta + jnp.sum((D["own"] @ p["U"]) * (D["nbr"] @ p["V"]), axis=-1)
                + jnp.einsum("ij,jm,im->i", D["own"], p["K"], D["hbasis"]))
         if "psi" in p:
             eta = eta + p["psi"] * D["oxygen"]
-    return jnp.clip(eta, -30.0, 30.0)
+    eta = jnp.clip(eta, -30.0, 30.0)
+    if "eta_m" in p:                               # technical: mistic, + theta_m m
+        eta = eta + jnp.log1p(jnp.exp(p["eta_m"] - eta) * D["m"])
+    return eta
 
 
 def fit_nb(D, matched, maxiter=20000, seed=0, theta_free=True):
@@ -89,8 +94,12 @@ def fit_nb(D, matched, maxiter=20000, seed=0, theta_free=True):
     d_own, d_nbr = D["own"].shape[1], D["nbr"].shape[1]
     n_h, n_s = D["hbasis"].shape[1], D["area"].shape[1]
     p = {"b0": jnp.asarray(float(np.log(np.mean(np.asarray(D["y"]))))),
-         "s": jnp.zeros(n_s), "a": jnp.zeros(d_own),
+         "a": jnp.zeros(d_own),
          "c": jnp.zeros(d_nbr), "h": jnp.zeros(n_h), "log_alpha": jnp.asarray(0.0)}
+    if n_s > 0:                                    # technical: area
+        p["s"] = jnp.zeros(n_s)
+    if "m" in D:                                   # technical: mistic
+        p["eta_m"] = jnp.asarray(0.0)
     if theta_free or not matched:
         p["theta"] = jnp.asarray(1.0)
     if matched:
@@ -201,7 +210,8 @@ def main():
     ll_mix_i = np.asarray(loglik_terms(P, D, spec))
     ll_mix = float(ll_mix_i.sum())
     k_mix = sum(int(np.size(np.asarray(v))) for v in pe["params"].values())
-    lam0, lam1, _rho = (np.asarray(x) for x in rates(P, D, spec))
+    # each component's Poisson mean (lambda_k, plus theta_m m under MisTIC)
+    lam0, lam1 = (np.asarray(x) for x in component_means(P, D, spec))
     pi = np.asarray(pi_hat(P, D, spec))
     print(f"  {'mixture':<11} loglik {ll_mix:,.2f}  k={k_mix}  "
           f"(penalised objective {pe['loglik']:,.2f})")

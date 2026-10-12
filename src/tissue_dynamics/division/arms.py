@@ -93,12 +93,27 @@ def penalty(p, n, weight_ridge, n_reference, ridge_tau, b_penalty="frobenius"):
 # --------------------------------------------------------------------------
 # NB arms
 # --------------------------------------------------------------------------
+def technical_eta(p, D):
+    """The technical block on the log scale: `b0 + theta log N [+ s(log A)]`.
+
+    The area spline is present only under `model.technical: area` (`s` in the
+    parameters); under MisTIC `logN` is the MisTIC-weighted library size.
+    """
+    theta = p["theta"] if "theta" in p else 1.0          # absent = offset (F)
+    eta = p["b0"] + theta * D["logN"]
+    return eta + D["area"] @ p["s"] if "s" in p else eta
+
+
 def nb_log_mu(p, D):
+    """log of the NB mean. Under MisTIC (`eta_m` in the parameters) the mean is
+    `exp(technical + state) + exp(eta_m) m`, added as log(mu) + log1p(t / mu)
+    so cells with m = 0 are exact (see mixture.model._log_mu)."""
     import jax.numpy as jnp
 
-    theta = p["theta"] if "theta" in p else 1.0          # absent = offset (F)
-    eta = p["b0"] + theta * D["logN"] + D["area"] @ p["s"] + eta_state(p, D)
-    return jnp.clip(eta, -30.0, 30.0)
+    eta = jnp.clip(technical_eta(p, D) + eta_state(p, D), -30.0, 30.0)
+    if "eta_m" in p:
+        eta = eta + jnp.log1p(jnp.exp(p["eta_m"] - eta) * D["m"])
+    return eta
 
 
 def nb_log_alpha(p, D):
@@ -131,7 +146,11 @@ def init_nb(D, dispersion, rank, seed, oxygen=None, theta_free=True):
     p = init_eta(D["own"].shape[1], D["nbr"].shape[1], D["hbasis"].shape[1], rank, rng,
                  oxygen=oxygen)
     p.update({"b0": jnp.asarray(float(np.log(y.mean() + 1e-9) - logN.mean())),
-              "s": jnp.zeros(D["area"].shape[1]), "la": jnp.asarray(0.0)})
+              "la": jnp.asarray(0.0)})
+    if D["area"].shape[1] > 0:                          # technical: area
+        p["s"] = jnp.zeros(D["area"].shape[1])
+    if "m" in D:                                        # technical: mistic
+        p["eta_m"] = jnp.asarray(0.0)
     if theta_free:
         p["theta"] = jnp.asarray(1.0)
     if dispersion == "state":
@@ -151,12 +170,14 @@ def nb_objective(D, n, weight_ridge, n_reference, ridge_tau, b_penalty="frobeniu
 
 
 # --------------------------------------------------------------------------
-# LOG arms: logit P(L = 1) = b0 + theta log N + s(log A) + eta_state (spec 1)
+# LOG arms: logit P(L = 1) = b0 + theta log N [+ s(log A)] + eta_state (spec 1)
 # --------------------------------------------------------------------------
 def logistic_eta(p, D):
-    """The LOG arms' linear predictor: the technical block g(log N, log A) with
-    a free linear log N term, plus the shared weight block."""
-    return p["b0"] + p["theta"] * D["logN"] + D["area"] @ p["s"] + eta_state(p, D)
+    """The LOG arms' linear predictor: the technical block with a free linear
+    log N term -- g(log N, log A) under area, log of the MisTIC-weighted N
+    under MisTIC -- plus the shared weight block. The outcome is a label, not a
+    raw count, so the MisTIC spec's additive m term does not apply here."""
+    return technical_eta(p, D) + eta_state(p, D)
 
 
 def logistic_objective(D, lab, n, weight_ridge, n_reference, ridge_tau, b_penalty="frobenius"):
@@ -178,8 +199,9 @@ def init_logistic(D, lab, rank, seed):
     rng = np.random.default_rng(seed)
     p = init_eta(D["own"].shape[1], D["nbr"].shape[1], D["hbasis"].shape[1], rank, rng)
     m = float(np.clip(np.mean(np.asarray(lab)), 1e-6, 1 - 1e-6))
-    p.update({"b0": jnp.asarray(np.log(m / (1 - m))), "theta": jnp.asarray(0.0),
-              "s": jnp.zeros(D["area"].shape[1])})
+    p.update({"b0": jnp.asarray(np.log(m / (1 - m))), "theta": jnp.asarray(0.0)})
+    if D["area"].shape[1] > 0:                          # technical: area
+        p["s"] = jnp.zeros(D["area"].shape[1])
     return p
 
 

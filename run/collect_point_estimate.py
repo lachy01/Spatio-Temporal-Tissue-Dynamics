@@ -90,6 +90,8 @@ def main():
         # settings that produced it
         "weight_ridge": best.get("weight_ridge", cfg["model"].get("weight_ridge")),
         "area_spline_df": best.get("df_area", cfg["model"]["area_spline_df"]),
+        "technical": best.get("technical", "area"),
+        "theta_m": best.get("theta_m"),
         "rank": best.get("rank", cfg["model"]["rank"]),
         "stage": best.get("stage"), "theta_free": best.get("theta_free"),
     }

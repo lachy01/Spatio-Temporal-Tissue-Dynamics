@@ -3,13 +3,15 @@
 One replicate = one generator and one draw:
 
 * Cells: a random `division_sim_n` of the real analysis cells, with their real
-  state, neighbourhood, depth N and area A. The draw of cells is shared by the
+  state, neighbourhood and technical covariates (depth N and area A, or under
+  MisTIC the weighted depth and m -- `model.technical`). The draw of cells is shared by the
   three generators of a replicate, so they are paired. Fold `rep % 5` of the
   stored spatial partition is held out; every arm is fitted on the other four
   and scored on it.
 * Truth. The cycling probability pi_true is the production mixture's prior pi
   at each cell; Z ~ Bernoulli(pi_true).
-  - G1 (home advantage for MIX): y | Z ~ Poisson(lambda_Z), the fitted mixture.
+  - G1 (home advantage for MIX): y | Z ~ Poisson(mu_Z), the fitted mixture
+    (mu_Z = lambda_Z, plus theta_m m under MisTIC).
   - G2 (misspecified for MIX): as G1, but the cycling component is NB with one
     dispersion alpha_1, chosen so the model's pooled variance-to-mean ratio of y
     in Cancer Epithelial equals the observed one.
@@ -101,7 +103,7 @@ def run_replicate(task, cfg, say=None):
 
     from ..mixture.basis import build_basis, spec_from_basis
     from ..mixture.fit import multistart
-    from ..mixture.model import build_data, pi_hat, rates, responsibilities
+    from ..mixture.model import build_data, component_means, pi_hat, responsibilities
     from . import arms
     from . import labels as L
     from .survival import mix_p_ge, nb_p_ge
@@ -149,7 +151,7 @@ def run_replicate(task, cfg, say=None):
     # ---- truth -----------------------------------------------------------------------
     rng = np.random.default_rng(SEED + 1000 * (gi + 1) + rep)
     pi_true = np.asarray(pi_hat(P, Dsub, spec))
-    lam0, lam1, _ = (np.asarray(v) for v in rates(P, Dsub, spec))
+    lam0, lam1 = (np.asarray(v) for v in component_means(P, Dsub, spec))
     alpha1 = np.nan
     if gen in ("G1", "G2"):
         Z = rng.uniform(size=n_sim) < pi_true
@@ -158,7 +160,7 @@ def run_replicate(task, cfg, say=None):
         else:
             D = data.as_jax()
             ce = ctype_all == "Cancer Epithelial"
-            l0f, l1f, _ = (np.asarray(v)[ce] for v in rates(P, D, spec))
+            l0f, l1f = (np.asarray(v)[ce] for v in component_means(P, D, spec))
             alpha1 = g2_alpha(np.asarray(pi_hat(P, D, spec))[ce], l0f, l1f, float(inp["vmr_ce"]))
             y0 = rng.poisson(lam0).astype(float)
             y1 = L.sim_nb(lam1, alpha1, rng) if alpha1 > 0 else rng.poisson(lam1).astype(float)
@@ -170,8 +172,8 @@ def run_replicate(task, cfg, say=None):
         y = L.sim_nb(mu, al, rng)
 
     # ---- labels, rebuilt from the simulated counts ----------------------------------
-    Xa = np.column_stack([np.ones(n_sim), basis.log_area_basis(df.iloc[idx])])
-    null = L.robust_null(y, Xa, np.log(N))
+    Xa, off_null, m_null = L.null_design(df.iloc[idx], basis)
+    null = L.robust_null(y, Xa, off_null, m=m_null)
     mu0, a0 = null["mu"], null["alpha"]
     sd0 = np.sqrt(mu0 + a0 * mu0 ** 2)
     LT, cT, _, _ = L.base_t(y, mu0, a0, L.ALPHA_B_PRIMARY)
@@ -236,7 +238,7 @@ def run_replicate(task, cfg, say=None):
     mu_nb = np.exp(np.asarray(arms.nb_log_mu(p_nb, D_te)))
     al_nb = np.exp(np.asarray(arms.nb_log_alpha(p_nb, D_te))) * np.ones(len(te))
     pi_mix = np.asarray(pi_hat(best.params, D_te, spec))
-    l0m, l1m, _ = (np.asarray(v) for v in rates(best.params, D_te, spec))
+    l0m, l1m = (np.asarray(v) for v in component_means(best.params, D_te, spec))
     preds = {"NB-c, BASE-T": (nb_p_ge(cT[te], mu_nb, al_nb), "BASE-T"),
              "NB-c, BASE-O": (nb_p_ge(cO[te], mu_nb, al_nb), "BASE-O"),
              "MIX pi": (pi_mix, None),

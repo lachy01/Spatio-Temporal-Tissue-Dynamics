@@ -74,7 +74,7 @@ def _component_mstep(data, spec, w, p):
     b0 = [float(p["b0"])]
     if spec.theta_free:
         b0.append(float(p["theta"]))
-    b0 = np.concatenate([b0, np.asarray(p["s"], dtype=float),
+    b0 = np.concatenate([b0, np.asarray(p.get("s", np.zeros(0)), dtype=float),
                          [float(np.exp(p["delta"]))]])
     beta = _weighted_irls(ys, X, ws, "poisson", offset=off, beta0=b0)
 
@@ -85,7 +85,8 @@ def _component_mstep(data, spec, w, p):
     if spec.theta_free:
         out["theta"] = np.asarray(beta[1])
         k = 2
-    out["s"] = np.asarray(beta[k:-1])
+    if spec.df_area > 0:
+        out["s"] = np.asarray(beta[k:-1])
     # spec 4.3: e^delta must stay positive to pin component identity
     out["delta"] = np.asarray(np.log(max(e_delta, 1e-8)))
     return out, e_delta
@@ -193,6 +194,11 @@ def run_em(data, spec, params0, max_iter=500, tol=1e-8, ll_tol=1e-13,
     if spec.has_background:
         raise ValueError("EM does not apply with the additive background "
                          "(spec 4.3); use fit_lbfgs for Stage C")
+    if getattr(spec, "mistic", False):
+        # theta_m m_i is an additive term in the component means, exactly like
+        # Stage C's background: the component M-step is no longer a GLM
+        raise ValueError("EM does not apply with the additive MisTIC term "
+                         "theta_m m_i (spec 4.3); use fit_lbfgs")
     if getattr(spec, "weight_ridge", 0.0) > 0:
         # The M-steps maximise the UNPENALISED Q: `_weighted_irls` carries only a
         # 1e-10 diagonal for conditioning, and nothing adds `weight_ridge` to the

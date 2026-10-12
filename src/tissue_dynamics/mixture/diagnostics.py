@@ -29,13 +29,17 @@ def confound_diagnostic(w, df, basis):
     requires that number be reported prominently whatever it shows.
     """
     w = np.asarray(w, dtype=float)
-    nuis = np.column_stack([
-        np.log(df["area"].to_numpy(float)), np.log(df["N"].to_numpy(float)),
-        np.log(df["density"].to_numpy(float)), df["oxygen"].to_numpy(float)])
+    # area stays here as a diagnostic axis whatever the model's technical
+    # block; under MisTIC the library size is its weighted N, and m joins
+    cols = [("log_area", np.log(df["area"].to_numpy(float))),
+            ("log_N", np.log(df[getattr(basis, "logN_column", "N")].to_numpy(float)))]
+    if getattr(basis, "m_column", None):
+        cols.append(("log1p_m", np.log1p(df[basis.m_column].to_numpy(float))))
+    cols += [("log_density", np.log(df["density"].to_numpy(float))),
+             ("oxygen", df["oxygen"].to_numpy(float))]
+    nuis = np.column_stack([v for _, v in cols])
     r_nuis, r_state = _r2(nuis, w), _r2(basis.own(df), w)
-    per = {nm: float(np.corrcoef(v, w)[0, 1]) for nm, v in
-           (("log_area", nuis[:, 0]), ("log_N", nuis[:, 1]),
-            ("log_density", nuis[:, 2]), ("oxygen", nuis[:, 3]))}
+    per = {nm: float(np.corrcoef(v, w)[0, 1]) for nm, v in cols}
     return {
         "confound_r2_nuisance": r_nuis,
         "confound_r2_state": r_state,
@@ -99,9 +103,15 @@ def single_component_reference(y, d, spec):
     cols = [np.ones(len(y))]
     if spec.theta_free:
         cols.append(np.asarray(d.logN, dtype=float))
-    cols.append(np.asarray(d.area, dtype=float))
+    if spec.df_area > 0:
+        cols.append(np.asarray(d.area, dtype=float))
     X = np.column_stack(cols)
     off = None if spec.theta_free else np.asarray(d.logN, dtype=float)
+    if getattr(spec, "mistic", False):
+        from ..additive_glm import fit_poisson_additive
+
+        return np.asarray(fit_poisson_additive(np.asarray(y, dtype=float), X, off,
+                                               np.asarray(d.m, dtype=float), se=False)["mu"])
     _beta, mu = _poisson_irls(np.asarray(y, dtype=float), X, off)
     return np.asarray(mu, dtype=float)
 

@@ -53,7 +53,7 @@ import jax.numpy as jnp                                               # noqa: E4
 from tissue_dynamics.mixture.basis import build_basis, spec_from_basis    # noqa: E402
 from tissue_dynamics.mixture.data import load_config                      # noqa: E402
 from tissue_dynamics.mixture.inference import block_side_length, spatial_blocks  # noqa: E402
-from tissue_dynamics.mixture.model import build_data, pi_hat, rates       # noqa: E402
+from tissue_dynamics.mixture.model import build_data, component_means, pi_hat  # noqa: E402
 
 _s = importlib.util.spec_from_file_location("cmp", os.path.join(HERE, "compare_nb_mixture.py"))
 cmp = importlib.util.module_from_spec(_s)
@@ -314,7 +314,7 @@ def main():
                         **{f"{m}_mu": v[0] for m, v in nb.items()},
                         **{f"{m}_alpha": np.array(v[1]) for m, v in nb.items()})
     P = {k: jnp.asarray(np.asarray(v)) for k, v in pe["params"].items()}
-    lam0, lam1, _ = (np.asarray(x) for x in rates(P, D, spec))
+    lam0, lam1 = (np.asarray(x) for x in component_means(P, D, spec))
     pi = np.asarray(pi_hat(P, D, spec))
 
     res = {}

@@ -178,6 +178,7 @@ def _summarise(res, data, spec, extra=None, include_params=False):
         "weight_ridge": float(spec.weight_ridge), "rank": int(spec.rank),
         "df_area": int(spec.df_area), "stage": spec.stage,
         "theta_free": bool(spec.theta_free),
+        "technical": "mistic" if getattr(spec, "mistic", False) else "area",
         "loglik": float(res.loglik), "grad_inf": float(res.grad_inf),
         "n_iter": int(res.n_iter), "converged": bool(res.converged),
         "diverged": bool(res.diverged), "wall_time": float(res.wall_time),
@@ -190,9 +191,11 @@ def _summarise(res, data, spec, extra=None, include_params=False):
     }
     if spec.has_state:
         out.update(_eta_blocks(res.params, data, spec))
-    for k in ("a", "c", "psi", "b0", "theta", "h"):
+    for k in ("a", "c", "psi", "b0", "theta", "h", "eta_m"):
         if k in res.params:
             out[k] = np.asarray(res.params[k]).tolist()
+    if "eta_m" in res.params:
+        out["theta_m"] = float(np.exp(np.asarray(res.params["eta_m"])))
     if include_params:
         # the FULL pytree, including U, V, delta, a0, s -- the bootstrap
         # warm-starts from it, and the summary fields above are not enough to
@@ -380,13 +383,17 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
         from .model import responsibilities
 
         sp_ = int(task["split"])
-        for col in (f"y_A{sp_}", f"y_B{sp_}"):
+        need = [f"y_A{sp_}", f"y_B{sp_}"] + ([f"m_A{sp_}", f"m_B{sp_}"] if spec.mistic else [])
+        for col in need:
             if col not in df.columns:
                 raise KeyError(
-                    f"{col} missing from the table. Run run/add_gene_splits.py "
-                    "locally and re-copy the parquet: the half-set counts are "
-                    "not derivable from the summed y_count.")
+                    f"{col} missing from the table. Run run/add_gene_splits.py (and, "
+                    "under MisTIC, run/add_mistic_columns.py) locally and re-copy the "
+                    "parquet: the half-set counts are not derivable from the summed "
+                    "y_count, nor their m from m_cyc.")
         data.y = df[f"y_A{sp_}"].to_numpy(np.float64)     # fit on half A only
+        if spec.mistic:                                   # ... with half A's own m
+            data.m = df[f"m_A{sp_}"].to_numpy(np.float64)
         best, _ = multistart(data, spec, cfg, n_restarts=3, seed=7 * sp_,
                              verbose=verbose)
         w = np.asarray(responsibilities(best.params, data.as_jax(), spec))
@@ -395,7 +402,8 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
             y_a=df[f"y_A{sp_}"].to_numpy(float), y_b=df[f"y_B{sp_}"].to_numpy(float),
             w=w, log_n=basis.log_N(df), area_basis=basis.log_area_basis(df),
             density_basis=basis.density_weight_basis(df), labels=labels,
-            n_perm=int(cfg.get("n_permutations", 100)), seed=sp_, verbose=verbose)
+            n_perm=int(cfg.get("n_permutations", 100)), seed=sp_, verbose=verbose,
+            m_b=df[f"m_B{sp_}"].to_numpy(float) if spec.mistic else None)
         out = {**task, **_summarise(best, data, spec), **res}
         out["mean_y_A"] = float(df[f"y_A{sp_}"].mean())
         out["mean_y_B"] = float(df[f"y_B{sp_}"].mean())

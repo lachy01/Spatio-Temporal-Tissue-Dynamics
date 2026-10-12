@@ -45,23 +45,37 @@ class FitResult:
 
 
 def poisson_start(data, spec):
-    """Spec 4.4 step 1: single-component Poisson GLM with the component design."""
+    """Spec 4.4 step 1: single-component Poisson GLM with the component design.
+
+    Under MisTIC the mean also carries exp(eta_m) m_i, which is not a GLM, so
+    the start is the same single-component model fitted directly
+    (`additive_glm.fit_poisson_additive`); it also supplies eta_m's start.
+    """
     from ..count_glm import _poisson_irls
 
     y = np.asarray(data.y, dtype=float)
     cols = [np.ones(len(y))]
     if spec.theta_free:
         cols.append(np.asarray(data.logN, dtype=float))
-    cols.append(np.asarray(data.area, dtype=float))
+    if spec.df_area > 0:
+        cols.append(np.asarray(data.area, dtype=float))
     X = np.column_stack(cols)
     off = None if spec.theta_free else np.asarray(data.logN, dtype=float)
-    beta, _mu = _poisson_irls(y, X, off)
+    if spec.mistic:
+        from ..additive_glm import fit_poisson_additive
+
+        r = fit_poisson_additive(y, X, off, np.asarray(data.m, dtype=float), se=False)
+        beta = r["beta"]
+    else:
+        beta, _mu = _poisson_irls(y, X, off)
     out = {"b0": float(beta[0])}
+    k = 1
     if spec.theta_free:
         out["theta"] = float(beta[1])
-        out["s"] = np.asarray(beta[2:], dtype=float)
-    else:
-        out["s"] = np.asarray(beta[1:], dtype=float)
+        k = 2
+    out["s"] = np.asarray(beta[k:], dtype=float)
+    if spec.mistic:
+        out["eta_m"] = float(r["eta"])
     return out
 
 

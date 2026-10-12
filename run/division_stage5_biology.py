@@ -11,7 +11,8 @@ Spec 5, biological expectation:
       from MIX ("borrows from MIX").
   5.2 anchors. In situ: the fraction of Cancer Epithelial cells whose ESR1, PGR
       and ERBB2 counts exceed a per-gene technical null (the labels' null
-      design: log N offset + area spline, robustly trimmed), descriptive only.
+      design, robustly trimmed: log N offset + area spline, or under MisTIC the
+      weighted log N offset + theta m for the gene's own m), descriptive only.
       Wu et al. 2021: per-type S/G2M fractions (phase from
       run/wu2021_prepare.py), overall and within the patients of the clinical
       subtype whose receptor profile is closest to the section's. Closeness is
@@ -136,9 +137,10 @@ class Groups:
             return num.sum(0) / den.sum(0), (self.M @ num) / (self.M @ den)
 
 
-def receptor_null(y, Xa, off):
-    """Per-gene technical null, as the labels' (spec 2.1): P(Y >= y)."""
-    fit = L.robust_null(y, Xa, off)
+def receptor_null(y, Xa, off, m=None):
+    """Per-gene technical null, as the labels' (spec 2.1): P(Y >= y). Under
+    MisTIC `m` is this gene's own expected misassigned count."""
+    fit = L.robust_null(y, Xa, off, m=m)
     return nb_p_ge(y, fit["mu"], fit["alpha"]), fit
 
 
@@ -214,13 +216,18 @@ def main():
         sys.exit("table cells missing from the Xenium cell list")
     ix = ix.astype(int)
     basis = build_basis(df, cfg, verbose=False)
-    Xa = np.column_stack([np.ones(n), basis.log_area_basis(df)])
-    off = np.log(df["N"].to_numpy(float))
+    Xa, off, _m = L.null_design(df, basis)
+    if basis.technical == "mistic":                # each gene's own m (MisTIC)
+        from tissue_dynamics import mistic as MI
+
+        cov = MI.load_covariates(cfg)
+        cix = pd.Index(cov.counts.cell_ids).get_indexer(ids)
+        m_gene = {g: cov.m_gene_set([g])[0][cix] for g in RECEPTORS}
     rec_rows, rec_counts = [], {}
     for gname in RECEPTORS:
         y = cfg_cells[f"g_{gname}"].to_numpy(float)[ix]
         rec_counts[gname] = y
-        p, fit = receptor_null(y, Xa, off)
+        p, fit = receptor_null(y, Xa, off, m=m_gene[gname] if basis.technical == "mistic" else None)
         for stratum, m in (("Cancer Epithelial", ctype == "Cancer Epithelial"),
                            ("Normal Epithelial", ctype == "Normal Epithelial"),
                            ("all other types", ~np.isin(ctype, ["Cancer Epithelial", "Normal Epithelial"]))):
@@ -607,8 +614,8 @@ Each arm's mean p against its label (label scale):
 ### 5.2 Anchors
 
 **The section, in situ.** Receptor genes in Cancer Epithelial cells, against a
-per-gene technical null (log N offset, area spline, robustly trimmed, as the
-labels' null). Descriptive only; no clinical subtype is assigned.
+per-gene technical null ({'weighted log N offset plus theta m for the gene' if basis.technical == 'mistic' else 'log N offset, area spline'},
+robustly trimmed, as the labels' null). Descriptive only; no clinical subtype is assigned.
 
 {md_table(rec_ce, '{:.4f}')}
 

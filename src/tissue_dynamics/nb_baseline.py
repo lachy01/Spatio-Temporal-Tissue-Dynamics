@@ -3,8 +3,12 @@
 The model is the division comparison's NB-c (`division.arms`): every covariate
 the production mixture uses, placed in one NB mean,
 
-    log mu_i = b0 + theta log N_i + s(log area_i) + eta(x_i)
+    log mu_i = b0 + theta log N_i + s(log area_i) + eta(x_i)        (technical: area)
+    mu_i     = exp(b0 + theta log N_i + eta(x_i)) + theta_m m_i     (technical: mistic)
     eta(x)   = phi'a + phibar'c + sum_r (phi'U_r)(phibar'V_r) [+ psi ox] + H'h + phi'K H
+
+Under MisTIC (`model.technical`) N is the MisTIC-weighted library size and m the
+expected count of misassigned cycle transcripts; there is no area spline.
 
 with the mixture's penalty (`weight_ridge` on every eta coefficient, `ridge_tau`
 on U and V). `eta` is `arms.eta_state`, the block shared with the mixture, so a
@@ -46,7 +50,7 @@ import pandas as pd
 from .division import arms
 
 CACHE = "outputs/nb_baseline/cache"
-DESIGN_KEYS = ("y", "logN", "area", "own", "nbr", "hbasis", "oxygen")
+DESIGN_KEYS = ("y", "logN", "area", "m", "own", "nbr", "hbasis", "oxygen")
 DEPTH_SPLINE_DF = 6
 
 HIF_CORE = ["CA9", "NDRG1", "ADM", "EGLN3", "BNIP3", "ANGPTL4"]
@@ -180,8 +184,13 @@ def _log_mu(p, D):
         depth = depth + D["Nbasis"] @ p["tN"]
     if "tT" in p:                                  # theta="by_type"
         depth = depth + (D["own"] @ p["tT"]) * D["logNc"]
-    eta = p["b0"] + depth + D["area"] @ p["s"] + arms.eta_state(p, D)
-    return jnp.clip(eta, -30.0, 30.0)
+    eta = p["b0"] + depth + arms.eta_state(p, D)
+    if "s" in p:                                   # technical: area
+        eta = eta + D["area"] @ p["s"]
+    eta = jnp.clip(eta, -30.0, 30.0)
+    if "eta_m" in p:                               # technical: mistic, + theta_m m
+        eta = eta + jnp.log1p(jnp.exp(p["eta_m"] - eta) * D["m"])
+    return eta
 
 
 def _log_alpha(p, D):

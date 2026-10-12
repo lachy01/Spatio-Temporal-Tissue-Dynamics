@@ -22,9 +22,23 @@ from tissue_dynamics.mixture.tasks import enumerate_tasks, run_task  # noqa: E40
 FINGERPRINT_SECTIONS = ("data", "state", "model", "oxygen", "optim", "init", "inference")
 
 
+MISTIC_KEYS = ("technical", "mistic_library_size", "mistic_m")
+
+
 def fingerprint(cfg):
-    """Hash of the configuration sections that change what a fit is."""
-    blob = json.dumps({k: cfg.get(k) for k in FINGERPRINT_SECTIONS}, sort_keys=True, default=str)
+    """Hash of the configuration sections that change what a fit is.
+
+    The MisTIC keys (2026-10-12) change nothing in an area fit, so under
+    `technical: area` they are left out, and results fitted before they existed
+    keep their fingerprints.
+    """
+    secs = {k: cfg.get(k) for k in FINGERPRINT_SECTIONS}
+    model = dict(secs.get("model") or {})
+    if model.get("technical", "area") == "area":
+        for k in MISTIC_KEYS:
+            model.pop(k, None)
+    secs["model"] = model
+    blob = json.dumps(secs, sort_keys=True, default=str)
     return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
@@ -49,6 +63,11 @@ def stale_reasons(existing, task, cfg):
     width = 16 if cfg["state"].get("neighbourhood", "disc") == "split" else 8
     if existing.get("c") is not None and len(existing["c"]) != width:
         out.append(f"neighbour block width: file {len(existing['c'])}, config {width}")
+    # results from before 2026-10-12 carry no "technical" and are area fits
+    tech = mc.get("technical", "area")
+    if existing.get("technical", "area") != tech and not existing.get("job", "").startswith(
+            ("sim_", "division_sim")):
+        out.append(f"technical: file {existing.get('technical', 'area')!r}, config {tech!r}")
     return out
 
 

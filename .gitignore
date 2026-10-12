@@ -243,3 +243,5 @@ outputs/nb_baseline/cache/
 
 # Earlier CV/simulation runs on the log1p table, kept beside outputs/hpc (same per-task JSON layout)
 outputs/hpc_log1p_v*/
+# The area-based fits, archived before the MisTIC refits (read by run/mistic_t6_old_vs_new.py)
+outputs/hpc_area/

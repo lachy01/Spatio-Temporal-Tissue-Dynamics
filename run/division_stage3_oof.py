@@ -52,7 +52,7 @@ from tissue_dynamics.mixture.basis import build_basis, spec_from_basis    # noqa
 from tissue_dynamics.mixture.data import load_config                  # noqa: E402
 from tissue_dynamics.mixture.fit import fit_lbfgs                     # noqa: E402
 from tissue_dynamics.mixture.model import (build_data, loglik_terms,  # noqa: E402
-                                           pi_hat, rates)
+                                           pi_hat, component_means)
 
 OUT = "outputs/division_classifier"
 REPORT = f"{OUT}/report.md"
@@ -99,10 +99,11 @@ def to_json(p):
 
 
 # --------------------------------------------------------------------------
-# LOG arms: logit P(L = 1) = b0 + theta log N + s(log A) + eta_state
+# LOG arms: logit P(L = 1) = b0 + theta log N [+ s(log A)] + eta_state
+# (arms.logistic_eta: the area spline only under model.technical: area)
 # --------------------------------------------------------------------------
 def log_eta(p, D):
-    return p["b0"] + p["theta"] * D["logN"] + D["area"] @ p["s"] + arms.eta_state(p, D)
+    return arms.logistic_eta(p, D)
 
 
 def log_objective(D, lab, n, spec):
@@ -115,12 +116,7 @@ def log_objective(D, lab, n, spec):
 
 
 def init_log(D, lab, rank, seed):
-    rng = np.random.default_rng(seed)
-    p = arms.init_eta(D["own"].shape[1], D["nbr"].shape[1], D["hbasis"].shape[1], rank, rng)
-    m = float(np.clip(np.mean(np.asarray(lab)), 1e-6, 1 - 1e-6))
-    p.update({"b0": jnp.asarray(np.log(m / (1 - m))), "theta": jnp.asarray(0.0),
-              "s": jnp.zeros(D["area"].shape[1])})
-    return p
+    return arms.init_logistic(D, lab, rank, seed)
 
 
 def main():
@@ -180,7 +176,9 @@ def main():
         res = fit_lbfgs(data.subset(tr), spec, p_hat, maxiter=maxiter)
         Dte = data.subset(te).as_jax()
         pi_oof[te] = np.asarray(pi_hat(res.params, Dte, spec))
-        lam0, lam1, _ = rates(res.params, Dte, spec)
+        # each component's Poisson mean (lambda_k, plus theta_m m under MisTIC):
+        # what the push-through P(Y >= c | component) needs
+        lam0, lam1 = component_means(res.params, Dte, spec)
         l0_oof[te], l1_oof[te] = np.asarray(lam0), np.asarray(lam1)
         ho = float(jnp.mean(loglik_terms(res.params, Dte, spec)))
         spartan = [r for r in cvr if int(r["fold"]) == f and int(r["rank"]) == spec.rank

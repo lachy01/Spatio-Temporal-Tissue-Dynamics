@@ -42,8 +42,26 @@ def cell_type(df, phi_names):
 
 
 # --------------------------------------------------------------------------
-# 2.1 Technical null: NB(mu0, alpha0), log mu0 = b0 + log N + s(log A)
+# 2.1 Technical null: NB(mu0, alpha0). By model.technical:
+#     "area"    log mu0 = b0 + log N + s(log A)
+#     "mistic"  mu0 = Nt e^b0 + theta m    (MisTIC spec 3.2; no area spline)
 # --------------------------------------------------------------------------
+def null_design(df, basis, m=None):
+    """`(X, offset, m)` of the technical null for the table rows in `df`.
+
+    "area": X = [1, s(log A)], offset = raw log N, m = None (as before).
+    "mistic": X = [1], offset = log of the MisTIC-weighted N, and m -- the
+    table's m_cyc unless another gene set's m is passed (the negative-control
+    and spillover tests).
+    """
+    n = len(df)
+    X = np.column_stack([np.ones(n), basis.log_area_basis(df)])
+    if getattr(basis, "technical", "area") == "mistic":
+        mm = basis.mistic_m(df) if m is None else np.asarray(m, float)
+        return X, np.log(df[basis.logN_column].to_numpy(float)), mm
+    return X, np.log(df["N"].to_numpy(float)), None
+
+
 def fit_nb_offset(y, X, offset, weight=None, beta0=None, log_alpha0=0.0,
                   maxiter=10000, grad_tol=1e-9, rel_tol=1e-14):
     """NB2 regression with a fixed offset, by L-BFGS on the per-cell NLL.
@@ -98,12 +116,38 @@ def fit_nb_offset(y, X, offset, weight=None, beta0=None, log_alpha0=0.0,
                 mu=np.exp(np.clip(np.asarray(X) @ b + np.asarray(offset), -30, 30)))
 
 
-def robust_null(y, X, offset, trim_p=TRIM_P, tol_frac=0.001, max_iter=20, say=None):
+def fit_nb_additive_null(y, X, offset, m, weight=None, beta0=None, eta0=None,
+                         log_alpha0=0.0):
+    """The MisTIC technical null (MisTIC spec 3.2): NB2 with mean
+
+        mu_i = exp(x_i'b + offset_i) + theta m_i,   theta = exp(eta)
+
+    -- with X = 1 and offset = log Nt, `Nt_i e^b0 + theta m_i`. The additive
+    term is not a log-link GLM, so the NB negative log-likelihood is written out
+    and minimised with scipy's L-BFGS-B on analytic gradients
+    (`additive_glm.fit_nb_additive`). Returns `fit_nb_offset`'s keys plus
+    `eta`, `theta_m` and their standard errors.
+    """
+    from ..additive_glm import fit_nb_additive
+
+    r = fit_nb_additive(y, X, offset, m, weight=weight, beta0=beta0, eta0=eta0,
+                        log_alpha0=log_alpha0)
+    se = dict(zip(r["names"], r["se"]))
+    return dict(beta=r["beta"], alpha=r["alpha"], eta=r["eta"], theta_m=r["theta"],
+                theta_m_at_floor=r["theta_at_floor"], se=se,
+                converged=r["converged"], iters=r["n_iter"], grad_inf=r["grad_inf_per_cell"],
+                nll_per_cell=r["nll_per_cell"], mu=r["mu"])
+
+
+def robust_null(y, X, offset, trim_p=TRIM_P, tol_frac=0.001, max_iter=20, say=None, m=None):
     """Iteratively trimmed technical null (spec 2.1).
 
     Fit on all cells; flag `P(Y >= y_i) < trim_p`; refit on the unflagged; stop
     when the flagged set changes by fewer than `tol_frac` of cells, or after
     `max_iter` fits. Returns the final fit and the trace.
+
+    `m` given: the MisTIC null, mean `exp(Xb + offset) + theta m`
+    (`fit_nb_additive_null`), trimmed the same way.
     """
     say = say or (lambda *a: None)
     n = len(y)
@@ -111,18 +155,26 @@ def robust_null(y, X, offset, trim_p=TRIM_P, tol_frac=0.001, max_iter=20, say=No
     prev, trace, fit = None, [], None
     stopped = "max_iter"
     for it in range(max_iter):
-        fit = fit_nb_offset(y, X, offset, weight=keep.astype(float),
-                            beta0=None if fit is None else fit["beta"],
-                            log_alpha0=0.0 if fit is None else np.log(fit["alpha"]))
+        if m is None:
+            fit = fit_nb_offset(y, X, offset, weight=keep.astype(float),
+                                beta0=None if fit is None else fit["beta"],
+                                log_alpha0=0.0 if fit is None else np.log(fit["alpha"]))
+        else:
+            fit = fit_nb_additive_null(y, X, offset, m, weight=keep.astype(float),
+                                       beta0=None if fit is None else fit["beta"],
+                                       eta0=None if fit is None else fit["eta"],
+                                       log_alpha0=0.0 if fit is None else np.log(fit["alpha"]))
         p = nb_p_ge(y, fit["mu"], fit["alpha"])
         flagged = p < trim_p
         changed = int(np.sum(flagged != prev)) if prev is not None else int(flagged.sum())
         trace.append(dict(iteration=it + 1, n_fit=int(keep.sum()), alpha0=fit["alpha"],
                           intercept=float(fit["beta"][0]), flagged=int(flagged.sum()),
                           flagged_frac=float(flagged.mean()), changed=changed,
-                          converged=fit["converged"], grad_inf=fit["grad_inf"]))
-        say(f"    trim {it + 1:2d}: fit on {keep.sum():,} cells, alpha0 {fit['alpha']:.4f}, "
-            f"flagged {flagged.sum():,} ({100 * flagged.mean():.3f}%), changed {changed:,}")
+                          converged=fit["converged"], grad_inf=fit["grad_inf"],
+                          **({"theta_m": fit["theta_m"]} if m is not None else {})))
+        say(f"    trim {it + 1:2d}: fit on {keep.sum():,} cells, alpha0 {fit['alpha']:.4f}"
+            + (f", theta_m {fit['theta_m']:.4f}" if m is not None else "")
+            + f", flagged {flagged.sum():,} ({100 * flagged.mean():.3f}%), changed {changed:,}")
         if prev is not None and changed < tol_frac * n:
             stopped = "tolerance"
             break

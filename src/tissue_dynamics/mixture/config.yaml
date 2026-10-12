@@ -113,7 +113,27 @@ oxygen:
   source: major
 
 model:
-  # s(log area) in the component rates. Raised from the spec's 4 on evidence:
+  # The technical covariates of every count model (2026-10-12,
+  # instructions/mistic_implementation_spec.md, decided by the user):
+  #   "mistic"  no cell-area term anywhere. Library size is `mistic_library_size`
+  #             (sum of q = 1 - p over the cell's genes outside the blocklist, the
+  #             MisTIC-weighted N), still an offset. Every raw-count outcome's mean
+  #             gains theta_m * m_i, the expected number of its transcripts
+  #             misassigned from neighbours (`mistic_m`), theta_m = exp(eta_m)
+  #             estimated -- shared by both mixture components.
+  #   "area"    the earlier s(log area) spline and raw N. Kept so the old fits
+  #             can be reproduced for the old-vs-new comparison (T6).
+  # Area's causal path is unclear: it tracks cell state and cycle stage as well
+  # as segmentation. MisTIC's p targets segmentation error directly.
+  # "mistic" needs the MisTIC columns in the table (run/add_mistic_columns.py,
+  # after the Spartan run and run/mistic_covariates.py).
+  technical: area
+  # Nt_nonB rather than the all-gene Nt of the spec's notation table: the spec
+  # rules out any use of cycle-gene p, and Nt would put it in the offset; Nt_nonB
+  # is also the like-for-like replacement for N, which excludes the blocklist.
+  mistic_library_size: Nt_nonB
+  mistic_m: m_cyc
+  # s(log area) in the component rates (technical: area only). Raised from the spec's 4 on evidence:
   # the Test 07 confound floor -- the fold change the model invents from pure
   # size misspecification -- falls from 2.84 at df=4 to 1.84 at df=8, while the
   # real-data fold change is invariant (5.581 / 5.577 / 5.581 / 5.579 at

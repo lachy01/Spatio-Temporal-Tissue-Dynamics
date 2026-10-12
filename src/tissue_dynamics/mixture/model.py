@@ -1,13 +1,20 @@
 """Marginal log-likelihood of the concomitant-variable Poisson mixture (spec 2, 4.1).
 
     P(Z_i = 1) = pi_i
-    y_i | Z_i = k  ~  Poisson(rho_i + lambda_ki)
+    y_i | Z_i = k  ~  Poisson(rho_i + theta_m m_i + lambda_ki)
 
-    log lambda_0i = b0        + theta * logN_i + s(log area_i)
-    log lambda_1i = b0 + e^d  + theta * logN_i + s(log area_i)
+    log lambda_0i = b0        + theta * logN_i [+ s(log area_i)]
+    log lambda_1i = b0 + e^d  + theta * logN_i [+ s(log area_i)]
     log rho_i     = r0 + g(log density_i)                      [Stage C onward]
     logit(pi_i)   = a0 + phi_i.a + nbr_i.c + phi_i' B nbr_i
                        + h(log density_i) [+ psi * oxygen_i]
+
+The technical covariates follow `model.technical` (2026-10-12). Under "mistic"
+there is no area spline, logN is the MisTIC-weighted library size, and
+theta_m m_i -- the expected number of outcome transcripts misassigned into
+the cell from its neighbours, theta_m = exp(eta_m) -- adds to both components'
+means alike, next to the Stage C background. Under "area" the area spline is
+in and the m term is out, as before.
 
 The oxygen term is off in production (`model.oxygen: false`): on the log1p
 table the field explained nothing beyond cell state and never beat its rotated
@@ -15,8 +22,9 @@ or mirrored decoys (notebooks/nb_baseline.ipynb, section 3).
 
 with `B = U V^T`. The structural rules of spec 0 are enforced by construction
 here, not by convention: the state blocks are only ever read by `_logit_pi`, and
-`logN`/the area spline are only ever read by `_log_lambda`. There is no code path
-that puts state into the rates or detection into the weight.
+`logN`/the area spline are only ever read by `_log_lambda` (and `m` only by the
+mean, `_log_mu` / `_background`). There is no code path that puts state into the
+rates or detection into the weight.
 
 Three points of numerical care, all mandated by spec 4.1:
 
@@ -70,6 +78,9 @@ class ModelSpec:
     # ridge_tau as the weight of the balancing term ||U'U - V'V||_F^2;
     # "nuclear" is the earlier form, (weight_ridge + ridge_tau)(||U||^2 + ||V||^2).
     b_penalty: str = "frobenius"
+    # theta_m * m_i in every component's mean (model.technical: mistic); the
+    # area spline is then absent (df_area = 0)
+    mistic: bool = False
 
     @property
     def has_state(self):
@@ -86,6 +97,7 @@ class ModelSpec:
             bits.append(f"state {self.d_own}x{self.d_nbr}, rank {self.rank}")
         if self.has_background:
             bits.append(f"additive background, df {self.df_bg}")
+        bits.append("MisTIC theta_m m, no area" if self.mistic else f"area spline, df {self.df_area}")
         return "; ".join(bits)
 
 
@@ -95,7 +107,8 @@ class MixtureData:
 
     y: np.ndarray
     logN: np.ndarray
-    area: np.ndarray                      # s(log area) basis
+    area: np.ndarray                      # s(log area) basis; 0 columns under MisTIC
+    m: np.ndarray = field(default=None)   # expected misassigned outcome count (MisTIC)
     own: np.ndarray = field(default=None)
     nbr: np.ndarray = field(default=None)
     hbasis: np.ndarray = field(default=None)
@@ -128,6 +141,8 @@ def build_data(df, basis, cfg, spec):
         logN=np.asarray(basis.log_N(df), dtype=np.float64),
         area=np.asarray(basis.log_area_basis(df), dtype=np.float64),
     )
+    if spec.mistic:
+        d.m = np.asarray(basis.mistic_m(df), dtype=np.float64)
     if spec.has_state:
         d.own = np.asarray(basis.own(df), dtype=np.float64)
         d.nbr = np.asarray(basis.nbr(df), dtype=np.float64)
@@ -150,14 +165,20 @@ def init_params(spec, cfg, data=None, rng=None, poisson_start=None):
     p = {}
     if poisson_start is not None:                # step 1: single-component GLM fit
         p["b0"] = jnp.asarray(float(poisson_start["b0"]))
-        p["s"] = jnp.asarray(np.asarray(poisson_start["s"], dtype=np.float64))
+        if spec.df_area > 0:
+            p["s"] = jnp.asarray(np.asarray(poisson_start["s"], dtype=np.float64))
         if spec.theta_free:
             p["theta"] = jnp.asarray(float(poisson_start.get("theta", 1.0)))
+        if spec.mistic:
+            p["eta_m"] = jnp.asarray(float(poisson_start.get("eta_m", 0.0)))
     else:
         p["b0"] = jnp.asarray(-1.0)
-        p["s"] = jnp.zeros(spec.df_area)
+        if spec.df_area > 0:
+            p["s"] = jnp.zeros(spec.df_area)
         if spec.theta_free:
             p["theta"] = jnp.asarray(1.0)
+        if spec.mistic:
+            p["eta_m"] = jnp.asarray(0.0)
 
     scale = float(ic["random_scale"])
     draw = (lambda *sh: jnp.asarray(rng.normal(scale=scale, size=sh))) if rng is not None \
@@ -193,7 +214,9 @@ def init_params(spec, cfg, data=None, rng=None, poisson_start=None):
 def _log_lambda(p, d, spec):
     """`(log lambda_0, log lambda_1)`. Reads detection covariates only."""
     theta = p["theta"] if spec.theta_free else 1.0
-    base = p["b0"] + theta * d["logN"] + d["area"] @ p["s"]
+    base = p["b0"] + theta * d["logN"]
+    if spec.df_area > 0:
+        base = base + d["area"] @ p["s"]
     return base, base + jnp.exp(p["delta"])      # e^delta > 0 pins lambda_1 > lambda_0
 
 
@@ -233,9 +256,29 @@ def _log_rho(p, d, spec):
     return p["r0"] + d["gbasis"] @ p["g"] if spec.has_background else None
 
 
-def _log_mu(log_lam, log_rho):
-    """Poisson mean on the log scale; additive background via logaddexp."""
-    return log_lam if log_rho is None else jnp.logaddexp(log_rho, log_lam)
+def _log_mu(log_lam, log_rho, p=None, d=None, spec=None):
+    """Poisson mean on the log scale: lambda, plus the Stage C background via
+    logaddexp, plus theta_m m_i under MisTIC.
+
+    The MisTIC term is added as log(mu + t) = log mu + log1p(t / mu), with
+    t = exp(eta_m) m_i. That is exact where m_i = 0 (t = 0, nothing added) and
+    never forms log(0), which logaddexp(eta_m + log m_i, log mu) would carry
+    as -inf through every cell with m_i = 0.
+    """
+    out = log_lam if log_rho is None else jnp.logaddexp(log_rho, log_lam)
+    if spec is not None and spec.mistic:
+        out = out + jnp.log1p(jnp.exp(p["eta_m"] - out) * d["m"])
+    return out
+
+
+def _background(p, d, spec, like):
+    """The additive part of each component's mean, natural scale: the Stage C
+    background rho_i plus theta_m m_i under MisTIC (zeros if neither)."""
+    lr = _log_rho(p, d, spec)
+    bg = jnp.zeros_like(like) if lr is None else jnp.exp(lr)
+    if spec.mistic:
+        bg = bg + jnp.exp(p["eta_m"]) * d["m"]
+    return bg
 
 
 def _log_pois(y, log_mu):
@@ -251,8 +294,8 @@ def loglik_terms(p, d, spec):
     eta = _logit_pi(p, d, spec)
     y = d["y"]
     comp = jnp.stack([
-        jax.nn.log_sigmoid(-eta) + _log_pois(y, _log_mu(l0, lr)),
-        jax.nn.log_sigmoid(eta) + _log_pois(y, _log_mu(l1, lr)),
+        jax.nn.log_sigmoid(-eta) + _log_pois(y, _log_mu(l0, lr, p, d, spec)),
+        jax.nn.log_sigmoid(eta) + _log_pois(y, _log_mu(l1, lr, p, d, spec)),
     ], axis=0)
     return logsumexp(comp, axis=0)
 
@@ -345,8 +388,8 @@ def responsibilities(p, d, spec):
     lr = _log_rho(p, d, spec)
     eta = _logit_pi(p, d, spec)
     y = d["y"]
-    a0 = jax.nn.log_sigmoid(-eta) + _log_pois(y, _log_mu(l0, lr))
-    a1 = jax.nn.log_sigmoid(eta) + _log_pois(y, _log_mu(l1, lr))
+    a0 = jax.nn.log_sigmoid(-eta) + _log_pois(y, _log_mu(l0, lr, p, d, spec))
+    a1 = jax.nn.log_sigmoid(eta) + _log_pois(y, _log_mu(l1, lr, p, d, spec))
     return jnp.exp(a1 - jnp.logaddexp(a0, a1))
 
 
@@ -355,11 +398,22 @@ def pi_hat(p, d, spec):
 
 
 def rates(p, d, spec):
-    """`(lambda_0, lambda_1, rho)` on the natural scale."""
+    """`(lambda_0, lambda_1, rho)` on the natural scale.
+
+    `rho` is the whole additive part of the mean: the Stage C background plus
+    theta_m m_i under MisTIC. A component's Poisson mean is `rho + lambda_k`
+    (`component_means`); the rate ratio lambda_1 / lambda_0 = exp(e^delta)
+    does not involve it.
+    """
     l0, l1 = _log_lambda(p, d, spec)
-    lr = _log_rho(p, d, spec)
-    rho = jnp.zeros_like(l0) if lr is None else jnp.exp(lr)
-    return jnp.exp(l0), jnp.exp(l1), rho
+    return jnp.exp(l0), jnp.exp(l1), _background(p, d, spec, l0)
+
+
+def component_means(p, d, spec):
+    """`(mu_0, mu_1)`: each component's Poisson mean, `rho + lambda_k`, the
+    quantities any count probability under a component must use."""
+    lam0, lam1, bg = rates(p, d, spec)
+    return bg + lam0, bg + lam1
 
 
 def marginal_mean(p, d, spec):

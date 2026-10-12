@@ -139,10 +139,17 @@ class FrozenBasis:
     # single 80 um disc (nbr_phi_*), as before the split.
     nbr_cols: list | None = None
     nbr_blocks: list | None = None
+    # Technical covariates (model.technical). "area": s(log area) and raw N.
+    # "mistic": no area spline (area_spline is None), library size read from
+    # `logN_column` (the MisTIC-weighted N), and `m_column` -- the expected
+    # count of misassigned outcome transcripts -- for the additive term.
+    technical: str = "area"
+    logN_column: str = "N"
+    m_column: str | None = None
 
     @property
     def n_area(self):
-        return int(self.area_spline.n_cols)
+        return 0 if self.area_spline is None else int(self.area_spline.n_cols)
 
     @property
     def n_weight(self):
@@ -219,7 +226,16 @@ class FrozenBasis:
         return np.concatenate(offs), np.hstack(Ms)
 
     def log_area_basis(self, df):
+        """s(log area) basis; zero columns when the technical block is MisTIC's."""
+        if self.area_spline is None:
+            return np.zeros((len(df), 0))
         return self.area_spline(np.log(df["area"].to_numpy(float)))
+
+    def mistic_m(self, df):
+        """`m_i`, the expected misassigned outcome count (technical: mistic)."""
+        if self.m_column is None:
+            raise ValueError("the basis was built with technical: area; it has no m")
+        return df[self.m_column].to_numpy(float)
 
     def density_weight_basis(self, df):
         return self.density_weight_spline(np.log(df["density"].to_numpy(float)))
@@ -228,8 +244,9 @@ class FrozenBasis:
         return self.density_bg_spline(np.log(df["density"].to_numpy(float)))
 
     def log_N(self, df):
-        """`log N`, residualised on the area spline when spec 2.2 requires it."""
-        v = np.log(df["N"].to_numpy(float))
+        """`log N` (the configured library size), residualised on the area
+        spline when spec 2.2 requires it (technical: area only)."""
+        v = np.log(df[self.logN_column].to_numpy(float))
         if self.logN_ortho_coef is None:
             return v
         A = np.column_stack([np.ones(len(v)), self.log_area_basis(df)])
@@ -348,25 +365,47 @@ def build_basis(df, cfg, verbose=True):
             "so deliberately not implemented -- add it if a new sample needs it.")
 
     adata_density = df["density"].to_numpy(float)
-    area_spline = _Spline(np.log(df["area"].to_numpy(float)), mc["area_spline_df"])
     dw = _Spline(np.log(df["density"].to_numpy(float)), mc["weight_density_spline_df"],
                  knot_quantiles=mc.get("weight_density_knot_quantiles"),
                  scale=bool(mc.get("scale_weight_splines", False)))
     dg = _Spline(np.log(df["density"].to_numpy(float)), mc["background_spline_df"])
 
-    # spec 2.2: orthogonalise log N against the area spline only if strongly collinear
-    logN = np.log(df["N"].to_numpy(float))
-    la = np.log(df["area"].to_numpy(float))
-    r = float(np.corrcoef(logN, la)[0, 1])
+    technical = str(mc.get("technical", "area"))
     coef, r2 = None, float("nan")
-    if abs(r) > float(dc["corr_logN_logarea_orthogonalise_above"]):
-        A = np.column_stack([np.ones(len(logN)), area_spline(la)])
-        coef, *_ = np.linalg.lstsq(A, logN, rcond=None)
-        fit = A @ coef
-        r2 = float(1.0 - np.var(logN - fit) / np.var(logN))
-        say(f"  corr(log N, log area) = {r:.3f} -> orthogonalised, aux R2 = {r2:.4f}")
+    if technical == "mistic":
+        # MisTIC replaces area: no area spline, the MisTIC-weighted library
+        # size, and m for the additive misassignment term
+        logN_col, m_col = str(mc["mistic_library_size"]), str(mc["mistic_m"])
+        lacking = [c for c in (logN_col, m_col) if c not in df.columns]
+        if lacking:
+            raise KeyError(f"technical: mistic, but the table lacks {lacking}; run "
+                           "run/add_mistic_columns.py first")
+        lib = df[logN_col].to_numpy(float)
+        mv = df[m_col].to_numpy(float)
+        if not (np.all(lib > 0) and np.all(np.isfinite(lib))):
+            raise ValueError(f"{logN_col} must be positive and finite")
+        if not (np.all(mv >= 0) and np.all(np.isfinite(mv))):
+            raise ValueError(f"{m_col} must be non-negative and finite")
+        area_spline = None
+        say(f"  technical: mistic -- library size {logN_col}, additive m from {m_col} "
+            f"(mean {mv.mean():.4f}); no area term")
+    elif technical == "area":
+        logN_col, m_col = "N", None
+        area_spline = _Spline(np.log(df["area"].to_numpy(float)), mc["area_spline_df"])
+        # spec 2.2: orthogonalise log N against the area spline only if strongly collinear
+        logN = np.log(df["N"].to_numpy(float))
+        la = np.log(df["area"].to_numpy(float))
+        r = float(np.corrcoef(logN, la)[0, 1])
+        if abs(r) > float(dc["corr_logN_logarea_orthogonalise_above"]):
+            A = np.column_stack([np.ones(len(logN)), area_spline(la)])
+            coef, *_ = np.linalg.lstsq(A, logN, rcond=None)
+            fit = A @ coef
+            r2 = float(1.0 - np.var(logN - fit) / np.var(logN))
+            say(f"  corr(log N, log area) = {r:.3f} -> orthogonalised, aux R2 = {r2:.4f}")
+        else:
+            say(f"  corr(log N, log area) = {r:.3f} -> no orthogonalisation needed")
     else:
-        say(f"  corr(log N, log area) = {r:.3f} -> no orthogonalisation needed")
+        raise ValueError(f"model.technical must be 'area' or 'mistic', not {technical!r}")
 
     return FrozenBasis(
         phi_names=phi_names, own_names=own_names, nbr_names=nbr_names,
@@ -376,7 +415,8 @@ def build_basis(df, cfg, verbose=True):
         logN_ortho_coef=coef, logN_ortho_r2=r2,
         cond_own=cond_own, cond_nbr=cond_nbr,
         mean_log_density=float(np.log(adata_density).mean()),
-        W_own=W_own, W_nbr=W_nbr, nbr_cols=nbr_cols, nbr_blocks=nbr_blocks)
+        W_own=W_own, W_nbr=W_nbr, nbr_cols=nbr_cols, nbr_blocks=nbr_blocks,
+        technical=technical, logN_column=logN_col, m_column=m_col)
 
 
 def spec_from_basis(basis, cfg, stage="B", theta_free=None, weight_ridge=0.0,
@@ -403,4 +443,5 @@ def spec_from_basis(basis, cfg, stage="B", theta_free=None, weight_ridge=0.0,
         density_interaction_spline=bool(mc.get("density_interaction_spline", False)),
         n_reference=int(mc.get("weight_ridge_n_reference", 0)
                         if n_reference is None else n_reference),
-        oxygen=bool(mc.get("oxygen", True)))
+        oxygen=bool(mc.get("oxygen", True)),
+        mistic=basis.technical == "mistic")

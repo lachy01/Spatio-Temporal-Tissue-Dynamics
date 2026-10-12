@@ -2,6 +2,12 @@
 
 Pass: every scalar parameter within 3 Monte Carlo standard errors of truth
 across the replicates, and ||B_hat - B||_F / ||B||_F < 0.15.
+
+`test_01_recovery` follows the configured technical covariates
+(`model.technical`). `test_01_recovery_mistic` is the mixture half of the MisTIC
+spec's T1: the same test with the additive theta_m m term in every component's
+mean and no area spline, with eta_m = log theta_m among the parameters that
+must be recovered.
 """
 import numpy as np
 import pytest
@@ -12,22 +18,21 @@ from tissue_dynamics.mixture.fit import multistart
 from tissue_dynamics.mixture.model import B_matrix
 from tissue_dynamics.mixture.simulate import simulate_stage_b
 
-SCALARS = ("b0", "theta", "delta", "a0", "psi")
+SCALARS = ("b0", "theta", "delta", "a0", "psi", "eta_m")
 
 
-@pytest.mark.slow
-def test_01_recovery():
+def _recovery(title, technical=None):
     cfg = load_config()
     n, reps = size(100_000, 30_000), size(20, 8)
     est, truths, bfro, last = {k: [] for k in SCALARS}, {}, [], None
 
     for rep in range(reps):
         data, truth, spec = simulate_stage_b(n=n, seed=rep, e_delta=np.log(4.0),
-                                             mean_pi=0.15, rank=2)
+                                             mean_pi=0.15, rank=2, technical=technical)
         best, _ = multistart(data, spec, cfg, n_restarts=size(5, 3),
                              seed=100 * rep, verbose=False, maxiter=2000)
         for k in SCALARS:
-            if k not in truth:              # psi: absent when the config drops oxygen
+            if k not in truth:              # psi / eta_m: absent unless configured
                 continue
             est[k].append(float(best.params[k]))
             truths[k] = float(truth[k])
@@ -49,10 +54,21 @@ def test_01_recovery():
     bf = np.array(bfro)
     b_ok = bool(bf.mean() < 0.15)
     ok &= b_ok
-    lines += ["", f"- replicates: **{reps}** at n = **{n:,}**",
+    lines += ["", f"- replicates: **{reps}** at n = **{n:,}**; {last[3].describe()}",
               f"- `||B_hat - B||_F / ||B||_F`: mean **{bf.mean():.4f}**, "
               f"max {bf.max():.4f} (threshold 0.15 -> {'pass' if b_ok else 'FAIL'})"]
     prov, _e, _f = fit_summary(last[0], last[1], last[2], last[3])
     lines += [""] + [f"{k}: **{v}**" for k, v in prov]
-    write("Test 01 -- simulation recovery (spec 6.1)", lines, passed=ok)
+    write(title, lines, passed=ok)
     assert ok, "parameter recovery outside 3 MC SE, or B recovery worse than 0.15"
+
+
+@pytest.mark.slow
+def test_01_recovery():
+    _recovery("Test 01 -- simulation recovery (spec 6.1)")
+
+
+@pytest.mark.slow
+def test_01_recovery_mistic():
+    _recovery("Test 01 with theta_m m -- simulation recovery (MisTIC spec T1, mixture)",
+              technical="mistic")

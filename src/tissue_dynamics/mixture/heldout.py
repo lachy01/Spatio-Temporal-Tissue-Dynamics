@@ -50,7 +50,13 @@ def poisson_deviance(y, mu):
     return float(2.0 * np.sum(t - (y - mu)))
 
 
-def _fit_poisson(y, X, offset):
+def _fit_poisson(y, X, offset, m=None):
+    """Poisson GLM; with `m`, the mean is exp(X b + offset) + theta m (MisTIC)."""
+    if m is not None:
+        from ..additive_glm import fit_poisson_additive
+
+        r = fit_poisson_additive(y, X, offset, m, se=False)
+        return r["beta"], r["mu"]
     from ..count_glm import _poisson_irls
 
     beta, mu = _poisson_irls(np.asarray(y, dtype=float), X, offset)
@@ -76,23 +82,27 @@ def block_permute(values, labels, rng):
 
 
 def heldout_gene_test(y_a, y_b, w, log_n, area_basis, density_basis, labels,
-                      n_perm=100, seed=0, verbose=False):
+                      n_perm=100, seed=0, verbose=False, m_b=None):
     """Spec 6.8. Returns the observed and permuted improvements in deviance.
 
     `w` must come from a model fitted on `y_a` only.  The nuisance model is
     `y_b ~ offset(log N) + s(log area) + s(log density)`; the full model adds
     `w`. Both are Poisson GLMs, so twice the log-likelihood difference is the
     drop in residual deviance.
+
+    Under MisTIC (`m_b`, half B's expected misassigned count) the area basis
+    has no columns and both models' means gain theta * m_b, fitted directly;
+    the deviance difference keeps its meaning.
     """
     n = len(y_b)
     nuis = np.column_stack([np.ones(n), area_basis, density_basis])
     off = np.asarray(log_n, dtype=float)
 
-    _b0, mu0 = _fit_poisson(y_b, nuis, off)
+    _b0, mu0 = _fit_poisson(y_b, nuis, off, m_b)
     dev0 = poisson_deviance(y_b, mu0)
 
     full = np.column_stack([nuis, np.asarray(w, dtype=float)])
-    beta1, mu1 = _fit_poisson(y_b, full, off)
+    beta1, mu1 = _fit_poisson(y_b, full, off, m_b)
     dev1 = poisson_deviance(y_b, mu1)
     obs = dev0 - dev1                       # deviance explained by w
 
@@ -101,7 +111,7 @@ def heldout_gene_test(y_a, y_b, w, log_n, area_basis, density_basis, labels,
     for i in range(int(n_perm)):
         wp = block_permute(w, labels, rng)
         Xp = np.column_stack([nuis, wp])
-        _bp, mup = _fit_poisson(y_b, Xp, off)
+        _bp, mup = _fit_poisson(y_b, Xp, off, m_b)
         null[i] = dev0 - poisson_deviance(y_b, mup)
         if verbose and (i + 1) % 25 == 0:
             print(f"    permutation {i + 1}/{n_perm}", flush=True)

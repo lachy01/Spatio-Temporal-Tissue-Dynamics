@@ -168,18 +168,25 @@ def main():
              "the same gene list and library size as the mixture (spec 2.1).")
 
     # ---- 2.1 technical null --------------------------------------------------
-    Xa = np.column_stack([np.ones(n), basis.log_area_basis(df)])
-    off = np.log(N)                        # raw log N: the null fixes theta = 1
-    say("fitting the robust technical null ...")
-    null = L.robust_null(y, Xa, off, say=say)
+    # model.technical: "area" -- log mu0 = b0 + log N + s(log A), raw log N a
+    # fixed offset; "mistic" -- mu0 = Nt e^b0 + theta_m m (MisTIC spec 3.2),
+    # Nt the MisTIC-weighted N, m the expected misassigned Tirosh count
+    Xa, off, m_null = L.null_design(df, basis)
+    mistic = m_null is not None
+    say(f"fitting the robust technical null ({basis.technical}) ...")
+    null = L.robust_null(y, Xa, off, say=say, m=m_null)
     mu0, a0 = null["mu"], null["alpha"]
     sd0 = np.sqrt(mu0 + a0 * mu0 ** 2)
     say(f"  alpha0 = {a0:.4f}, mean mu0 = {mu0.mean():.4f}, stopped on "
-        f"{null['stopped_on']} after {len(null['trace'])} fits")
+        f"{null['stopped_on']} after {len(null['trace'])} fits"
+        + (f"; theta_m = {null['theta_m']:.4f}" if mistic else ""))
 
     out = pd.DataFrame({"cell_id": df["cell_id"].astype(str).to_numpy(), "cell_type": ctype,
                         "y": y.astype(np.int64), "N": N.astype(np.int64), "A": A,
                         "mu0": mu0, "alpha0": a0, "sd0": sd0})
+    if mistic:
+        out["Nt"] = np.exp(off)
+        out["m"] = m_null
 
     # ---- 2.2 BASE-T -----------------------------------------------------------
     for ab in L.ALPHA_B_GRID:
@@ -273,7 +280,7 @@ def main():
     say("V2: simulating from the technical null and rebuilding the labels ...")
     rng = np.random.default_rng(2026)
     ys = L.sim_nb(mu0, a0, rng)
-    null_s = L.robust_null(ys, Xa, off, say=lambda *a: None)
+    null_s = L.robust_null(ys, Xa, off, say=lambda *a: None, m=m_null)
     mu_s, a_s = null_s["mu"], null_s["alpha"]
     sd_s = np.sqrt(mu_s + a_s * mu_s ** 2)
     v2_rows, v2_fail = [], []
@@ -338,7 +345,10 @@ def main():
                 score=dict(mode=thr["mode"], sigma=thr["sigma"], threshold=thr["threshold"],
                            **sinfo),
                 v3=v3, cell_type_agreement=agree,
-                logN_residualised_in_basis=basis.logN_ortho_coef is not None)
+                logN_residualised_in_basis=basis.logN_ortho_coef is not None,
+                technical=basis.technical,
+                **({"null_theta_m": null["theta_m"], "null_eta": null["eta"],
+                    "null_se": null["se"]} if mistic else {}))
     json.dump(meta, open(f"{OUT}/labels_meta.json", "w"), indent=2, default=float)
     plot_stage1(out, thr, disc)
 
@@ -358,6 +368,15 @@ def main():
     tr = pd.DataFrame(null["trace"])[["iteration", "n_fit", "alpha0", "flagged",
                                       "flagged_frac", "changed", "converged"]]
     v2_ok = not v2_fail
+    null_text = (
+        "mu0 = Nt e^b0 + theta_m m (MisTIC; `model.technical: mistic`): Nt the "
+        f"MisTIC-weighted N ({basis.logN_column}) as a fixed offset, m the expected count of "
+        f"misassigned Tirosh transcripts ({basis.m_column}), theta_m = exp(eta) estimated "
+        f"(**{null['theta_m']:.4f}**, SE of eta {null['se'].get('eta', float('nan')):.4f}); "
+        "no area term. NB negative log-likelihood minimised directly (scipy L-BFGS-B). "
+        if mistic else
+        "log mu0 = b0 + log N + s(log A), area spline as the NB arms (df 8), raw log N as "
+        "a fixed offset. ")
     report(f"""
 ## Stage 1 -- labels (built and frozen {time.strftime('%Y-%m-%d %H:%M')})
 
@@ -371,8 +390,7 @@ table's `N` for every cell.
 
 ### Technical null (spec 2.1)
 
-log mu0 = b0 + log N + s(log A), area spline as the NB arms (df 8), raw log N as
-a fixed offset. Robust fit by iterative trimming at P(Y >= y) < 0.001; stopped on
+{null_text}Robust fit by iterative trimming at P(Y >= y) < 0.001; stopped on
 **{null['stopped_on']}** after {len(null['trace'])} fits. Final alpha0 = **{a0:.4f}**.
 
 {md_table(tr)}
