@@ -136,6 +136,12 @@ def main():
     from MisTIC.mistic_class import mistic
     gtf.get_num_processes = lambda n_cpus=None: int(a.threads)
     torch.set_num_threads(int(a.threads))
+    if a.device == "cuda" and not torch.cuda.is_available():
+        raise SystemExit(f"--device cuda, but torch {torch.__version__} (CUDA build "
+                         f"{torch.version.cuda}) cannot see a GPU on {os.uname().nodename}")
+    say(f"torch {torch.__version__}; device "
+        + (f"cuda ({torch.cuda.get_device_name(0)})" if a.device != "cpu"
+           and torch.cuda.is_available() else "cpu"))
     np.random.seed(seed)                   # MisTIC shuffles patches with the global RNGs
     torch.manual_seed(seed)
 

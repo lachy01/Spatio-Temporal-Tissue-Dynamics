@@ -43,7 +43,12 @@ n="${SLURM_CPUS_PER_TASK:-1}"
 export OMP_NUM_THREADS="$n" MKL_NUM_THREADS="$n" OPENBLAS_NUM_THREADS="$n" NUMBA_NUM_THREADS="$n"
 export POLARS_MAX_THREADS="$n"
 
+# With a GPU allocated, insist on it: MisTIC would otherwise fall back to the
+# CPU without a word if torch cannot reach the device. Without one, use the CPU.
+dev=cpu
+[ -n "${CUDA_VISIBLE_DEVICES:-}" ] && dev=cuda
+
 cd "$MIX_ROOT"
 mkdir -p logs
-echo "tile=${SLURM_ARRAY_TASK_ID} cores=${n} host=$(hostname) gpu=${CUDA_VISIBLE_DEVICES:-none}"
-"$MISTIC_ENV/bin/python" run/mistic_run.py --tile "$SLURM_ARRAY_TASK_ID" --threads "$n"
+echo "tile=${SLURM_ARRAY_TASK_ID} cores=${n} host=$(hostname) gpu=${CUDA_VISIBLE_DEVICES:-none} device=${dev}"
+"$MISTIC_ENV/bin/python" run/mistic_run.py --tile "$SLURM_ARRAY_TASK_ID" --threads "$n" --device "$dev"
