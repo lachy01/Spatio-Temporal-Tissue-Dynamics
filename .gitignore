@@ -236,10 +236,13 @@ outputs/division_classifier/**/labels.parquet
 outputs/division_classifier/**/oof_nb.parquet
 outputs/division_classifier/**/oof_predictions.parquet
 outputs/division_classifier/cache_stage7/
+outputs/division_classifier/**/cache_stage7/
 outputs/hpc_spanorm/
 
 # Notebook caches for nb_baseline.ipynb (fits, fields, ring sums; rebuilt by re-running it)
 outputs/nb_baseline/cache/
+# the area-era cache, kept after the MisTIC switch (2026-10-13)
+outputs/nb_baseline/cache_area/
 
 # Earlier CV/simulation runs on the log1p table, kept beside outputs/hpc (same per-task JSON layout)
 outputs/hpc_log1p_v*/

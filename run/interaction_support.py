@@ -158,13 +158,22 @@ def main():
     sd_own = own_raw.std(0)
     sd_nbr = np.concatenate([nbr_raw[b].std(0) for b in BLOCKS])
     fits = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(a.cv, "*.json")))]
+    # the fold fits are a cross-check on the same model only: a CV run fitted with
+    # other technical covariates (the area-era runs, since the MisTIC switch) is
+    # not used, and its columns are left empty
+    fits = [r for r in fits if r.get("technical", "area") == basis.technical]
     Bfit = {}
     for rank in sorted({int(r["rank"]) for r in fits}):
         Bfit[rank] = np.stack([b_star(r, basis, sd_own, sd_nbr) for r in fits
                                if int(r["rank"]) == rank])
-    g = Bfit[3].shape[0]
-    B3cv = Bfit[3].mean(0)
-    se3 = np.sqrt((g - 1) / g * ((Bfit[3] - B3cv) ** 2).sum(0))
+    if 3 in Bfit:
+        g = Bfit[3].shape[0]
+        B3cv = Bfit[3].mean(0)
+        se3 = np.sqrt((g - 1) / g * ((Bfit[3] - B3cv) ** 2).sum(0))
+    else:
+        print(f"no rank-3 cv_rank fold fits for technical: {basis.technical} in {a.cv}; "
+              "the jackknife cross-check columns are left empty")
+        B3cv = se3 = None
 
     # ---- the full-data point estimate and its spatial block bootstrap ----
     pe = json.load(open(a.point))
@@ -191,7 +200,8 @@ def main():
                              "B_rank3": B3[k, cols][l], "se_boot": se_b[k, cols][l],
                              "ci_lo": lo_b[k, cols][l], "ci_hi": hi_b[k, cols][l],
                              "z": B3[k, cols][l] / se_b[k, cols][l],
-                             "B_rank3_cv": B3cv[k, cols][l], "se_jackknife": se3[k, cols][l],
+                             "B_rank3_cv": B3cv[k, cols][l] if B3cv is not None else np.nan,
+                             "se_jackknife": se3[k, cols][l] if se3 is not None else np.nan,
                              **{f"B_rank{r}": Bfit[r].mean(0)[k, cols][l] for r in Bfit if r != 3}})
     tab = pd.DataFrame(rows)
     tab["reportable"] = (tab["ci_lo"] > 0) | (tab["ci_hi"] < 0)
@@ -213,8 +223,9 @@ def main():
         rs = tab[tab["block"] == b]
         print(f"   corr(log ESS, |B rank 3|) = {np.corrcoef(np.log(rs['ess_cells']), rs['B_rank3'].abs())[0, 1]:+.3f}; "
               f"corr(log ESS, bootstrap SE) = {np.corrcoef(np.log(rs['ess_cells']), rs['se_boot'])[0, 1]:+.3f}")
-        print(f"   bootstrap SE / jackknife SE: median {np.median(rs['se_boot'] / rs['se_jackknife']):.2f}; "
-              f"corr(point estimate, fold mean) {np.corrcoef(rs['B_rank3'], rs['B_rank3_cv'])[0, 1]:+.3f}")
+        if rs["se_jackknife"].notna().all():
+            print(f"   bootstrap SE / jackknife SE: median {np.median(rs['se_boot'] / rs['se_jackknife']):.2f}; "
+                  f"corr(point estimate, fold mean) {np.corrcoef(rs['B_rank3'], rs['B_rank3_cv'])[0, 1]:+.3f}")
         if "B_rank5" in rs:
             dlt = (rs["B_rank5"] - rs["B_rank3"]).abs()
             print(f"   |B rank 5 - B rank 3|: median {dlt.median():.4f}; "
