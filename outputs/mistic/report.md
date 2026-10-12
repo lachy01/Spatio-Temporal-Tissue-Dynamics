@@ -27,14 +27,22 @@ covariate the models read uses p of a cycle-gene transcript.
 
 | test | status |
 | --- | --- |
-| T1. Likelihood recovery (blocking) | null: FAIL; mixture: FAIL |
+| T1. Likelihood recovery (blocking) | null: FAIL; mixture: FAIL -- accepted by the user on 2026-10-12 on the replicate evidence; `model.technical` switched to mistic |
 | T2. MisTIC sanity (blocking) | PASS |
 | T3. Null calibration negative control (blocking) | PASS |
 | T4. Spillover control (report) | reported |
 | T5. PhiSpace feature check (report) | deferred |
 | T6. Old vs new comparison (report) | reported |
 
-_Assembled 2026-10-12 23:27 at git 36c39a7._
+## Headline numbers
+
+- **MisTIC:** 36 tiles, every one on cuda; 33 reached the 50-epoch cap. Mean p 0.078; 0.66% of transcripts above 0.5; contamination fraction f median 0.081; m_cyc mean 0.064 against a mean cycle count of 0.845 (all segmented cells).
+- **Mixture fit:** the MisTIC model's penalised log-likelihood is +2,846 against the area model's, with 145 parameters against 151; restart agreement 95%.
+- **Cycling component:** e^delta 1.723 -> 1.902 (rate ratio 5.60 -> 6.70); cycling fraction 0.126 -> 0.098; theta_m 1.594; entropy 0.703 -> 0.763.
+- **Priority-pair neighbourhood effects:** 16 of 16 MisTIC estimates fall inside the area estimate's 95% interval; the largest change is 5.0% (Cancer Epithelial, regional: T-cells: 1.027 -> 1.079).
+- **Division labels:** BASE-T 0.0344 -> 0.0329, BASE-O 0.1828 -> 0.1818 overall.
+
+_Assembled 2026-10-13 01:04 at git 76a9c49._
 
 ## T1. Likelihood recovery, technical null — **FAIL**
 
@@ -240,35 +248,35 @@ Deferred: PhiSpace is trained in R. Its MisTIC input, X~ = sum of q per cell and
 
 ## T6. Old (area) against new (MisTIC) fits (report)
 
-Mixture point estimates from `outputs/hpc` (area) and `outputs/hpc_mistic_pending` (MisTIC); bracketed: 95% spatial block bootstrap intervals (300 and 0 replicates).
+Mixture point estimates from `outputs/hpc_area` (area) and `outputs/hpc` (MisTIC); bracketed: 95% spatial block bootstrap intervals (300 and 300 replicates).
 
 | quantity | area | MisTIC |
 |---|---|---|
-| e^delta | 1.7231 (1.7066, 1.7412) | pending |
-| theta_m | -- | pending |
-| cycling fraction, mean prior pi | 0.1259 | pending |
-| cycling fraction, mean posterior w | 0.1260 (0.1208, 0.1320) | pending |
+| e^delta | 1.7231 (1.7066, 1.7412) | 1.9020 (1.8831, 1.9251) |
+| theta_m | -- | 1.5938 (1.5329, 1.6613) |
+| cycling fraction, mean prior pi | 0.1259 | 0.0982 |
+| cycling fraction, mean posterior w | 0.1260 (0.1208, 0.1320) | 0.0982 (0.0934, 0.1029) |
 
 Odds ratio of cycling per IQR of each neighbourhood component, priority pairs both ways round (own archetype; contact = 0-15 um, regional = 15-80 um):
 
 | own archetype | neighbour component | area | MisTIC |
 |---|---|---|---|
-| CAFs | contact: Myeloid | 0.9326 (0.8870, 0.9705) | pending |
-| CAFs | regional: Myeloid | 1.1299 (1.0299, 1.2278) | pending |
-| Cancer Epithelial | contact: CAFs | 0.9343 (0.9023, 0.9627) | pending |
-| Cancer Epithelial | regional: CAFs | 1.0039 (0.9236, 1.0784) | pending |
-| Cancer Epithelial | contact: Myeloid | 0.9302 (0.8982, 0.9646) | pending |
-| Cancer Epithelial | regional: Myeloid | 1.0881 (1.0029, 1.1748) | pending |
-| Cancer Epithelial | contact: T-cells | 1.3700 (1.2901, 1.4463) | pending |
-| Cancer Epithelial | regional: T-cells | 1.0273 (0.9272, 1.1440) | pending |
-| Myeloid | contact: CAFs | 0.9326 (0.8919, 0.9656) | pending |
-| Myeloid | regional: CAFs | 1.0059 (0.9406, 1.0882) | pending |
-| CAFs | contact: Cancer Epithelial | 1.8723 (1.7349, 2.0454) | pending |
-| CAFs | regional: Cancer Epithelial | 1.4619 (1.2209, 1.7684) | pending |
-| Myeloid | contact: Cancer Epithelial | 2.0259 (1.8745, 2.2045) | pending |
-| Myeloid | regional: Cancer Epithelial | 1.0347 (0.8645, 1.2877) | pending |
-| T-cells | contact: Cancer Epithelial | 2.2714 (2.0855, 2.4947) | pending |
-| T-cells | regional: Cancer Epithelial | 1.2729 (1.0340, 1.5268) | pending |
+| CAFs | contact: Myeloid | 0.9326 (0.8870, 0.9705) | 0.9545 (0.9029, 1.0021) |
+| CAFs | regional: Myeloid | 1.1299 (1.0299, 1.2278) | 1.1510 (1.0478, 1.2466) |
+| Cancer Epithelial | contact: CAFs | 0.9343 (0.9023, 0.9627) | 0.9474 (0.9145, 0.9768) |
+| Cancer Epithelial | regional: CAFs | 1.0039 (0.9236, 1.0784) | 0.9912 (0.9270, 1.0603) |
+| Cancer Epithelial | contact: Myeloid | 0.9302 (0.8982, 0.9646) | 0.9313 (0.8988, 0.9699) |
+| Cancer Epithelial | regional: Myeloid | 1.0881 (1.0029, 1.1748) | 1.0784 (0.9970, 1.1536) |
+| Cancer Epithelial | contact: T-cells | 1.3700 (1.2901, 1.4463) | 1.3187 (1.2396, 1.3908) |
+| Cancer Epithelial | regional: T-cells | 1.0273 (0.9272, 1.1440) | 1.0788 (0.9813, 1.1896) |
+| Myeloid | contact: CAFs | 0.9326 (0.8919, 0.9656) | 0.9530 (0.9122, 0.9867) |
+| Myeloid | regional: CAFs | 1.0059 (0.9406, 1.0882) | 1.0049 (0.9425, 1.0847) |
+| CAFs | contact: Cancer Epithelial | 1.8723 (1.7349, 2.0454) | 1.8371 (1.6904, 2.0085) |
+| CAFs | regional: Cancer Epithelial | 1.4619 (1.2209, 1.7684) | 1.4425 (1.2132, 1.7386) |
+| Myeloid | contact: Cancer Epithelial | 2.0259 (1.8745, 2.2045) | 2.0516 (1.8934, 2.2485) |
+| Myeloid | regional: Cancer Epithelial | 1.0347 (0.8645, 1.2877) | 1.0199 (0.8484, 1.2684) |
+| T-cells | contact: Cancer Epithelial | 2.2714 (2.0855, 2.4947) | 2.2075 (2.0360, 2.4193) |
+| T-cells | regional: Cancer Epithelial | 1.2729 (1.0340, 1.5268) | 1.2572 (1.0089, 1.4948) |
 
 Division labels, call rate per archetype (area null: log N offset + area spline; MisTIC null: weighted N offset + theta m, theta = 2.8185):
 

@@ -48,6 +48,9 @@ covariate the models read uses p of a cycle-gene transcript.
 
 
 VALIDATION = "outputs/validation_report.md"
+# The user's decision on T1's literal failure (2026-10-12), recorded with it
+T1_ACCEPTED = ("accepted by the user on 2026-10-12 on the replicate evidence; "
+               "`model.technical` switched to mistic")
 TEST01 = [("Test 01 with theta_m m", "with the theta_m m term"),
           ("Test 01 -- simulation recovery", "as configured (the comparison)")]
 T1_MIXTURE_NOTE = """T1's mixture half is Test 01 (spec 6.1) with the theta_m m term in every
@@ -58,6 +61,61 @@ the cycling probability, estimated -1.707 against -1.735 in both, because the
 ridge on the weight slopes narrows the spread of the logit and the unpenalised
 intercept moves to keep mean pi. The failure predates the MisTIC term. theta_m,
 b0, theta, delta and B were all recovered."""
+
+
+def headline():
+    """Key numbers, computed from the saved outputs (lines; empty if absent)."""
+    import numpy as np
+    import pandas as pd
+
+    lines = []
+    d = os.path.dirname(OUT.rstrip("/")) or "outputs"
+    ts = "data/mistic/tiles_summary.csv"
+    cv = os.path.join(OUT, "covariates_summary.json")
+    if os.path.exists(ts) and os.path.exists(cv):
+        t, c = pd.read_csv(ts), json.load(open(cv))
+        lines.append(f"- **MisTIC:** {len(t)} tiles, every one on "
+                     f"{'/'.join(sorted(t['device'].unique()))}; {int((t['epochs_run'] >= 50).sum())} "
+                     f"reached the 50-epoch cap. Mean p {c['mean_p_all_transcripts']:.3f}; "
+                     f"{100 * c['share_p_gt_0.5']:.2f}% of transcripts above 0.5; contamination "
+                     f"fraction f median {c['f_quantiles_mistic_cells']['q50']:.3f}; m_cyc mean "
+                     f"{c['m_cyc_mean']:.3f} against a mean cycle count of {c['Y_cyc_mean']:.3f} (all "
+                     "segmented cells).")
+    old, new = (os.path.join(d, p, "point_estimate.json") for p in ("hpc_area", "hpc"))
+    if os.path.exists(old) and os.path.exists(new):
+        a, b = json.load(open(old)), json.load(open(new))
+        if b.get("technical") == "mistic":
+            na = sum(np.size(v) for v in a["params"].values())
+            nb = sum(np.size(v) for v in b["params"].values())
+            lines.append(f"- **Mixture fit:** the MisTIC model's penalised log-likelihood is "
+                         f"{b['loglik'] - a['loglik']:+,.0f} against the area model's, with {nb} "
+                         f"parameters against {na}; restart agreement "
+                         f"{100 * b['restart_agreement']:.0f}%.")
+            lines.append(f"- **Cycling component:** e^delta {a['e_delta']:.3f} -> {b['e_delta']:.3f} "
+                         f"(rate ratio {np.exp(a['e_delta']):.2f} -> {np.exp(b['e_delta']):.2f}); "
+                         f"cycling fraction {a['mean_w']:.3f} -> {b['mean_w']:.3f}; theta_m "
+                         f"{b['theta_m']:.3f}; entropy {a['entropy']:.3f} -> {b['entropy']:.3f}.")
+    eff = os.path.join(OUT, "t6_effects.csv")
+    if os.path.exists(eff):
+        E = pd.read_csv(eff)
+        if not (E["MisTIC"] == "pending").any():
+            num = lambda s: float(str(s).split()[0])                   # noqa: E731
+            ci = lambda s: tuple(float(x) for x in str(s).split("(")[1].rstrip(")").split(","))  # noqa: E731
+            rel = (E["MisTIC"].map(num) / E["area"].map(num) - 1).abs()
+            inside = sum(ci(o)[0] <= num(n) <= ci(o)[1] for o, n in zip(E["area"], E["MisTIC"]))
+            k = int(rel.idxmax())
+            lines.append(f"- **Priority-pair neighbourhood effects:** {inside} of {len(E)} MisTIC "
+                         f"estimates fall inside the area estimate's 95% interval; the largest "
+                         f"change is {100 * rel.max():.1f}% ({E.loc[k, 'own archetype']}, "
+                         f"{E.loc[k, 'neighbour component']}: {num(E.loc[k, 'area']):.3f} -> "
+                         f"{num(E.loc[k, 'MisTIC']):.3f}).")
+    lab = os.path.join(OUT, "t6_label_rates.csv")
+    if os.path.exists(lab):
+        R = pd.read_csv(lab).set_index("archetype")
+        lines.append(f"- **Division labels:** BASE-T {R.loc['all', 'BASE-T, area']:.4f} -> "
+                     f"{R.loc['all', 'BASE-T, MisTIC']:.4f}, BASE-O {R.loc['all', 'BASE-O, area']:.4f} "
+                     f"-> {R.loc['all', 'BASE-O, MisTIC']:.4f} overall.")
+    return lines
 
 
 def latest_section(path, prefix):
@@ -93,7 +151,8 @@ def main():
                 if sec:
                     text += f"\n_Test 01 {lab}:_\n\n{sec}\n"
             parts.append(text + "\n")
-            status.append((title, f"null: {null_state}; mixture: {mix_state}"))
+            status.append((title, f"null: {null_state}; mixture: {mix_state}"
+                           + (f" -- {T1_ACCEPTED}" if "FAIL" in (null_state, mix_state) else "")))
             continue
         if key == "t5":
             parts.append("## T5. PhiSpace feature check (report)\n\nDeferred: PhiSpace is "
@@ -111,6 +170,9 @@ def main():
             status.append((title, "not yet run"))
     summary = ["## Status", "", "| test | status |", "| --- | --- |"]
     summary += [f"| {t} | {s} |" for t, s in status]
+    head = headline()
+    if head:
+        summary += ["", "## Headline numbers", "", *head]
     parts.insert(1, "\n".join(summary) + "\n")
     open(os.path.join(OUT, "report.md"), "w").write("\n".join(parts))
     print(json.dumps(dict(status), indent=1))
