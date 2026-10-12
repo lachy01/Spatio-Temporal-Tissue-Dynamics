@@ -2,6 +2,7 @@
 division signal?
 
     python run/mistic_t3_negative_control.py
+    python run/mistic_t3_negative_control.py --technical plain   # the baseline's null
 
 Twenty random gene sets, each as large as the Tirosh set on the panel, drawn
 from the genes outside the blocklist B and matched to the Tirosh genes gene by
@@ -24,9 +25,14 @@ the same rule gives on counts drawn from each set's fitted null. BASE-T's
 attainable level (the mean realised alpha_i, below alpha_B by the discreteness
 of counts) is reported beside it.
 
+`--technical plain` runs the same test on the plain baseline's null (raw N
+offset, no area, no MisTIC term), for the comparison with the simple model;
+its files carry a `_plain` suffix.
+
 Writes outputs/mistic/t3.md, t3_sets.csv, t3_deciles.csv and t3_deciles.png;
 exits non-zero on a failure.
 """
+import argparse
 import os
 import sys
 import time
@@ -90,8 +96,12 @@ def labels_for(y, X, off, m, ctype, rng):
 
 
 def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--technical", default="mistic", choices=("mistic", "plain"))
+    a = ap.parse_args()
+    sfx = "" if a.technical == "mistic" else f"_{a.technical}"
     t0 = time.time()
-    cfg, df, out = M.test_setup()
+    cfg, df, out = M.test_setup(a.technical)
     basis = build_basis(df, cfg, verbose=False)
     X, off, _m = L.null_design(df, basis)
     cov = M.load_covariates(cfg)
@@ -117,10 +127,11 @@ def main():
     for k, s in enumerate(sets):
         genes = list(cov.counts.genes[s])
         y = cov.counts.gene_sum(genes)[cix]
-        m_set = cov.m_gene_set(genes)[0][cix]
+        m_set = cov.m_gene_set(genes)[0][cix] if a.technical == "mistic" else None
         LT, LO, abar, o_null, null = labels_for(y, X, off, m_set, ctype, rng)
-        rows.append({"set": k, "mean count": float(y.mean()), "mean m": float(m_set.mean()),
-                     "theta_m": null["theta_m"], "alpha0": null["alpha"],
+        rows.append({"set": k, "mean count": float(y.mean()),
+                     "mean m": float(m_set.mean()) if m_set is not None else np.nan,
+                     "theta_m": null.get("theta_m", np.nan), "alpha0": null["alpha"],
                      "BASE-T rate": float(LT.mean()), "BASE-T attainable level (mean alpha_i)": abar,
                      "BASE-O rate": float(LO.mean()), "BASE-O null rate": o_null})
         for bn, b in bins.items():
@@ -128,7 +139,7 @@ def main():
                 mm = b == d
                 dec.append({"set": k, "binning": bn, "decile": d + 1, "n": int(mm.sum()),
                             "BASE-T calls": int(LT[mm].sum()), "BASE-O calls": int(LO[mm].sum())})
-        print(f"  set {k:2d}: mean y {y.mean():.3f}, theta_m {null['theta_m']:.3f}, BASE-T "
+        print(f"  set {k:2d}: mean y {y.mean():.3f}, theta_m {null.get('theta_m', np.nan):.3f}, BASE-T "
               f"{LT.mean():.4f} (attainable {abar:.4f}), BASE-O {LO.mean():.4f} "
               f"(null {o_null:.4f})", flush=True)
     S = pd.DataFrame(rows)
@@ -136,8 +147,8 @@ def main():
     D["BASE-T rate"] = D["BASE-T calls"] / D["n"]
     D["BASE-O rate"] = D["BASE-O calls"] / D["n"]
     D = D.drop(columns=["set"])
-    S.to_csv(f"{out}/t3_sets.csv", index=False)
-    D.to_csv(f"{out}/t3_deciles.csv", index=False)
+    S.to_csv(f"{out}/t3_sets{sfx}.csv", index=False)
+    D.to_csv(f"{out}/t3_deciles{sfx}.csv", index=False)
 
     ref = {"BASE-T": ALPHA_B, "BASE-O": float(S["BASE-O null rate"].mean())}
     checks = {}
@@ -164,7 +175,7 @@ def main():
         ax.legend(fontsize=8)
         ax.set_title(f"Negative-control call rates by {bn}", fontsize=10)
     fig.tight_layout()
-    fig.savefig(f"{out}/t3_deciles.png", dpi=150)
+    fig.savefig(f"{out}/t3_deciles{sfx}.png", dpi=150)
     plt.close(fig)
 
     def md(frame, fmt="{:.4f}"):
@@ -177,23 +188,27 @@ def main():
 
     piv = D.pivot(index="decile", columns="binning", values=["BASE-T rate", "BASE-O rate"])
     piv.columns = [f"{a}, {b}" for a, b in piv.columns]
-    text = [f"## T3. Negative control: null calibration — **{'PASS' if ok else 'FAIL'}**", "",
+    title = ("T3. Negative control: null calibration" if a.technical == "mistic" else
+             "T3 on the plain baseline's null (raw N offset; no area, no MisTIC)")
+    null_form = ("the trimmed null mu = Nt e^b0 + theta m^G with its own m^G" if a.technical == "mistic"
+                 else "the trimmed null mu = N e^b0 (raw N offset, no MisTIC term)")
+    text = [f"## {title} — **{'PASS' if ok else 'FAIL'}**", "",
             f"{N_SETS} sets of {len(tirosh)} genes outside the blocklist, matched gene by gene to "
             f"the Tirosh genes (mean count {gap['mean (sets)']:.3f} against "
             f"{gap['mean (Tirosh)']:.3f}; detection {gap['detection (sets)']:.3f} against "
-            f"{gap['detection (Tirosh)']:.3f}). Each set: the trimmed null "
-            "mu = Nt e^b0 + theta m^G with its own m^G, BASE-T at alpha_B = "
+            f"{gap['detection (Tirosh)']:.3f}). Each set: {null_form}, BASE-T at alpha_B = "
             f"{ALPHA_B:g}, BASE-O at Td = {TD:g} with per-type s+.", "",
             *[f"- {k}: **{'pass' if v else 'FAIL'}**" for k, v in checks.items()], "",
             f"BASE-T's attainable level, the mean realised alpha_i, is "
             f"{S['BASE-T attainable level (mean alpha_i)'].mean():.4f} (pooled); BASE-O's null "
-            f"rate is {ref['BASE-O']:.4f}. Fitted theta_m across sets: "
-            f"{S['theta_m'].min():.3f} to {S['theta_m'].max():.3f} (median "
-            f"{S['theta_m'].median():.3f}).", "",
+            f"rate is {ref['BASE-O']:.4f}."
+            + (f" Fitted theta_m across sets: {S['theta_m'].min():.3f} to "
+               f"{S['theta_m'].max():.3f} (median {S['theta_m'].median():.3f})."
+               if a.technical == "mistic" else ""), "",
             "Per set:", "", md(S.round(4)), "",
             "By decile (pooled over the sets):", "", md(piv.reset_index().astype(float).round(4)), "",
-            "![T3](t3_deciles.png)"]
-    open(f"{out}/t3.md", "w").write("\n".join(text) + "\n")
+            f"![T3](t3_deciles{sfx}.png)"]
+    open(f"{out}/t3{sfx}.md", "w").write("\n".join(text) + "\n")
     print("\n".join(f"  {k}: {'pass' if v else 'FAIL'}" for k, v in checks.items()))
     print(f"T3: {'PASS' if ok else 'FAIL'} ({time.time() - t0:.0f}s)")
     if not ok:

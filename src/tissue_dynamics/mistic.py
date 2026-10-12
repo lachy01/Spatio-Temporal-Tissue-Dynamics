@@ -264,19 +264,20 @@ def summary_json(path, d):
         json.dump(d, fh, indent=1, default=float)
 
 
-def test_setup():
+def test_setup(technical="mistic"):
     """`(cfg, df, out_dir)` for the MisTIC tests (run/mistic_t*.py).
 
-    The config is the project's with `model.technical` forced to "mistic"; the
-    table carries `phi_names` in its attrs. Two environment variables redirect a
-    dry run: MISTIC_TABLE (another table with the MisTIC columns) and MISTIC_OUT
+    The config is the project's with `model.technical` forced to `technical`
+    ("mistic", or "plain" for the baseline without area or MisTIC); the table
+    carries `phi_names` in its attrs. Two environment variables redirect a dry
+    run: MISTIC_TABLE (another table with the MisTIC columns) and MISTIC_OUT
     (another output directory), so test code can be exercised without writing
     into outputs/mistic.
     """
     from .mixture.data import load_config
 
     cfg = load_config()
-    cfg["model"] = {**cfg["model"], "technical": "mistic"}
+    cfg["model"] = {**cfg["model"], "technical": technical}
     if os.environ.get("MISTIC_TABLE"):
         cfg["data"] = {**cfg["data"], "table_parquet": os.environ["MISTIC_TABLE"]}
     path = cfg["data"]["table_parquet"]

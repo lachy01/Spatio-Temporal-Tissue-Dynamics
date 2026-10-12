@@ -38,6 +38,11 @@ def enumerate_tasks(job, cfg):
         return [{"job": job, "lam": float(lam), "fold": f, **extra}
                 for lam in mc["weight_ridge_grid"]
                 for f in range(int(mc.get("cv_folds", 5)))]
+    if job == "cv_production":
+        # the production penalty and rank only, on the same spatial folds: the
+        # held-out comparison of technical covariates (MIX_TECHNICAL selects them)
+        return [{"job": job, "lam": float(mc["weight_ridge"]), "fold": f}
+                for f in range(int(mc.get("cv_folds", 5)))]
     if job == "cv_rank":
         return [{"job": job, "rank": int(r), "fold": f}
                 for r in cfg.get("rank_grid", [1, 2, 3, 5])
@@ -250,7 +255,8 @@ def _run_real(task, cfg, verbose=False, out_dir=None):
     data = build_data(df, basis, cfg, spec)
     xy = df[["x", "y"]].to_numpy(float)
 
-    if job in ("cv_penalty", "cv_penalty_unwhitened", "cv_penalty_buffered", "cv_rank"):
+    if job in ("cv_penalty", "cv_penalty_unwhitened", "cv_penalty_buffered", "cv_rank",
+               "cv_production"):
         labels = spatial_blocks(xy, int(cfg["inference"]["n_blocks_target"]))
         folds = block_folds(labels, int(mc.get("cv_folds", 5)))
         f = int(task["fold"])

@@ -389,6 +389,11 @@ def build_basis(df, cfg, verbose=True):
         area_spline = None
         say(f"  technical: mistic -- library size {logN_col}, additive m from {m_col} "
             f"(mean {mv.mean():.4f}); no area term")
+    elif technical == "plain":
+        # the simple baseline: raw library size as the offset, no area term,
+        # no MisTIC term -- state, density and depth only
+        logN_col, m_col, area_spline = "N", None, None
+        say("  technical: plain -- library size N, no area term, no MisTIC term")
     elif technical == "area":
         logN_col, m_col = "N", None
         area_spline = _Spline(np.log(df["area"].to_numpy(float)), mc["area_spline_df"])
@@ -405,7 +410,7 @@ def build_basis(df, cfg, verbose=True):
         else:
             say(f"  corr(log N, log area) = {r:.3f} -> no orthogonalisation needed")
     else:
-        raise ValueError(f"model.technical must be 'area' or 'mistic', not {technical!r}")
+        raise ValueError(f"model.technical must be 'mistic', 'plain' or 'area', not {technical!r}")
 
     return FrozenBasis(
         phi_names=phi_names, own_names=own_names, nbr_names=nbr_names,

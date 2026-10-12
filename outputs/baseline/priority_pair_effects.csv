@@ -1,0 +1,17 @@
+own archetype,neighbour component,MisTIC,plain
+CAFs,contact: Myeloid,"0.9545 (0.9029, 1.0021)",pending
+CAFs,regional: Myeloid,"1.1510 (1.0478, 1.2466)",pending
+Cancer Epithelial,contact: CAFs,"0.9474 (0.9145, 0.9768)",pending
+Cancer Epithelial,regional: CAFs,"0.9912 (0.9270, 1.0603)",pending
+Cancer Epithelial,contact: Myeloid,"0.9313 (0.8988, 0.9699)",pending
+Cancer Epithelial,regional: Myeloid,"1.0784 (0.9970, 1.1536)",pending
+Cancer Epithelial,contact: T-cells,"1.3187 (1.2396, 1.3908)",pending
+Cancer Epithelial,regional: T-cells,"1.0788 (0.9813, 1.1896)",pending
+Myeloid,contact: CAFs,"0.9530 (0.9122, 0.9867)",pending
+Myeloid,regional: CAFs,"1.0049 (0.9425, 1.0847)",pending
+CAFs,contact: Cancer Epithelial,"1.8371 (1.6904, 2.0085)",pending
+CAFs,regional: Cancer Epithelial,"1.4425 (1.2132, 1.7386)",pending
+Myeloid,contact: Cancer Epithelial,"2.0516 (1.8934, 2.2485)",pending
+Myeloid,regional: Cancer Epithelial,"1.0199 (0.8484, 1.2684)",pending
+T-cells,contact: Cancer Epithelial,"2.2075 (2.0360, 2.4193)",pending
+T-cells,regional: Cancer Epithelial,"1.2572 (1.0089, 1.4948)",pending

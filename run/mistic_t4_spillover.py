@@ -16,7 +16,9 @@ Epithelial analysis cell, in 10 um bins out to 100 um.
 
 Expected: without the term, call rates rise toward epithelium -- epithelial
 transcripts spilled into neighbouring cells look like expression; with it, the
-curve flattens. Reported with the fitted theta.
+curve flattens. Reported with the fitted theta. A third null, the plain
+baseline's (raw N offset, no MisTIC weighting or term), sets the curves against
+the model without MisTIC at all.
 
 Writes outputs/mistic/t4.md, t4_spillover.csv and t4_spillover.png.
 """
@@ -87,8 +89,10 @@ def main():
     band = pd.cut(dist, EDGES, right=False, labels=False)
 
     res, fits = {}, {}
-    for name, m in (("with theta m", m_epi), ("without", None)):
-        null = L.robust_null(y, X, off, m=m)
+    off_plain = np.log(sub["N"].to_numpy(float))
+    for name, o, m in (("with theta m", off, m_epi), ("without", off, None),
+                       ("plain baseline", off_plain, None)):
+        null = L.robust_null(y, X, o, m=m)
         mu0, a0 = null["mu"], null["alpha"]
         sd0 = np.sqrt(mu0 + a0 * mu0 ** 2)
         LT, _c, _ai, _p = L.base_t(y, mu0, a0, L.ALPHA_B_PRIMARY)
@@ -120,8 +124,12 @@ def main():
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
     xs = np.arange(len(T))
     for ax, lab in zip(axes, ("BASE-T", "BASE-O")):
-        for name, col in (("without", "#c0504d"), ("with theta m", "#1f4e79")):
-            ax.plot(xs, T[f"{lab}, {name}"], "o-", color=col, label=f"null {name}")
+        for name, col, ls in (("plain baseline", "#7f7f7f", "--"), ("without", "#c0504d", "-"),
+                              ("with theta m", "#1f4e79", "-")):
+            ax.plot(xs, T[f"{lab}, {name}"], "o" + ls, color=col,
+                    label={"plain baseline": "plain baseline null (raw N)",
+                           "without": "MisTIC null without theta m",
+                           "with theta m": "MisTIC null"}[name])
         ax.set_xticks(xs)
         ax.set_xticklabels(T.iloc[:, 0], rotation=40, ha="right", fontsize=8)
         ax.set_xlabel("distance to the nearest Cancer Epithelial cell (um)")
@@ -149,7 +157,10 @@ def main():
             f"alpha0 {f1['alpha']:.4f} with the term, {fits['without']['alpha']:.4f} without.", "",
             "Call rate at 0-10 um over the rate at 90-100 um:", "",
             *[f"- {lab}, {name}: **{near_far(f'{lab}, {name}'):.2f}**"
-              for lab in ("BASE-T", "BASE-O") for name in ("without", "with theta m")], "",
+              for lab in ("BASE-T", "BASE-O")
+              for name in ("plain baseline", "without", "with theta m")], "",
+            "(plain baseline: raw N offset, no MisTIC term; without: MisTIC-weighted N "
+            "offset, no theta m; with theta m: the MisTIC null.)", "",
             md(T), "", "Gene choice:", "", md(G), "", "![T4](t4_spillover.png)"]
     open(f"{out}/t4.md", "w").write("\n".join(text) + "\n")
     print("\n".join(text[4:11]))

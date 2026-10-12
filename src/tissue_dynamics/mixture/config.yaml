@@ -121,8 +121,11 @@ model:
   #             gains theta_m * m_i, the expected number of its transcripts
   #             misassigned from neighbours (`mistic_m`), theta_m = exp(eta_m)
   #             estimated -- shared by both mixture components.
+  #   "plain"   the simple baseline (2026-10-13, asked for by the user): raw N
+  #             as the offset, no area term, no MisTIC term -- state, density
+  #             and depth only. Fitted beside production with MIX_TECHNICAL=plain.
   #   "area"    the earlier s(log area) spline and raw N. Kept so the old fits
-  #             can be reproduced for the old-vs-new comparison (T6).
+  #             can be reproduced (their outputs are off-repo since 2026-10-13).
   # Area's causal path is unclear: it tracks cell state and cycle stage as well
   # as segmentation. MisTIC's p targets segmentation error directly.
   # "mistic" needs the MisTIC columns in the table (run/add_mistic_columns.py,

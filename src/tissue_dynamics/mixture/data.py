@@ -460,7 +460,13 @@ def validate(df, cfg, verbose=True):
 
 
 def load_config(path=None):
-    """Read `config.yaml` (the only place hyperparameters are defined)."""
+    """Read `config.yaml` (the only place hyperparameters are defined).
+
+    The environment variable MIX_TECHNICAL, if set, overrides
+    `model.technical` -- so a Spartan array can fit the plain baseline
+    (`MIX_TECHNICAL=plain`) beside the production model without editing the
+    file. Every result records the technical covariates it was fitted with.
+    """
     import os
 
     import yaml
@@ -468,4 +474,7 @@ def load_config(path=None):
     if path is None:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
     with open(path) as fh:
-        return yaml.safe_load(fh)
+        cfg = yaml.safe_load(fh)
+    if os.environ.get("MIX_TECHNICAL"):
+        cfg["model"]["technical"] = os.environ["MIX_TECHNICAL"]
+    return cfg

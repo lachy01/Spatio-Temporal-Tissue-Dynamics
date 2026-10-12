@@ -60,6 +60,10 @@ from tissue_dynamics.mixture.data import _tirosh_genes, load_config   # noqa: E4
 OUT = "outputs/division_classifier"
 REPORT = f"{OUT}/report.md"
 MIN_DETECT, V9_TOL, SEED, N_DRAWS = 0.01, 0.10, 20261008, 10
+# Type-gene pairs the user accepted beyond the 10% tolerance, with the bound each
+# was accepted at. 2026-10-13, MisTIC model: Cancer Epithelial CENPF at 10.04%
+# (the area model's worst pair had been 9.96%).
+V9_ACCEPTED = {("Cancer Epithelial", "CENPF"): 0.105}
 
 
 def say(*a):
@@ -217,9 +221,14 @@ def main():
         say(f"  {t:<18} a1 {a1:7.2f} a0 {a0:7.2f}; max |rel. error| (expected) {rows[-1]['max |rel. error|, expected']:.3f}")
     alloc = pd.DataFrame(rows)
     v9 = pd.DataFrame(v9_rows)
+    bound = np.array([V9_ACCEPTED.get((t, g), V9_TOL) for t, g in zip(v9["type"], v9["gene"])])
+    v9["accepted exception"] = [(t, g) in V9_ACCEPTED for t, g in zip(v9["type"], v9["gene"])]
+    v9["within bound"] = v9["rel. error (expected)"].abs() <= bound
     v9.to_csv(f"{OUT}/stage6_v9.csv", index=False)
     tested = v9[v9["tested"]]
-    v9_ok = bool((tested["rel. error (expected)"].abs() <= V9_TOL).all())
+    v9_ok = bool(tested["within bound"].all())
+    excepted = tested[tested["accepted exception"]
+                      & (tested["rel. error (expected)"].abs() > V9_TOL)]
 
     ce = ctype == "Cancer Epithelial"
     vmr_ce = float(y[ce].var() / y[ce].mean())
@@ -231,6 +240,9 @@ def main():
     say(f"Cancer Epithelial variance-to-mean ratio {vmr_ce:.3f}; V9 {'pass' if v9_ok else 'FAIL'}")
 
     worst = tested.reindex(tested["rel. error (expected)"].abs().sort_values(ascending=False).index).head(6)
+    exception_text = ("" if excepted.empty else ", except " + "; ".join(
+        f"{r['type']} {r['gene']} at {100 * abs(r['rel. error (expected)']):.2f}%"
+        for _, r in excepted.iterrows()) + ", accepted by the user (2026-10-13)")
     report(f"""
 ### Allocation model as adopted, and V9 ({time.strftime('%Y-%m-%d %H:%M')})
 
@@ -248,7 +260,7 @@ detection is comparable to the 10% tolerance.
 {md_table(alloc, '{:.4g}')}
 
 **V9: {'pass' if v9_ok else 'FAIL'}**, every one of {len(tested)} tested type-gene pairs within
-10% in expectation. The largest:
+10% in expectation{exception_text}. The largest:
 
 {md_table(worst[['type', 'gene', 'observed', 'expected', 'one draw', f'mean of {N_DRAWS} draws', 'rel. error (expected)']], '{:.4f}')}
 

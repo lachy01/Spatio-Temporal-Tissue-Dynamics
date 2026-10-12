@@ -970,3 +970,48 @@ transcript), which is not on this machine (decided in Stage 1).
 
 Every score and interval is in `stage7_scores.csv`; every fit in
 `stage7_fits.csv`. Stage 7 complete in 70 min.
+
+
+### Allocation model as adopted, and V9 (2026-10-13 09:49)
+
+**Decision (user, 2026-10-08):** the state-conditional allocation replaces
+spec 3.4's single Dirichlet-multinomial. Each cell type gets one DM profile
+for cycling and one for non-cycling cells, each fitted by maximum likelihood
+with cells weighted by the mixture's posterior w (or 1 - w). The simulation
+splits a cell's count by the profile of its simulated state (G1, G2), or, in
+G3, of a state drawn from the fitted mixture's posterior given the simulated
+count. The mixture never sees per-gene counts; the allocation borrows its
+posterior only to describe how genes split. V9 is judged on the expected
+detection rates (exact under the model), since a single draw's noise at 1-2%
+detection is comparable to the 10% tolerance.
+
+| type | cells | mean w | concentration, cycling | concentration, non-cycling | genes tested | max |rel. error|, expected | beyond 10%, one draw |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Endothelial | 48729 | 0.03815 | 20.56 | 13.24 | 12 | 0.04059 | 0 |
+| CAFs | 52079 | 0.02186 | 22.74 | 10.52 | 13 | 0.07259 | 0 |
+| PVL | 42834 | 0.05858 | 20.03 | 9.721 | 14 | 0.07147 | 3 |
+| B-cells | 59119 | 0.09017 | 26.62 | 9.162 | 12 | 0.03887 | 0 |
+| T-cells | 87004 | 0.1104 | 34.43 | 12.2 | 13 | 0.03824 | 0 |
+| Myeloid | 69669 | 0.04306 | 24.4 | 10.93 | 12 | 0.03813 | 0 |
+| Normal Epithelial | 54508 | 0.0934 | 45.92 | 23.96 | 38 | 0.08351 | 0 |
+| Plasmablasts | 42523 | 0.1159 | 41.05 | 18.38 | 32 | 0.08795 | 1 |
+| Cancer Epithelial | 105432 | 0.2062 | 66.33 | 30.47 | 51 | 0.1004 | 2 |
+
+**V9: pass**, every one of 197 tested type-gene pairs within
+10% in expectation, except Cancer Epithelial CENPF at 10.04%, accepted by the user (2026-10-13). The largest:
+
+| type | gene | observed | expected | one draw | mean of 10 draws | rel. error (expected) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Cancer Epithelial | CENPF | 0.0610 | 0.0672 | 0.0675 | 0.0673 | 0.1004 |
+| Cancer Epithelial | NEK2 | 0.0443 | 0.0485 | 0.0488 | 0.0486 | 0.0963 |
+| Plasmablasts | BIRC5 | 0.0533 | 0.0580 | 0.0580 | 0.0576 | 0.0880 |
+| Normal Epithelial | CENPF | 0.0215 | 0.0233 | 0.0236 | 0.0233 | 0.0835 |
+| Plasmablasts | NEK2 | 0.0121 | 0.0131 | 0.0137 | 0.0132 | 0.0824 |
+| Plasmablasts | CENPF | 0.0175 | 0.0189 | 0.0190 | 0.0188 | 0.0786 |
+
+The SCORE decomposition (gene term minus a fixed control term) reproduces
+scanpy's own score, recomputed with the Tirosh columns permuted among cells of
+equal N, to 1.8e-08; the stored control term (float32) differs from the
+float64 one by at most 9.1e-10. The observed variance-to-mean ratio of y
+in Cancer Epithelial, which G2 matches, is 9.205 (the spec's 7.29 was the
+SpaNorm-era table's). The inputs for the Spartan array are in `sim_inputs.npz`.
