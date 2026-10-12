@@ -4,18 +4,18 @@
   "y_var_mean": 7.723855971701972,
   "zeros": 0.6218702004103955,
   "alpha": {
-    "nb_prev": 0.7802232264920256,
-    "nb_matched": 0.7452291207293983
+    "nb_prev": 0.7316895825743341,
+    "nb_matched": 0.7143658131580622
   },
   "nb_converged": {
     "nb_prev": true,
     "nb_matched": true
   },
   "nb_iters": {
-    "nb_prev": 1124,
-    "nb_matched": 2470
+    "nb_prev": 162,
+    "nb_matched": 2077
   },
-  "mixture_penalised_loglik": -603178.6705093632,
-  "mixture_rate_ratio": 5.601988823933391,
-  "mixture_mean_pi": 0.12585134992331123
+  "mixture_penalised_loglik": -600332.2563476736,
+  "mixture_rate_ratio": 6.699378424008049,
+  "mixture_mean_pi": 0.09824845428689633
 }
