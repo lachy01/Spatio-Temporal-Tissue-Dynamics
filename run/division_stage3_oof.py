@@ -130,13 +130,16 @@ def main():
     fmeta = json.load(open(f"{OUT}/folds_meta.json"))
     oof_nb = pd.read_parquet(f"{OUT}/oof_nb.parquet")
     import glob
-    # V5 compares fold SIZES with the Spartan rank CV, which do not depend on the
-    # technical covariates, so the area-era CV (outputs/hpc_area since the MisTIC
-    # switch) serves; its held-out log-likelihoods are compared only when the
-    # CV fitted the same technical covariates as this run
-    cvr_dir = next((d for d in ("outputs/hpc/cv_rank", "outputs/hpc_area/cv_rank")
-                    if glob.glob(f"{d}/*.json")), "outputs/hpc/cv_rank")
-    cvr = [json.load(open(f)) for f in sorted(glob.glob(f"{cvr_dir}/*.json"))]
+    # V5 compares fold SIZES with a Spartan CV run of the mixture -- any CV job:
+    # sizes depend only on the cells and the partition. Without one (the area-era
+    # CV left the repository with cell area, 2026-10-13), the sizes recorded with
+    # the stored folds stand in. Held-out log-likelihoods are compared only with
+    # CV of the same rank, penalty and technical covariates as this run.
+    cvr = [json.load(open(f)) for j in ("cv_rank", "cv_production", "cv_penalty")
+           for f in sorted(glob.glob(f"outputs/hpc/{j}/*.json"))]
+    if not cvr:
+        cvr = [{"fold": int(f), "n_train": int(s[0]), "n_test": int(s[1])}
+               for f, s in fmeta["fold_sizes_train_test"].items()]
 
     basis = build_basis(df, cfg, verbose=False)
     spec = spec_from_basis(basis, cfg, stage="B", weight_ridge=float(pe["weight_ridge"]))
@@ -187,8 +190,8 @@ def main():
         lam0, lam1 = component_means(res.params, Dte, spec)
         l0_oof[te], l1_oof[te] = np.asarray(lam0), np.asarray(lam1)
         ho = float(jnp.mean(loglik_terms(res.params, Dte, spec)))
-        spartan = [r for r in cvr if int(r["fold"]) == f and int(r["rank"]) == spec.rank
-                   and float(r["weight_ridge"]) == spec.weight_ridge
+        spartan = [r for r in cvr if int(r["fold"]) == f and r.get("rank") == spec.rank
+                   and r.get("weight_ridge") == spec.weight_ridge
                    and r.get("technical", "area") == basis.technical]
         ho_sp = float(spartan[0]["heldout_loglik_per_cell"]) if spartan else np.nan
         diag = arms.eta_diagnostics(res.params, data.subset(tr).as_jax())

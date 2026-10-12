@@ -1,1 +1,0 @@
-From the most recent mixture model with a single density spline (no per phenotype)

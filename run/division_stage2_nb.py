@@ -76,12 +76,16 @@ def main():
     df.attrs["phi_names"] = json.load(open("data/mixture_cells_major.phi_names.json"))
     pe = json.load(open("outputs/hpc/point_estimate.json"))
     import glob
-    # V5 compares fold SIZES with the Spartan CV, which depend only on the cells and
-    # the spatial partition, not on the technical covariates: the area-era CV
-    # (archived in outputs/hpc_area since the MisTIC switch) serves as well
-    cvp_dir = next((d for d in ("outputs/hpc/cv_penalty", "outputs/hpc_area/cv_penalty")
-                    if glob.glob(f"{d}/*.json")), "outputs/hpc/cv_penalty")
-    cvp = [json.load(open(f)) for f in sorted(glob.glob(f"{cvp_dir}/*.json"))]
+    # V5 compares fold SIZES with a Spartan CV run of the mixture -- any CV job:
+    # sizes depend only on the cells and the spatial partition. Without one (the
+    # area-era CV left the repository with cell area, 2026-10-13), the sizes
+    # recorded with the stored folds, from the Spartan CV's partition, stand in.
+    cvp = [json.load(open(f)) for j in ("cv_penalty", "cv_rank", "cv_production")
+           for f in sorted(glob.glob(f"outputs/hpc/{j}/*.json"))]
+    if not cvp:
+        fmeta = json.load(open(f"{OUT}/folds_meta.json"))
+        cvp = [{"fold": int(f), "n_train": int(s[0]), "n_test": int(s[1])}
+               for f, s in fmeta["fold_sizes_train_test"].items()]
     labels = pd.read_parquet(f"{OUT}/labels.parquet", columns=["cell_id"])
 
     basis = build_basis(df, cfg, verbose=False)
