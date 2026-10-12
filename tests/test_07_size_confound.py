@@ -14,6 +14,7 @@ be made flexible enough and the test re-run before any real-data result is
 reported.
 """
 import numpy as np
+import pytest
 from mixture_report import size, write
 
 from tissue_dynamics.mixture.data import load_config
@@ -38,6 +39,11 @@ def _run(n, fit_df, cfg, seed=0):
 
 def test_07_adversarial_size_confound():
     cfg = load_config()
+    if cfg["model"].get("technical", "area") != "area":
+        # the test asks whether the AREA SPLINE absorbs an area effect it cannot
+        # represent; no production model has had an area term since 2026-10-13
+        pytest.skip("the production model has no area term (model.technical: "
+                    f"{cfg['model']['technical']}); Test 07 tests the area spline")
     n = size(100_000, 30_000)
     r = _run(n, cfg["model"]["area_spline_df"], cfg)
 

@@ -15,8 +15,11 @@ from tissue_dynamics.mixture.simulate import simulate_stage_b
 
 def test_06_optimiser_agreement():
     cfg = load_config()
-    data, _t, _sb = simulate_stage_b(n=20_000, seed=0, weight_ridge=0.0)
-    spec = ModelSpec(stage="A", theta_free=True, d_own=0, d_nbr=0, df_area=4)
+    # EM applies only without an additive term in the means: the plain
+    # specification, production without theta_m m
+    data, _t, _sb = simulate_stage_b(n=20_000, seed=0, weight_ridge=0.0, technical="plain")
+    spec = ModelSpec(stage="A", theta_free=True, d_own=0, d_nbr=0,
+                     df_area=data.area.shape[1])
     ps = poisson_start(data, spec)
     p0 = init_params(spec, cfg, data=data, poisson_start=ps)
 
@@ -32,7 +35,7 @@ def test_06_optimiser_agreement():
         rel = abs(a - b) / max(abs(b), 1e-12)
         par_ok &= bool(rel < 1e-4)                    # 4 significant figures
         rows.append(f"| `{k}` | {a:.8f} | {b:.8f} | {rel:.2e} |")
-    for j in range(len(np.asarray(pe["s"]))):
+    for j in range(len(np.asarray(pe.get("s", np.zeros(0))))):     # area spline, if any
         a, b = float(np.asarray(pe["s"])[j]), float(np.asarray(rl.params["s"])[j])
         rel = abs(a - b) / max(abs(b), 1e-12)
         par_ok &= bool(rel < 1e-4)

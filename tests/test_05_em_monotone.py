@@ -23,12 +23,15 @@ def _run(stage, n, n_iter):
     # optimiser cross-check runs on the unpenalised model. The penalised
     # estimator is covered by the L-BFGS tests, which now carry the
     # production weight_ridge.
+    # EM applies only without an additive term in the component means, so the
+    # cross-check runs on the plain specification: production without theta_m m
     data, _t, sb = simulate_stage_b(n=n, seed=0, d_own=6, d_nbr=8,
-                                    weight_ridge=0.0)
+                                    weight_ridge=0.0, technical="plain")
     # ridge_tau=0: EM's M-steps carry no balancing term (see run_em's guard);
     # the term never changes B, so the unpenalised cross-check leaves it out
     spec = (dataclasses.replace(sb, ridge_tau=0.0) if stage == "B"
-            else ModelSpec(stage="A", theta_free=True, d_own=0, d_nbr=0, df_area=4))
+            else ModelSpec(stage="A", theta_free=True, d_own=0, d_nbr=0,
+                           df_area=data.area.shape[1]))
     ps = poisson_start(data, spec)
     rng = np.random.default_rng(1) if stage == "B" else None
     p0 = init_params(spec, cfg, data=data, rng=rng, poisson_start=ps)

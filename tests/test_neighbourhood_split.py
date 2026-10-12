@@ -67,6 +67,10 @@ def test_portrait_fold_matches_the_weight_model(neighbourhood, whiten):
         df["density"] = np.exp(rng.normal(1.0, 0.4, n))
         df["area"] = np.exp(rng.normal(4.0, 0.3, n))
         df["N"] = rng.integers(10, 500, n)
+        # the MisTIC columns (model.technical: mistic); the weight model under
+        # test does not read them
+        df["Nt_nonB"] = df["N"] * rng.uniform(0.8, 1.0, n)
+        df["m_cyc"] = rng.gamma(1.0, 0.05, n)
         df["y_count"] = rng.poisson(1.0, n)
         df.attrs["phi_names"] = [f"type{j}" for j in range(d)]
         return df
