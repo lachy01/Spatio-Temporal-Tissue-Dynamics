@@ -127,10 +127,17 @@ model:
   # as segmentation. MisTIC's p targets segmentation error directly.
   # "mistic" needs the MisTIC columns in the table (run/add_mistic_columns.py,
   # after the Spartan run and run/mistic_covariates.py).
-  technical: area
-  # Nt_nonB rather than the all-gene Nt of the spec's notation table: the spec
-  # rules out any use of cycle-gene p, and Nt would put it in the offset; Nt_nonB
-  # is also the like-for-like replacement for N, which excludes the blocklist.
+  # Switched to "mistic" on 2026-10-12, decided by the user, after T2 and T3
+  # passed and T1 was accepted on its replicate evidence: the null's one primary
+  # draw missed 2 SE (eta, z = -2.17) with 94-96% coverage over 50 further
+  # draws, and the mixture half fails on a0 alone, as Test 01 does without the
+  # MisTIC term (outputs/mistic/report.md). The area fits are archived in
+  # outputs/hpc_area.
+  technical: mistic
+  # Nt_nonB rather than the all-gene Nt of the spec's notation table (confirmed
+  # by the user, 2026-10-12): the spec rules out any use of cycle-gene p, and
+  # Nt would put it in the offset; Nt_nonB is also the like-for-like
+  # replacement for N, which excludes the blocklist.
   mistic_library_size: Nt_nonB
   mistic_m: m_cyc
   # s(log area) in the component rates (technical: area only). Raised from the spec's 4 on evidence:
