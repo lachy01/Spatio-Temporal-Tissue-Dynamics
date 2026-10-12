@@ -115,6 +115,20 @@ def main():
           *tab, "",
           "Coverage, mean z and sd z are over 50 further draws, reported rather than "
           "tested: about 95%, 0 and 1 if the estimator and its standard errors are right."]
+    miss = [k for k, zz in zip(PARAMS, z) if abs(zz) >= 2]
+    calibrated = (all(0.88 <= cover[k] <= 1.0 for k in PARAMS)
+                  and all(abs(zbar[k]) < 0.5 for k in PARAMS)
+                  and all(0.7 <= sdz[k] <= 1.3 for k in PARAMS))
+    if miss:
+        md += ["", f"The primary draw puts {', '.join(f'`{k}`' for k in miss)} outside 2 SE. "
+               f"Across the 50 further draws, coverage is {100 * min(cover.values()):.0f}-"
+               f"{100 * max(cover.values()):.0f}%, |mean z| at most "
+               f"{max(abs(v) for v in zbar.values()):.2f} and sd z "
+               f"{min(sdz.values()):.2f}-{max(sdz.values()):.2f}: "
+               + ("what an unbiased estimator with correct standard errors gives, so the miss is "
+                  "within chance (with three parameters about one draw in seven misses 2 SE "
+                  "somewhere). The spec's rule is applied as written." if calibrated else
+                  "not what an unbiased estimator with correct standard errors gives.")]
     open(f"{OUT}/t1.md", "w").write("\n".join(md) + "\n")
     print("\n".join(tab))
     print(f"T1 null recovery: {'PASS' if ok else 'FAIL'} ({time.time() - t0:.0f}s)")

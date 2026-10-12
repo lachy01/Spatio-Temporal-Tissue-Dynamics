@@ -1,0 +1,12 @@
+{
+ "checks": {
+  "p in [0, 1] for every transcript": true,
+  "Nt <= N for every cell": true,
+  "Nt_nonB <= N_nonB for every cell": true,
+  "mean p at 0-0.5 um exceeds mean p at >= 4 um by > 3 SE": true,
+  "mean p falls with distance inside the cell (Spearman rho < -0.5)": true
+ },
+ "diff": 0.03585580506438007,
+ "se": 0.00036978153403819416,
+ "rho": -1.0
+}
