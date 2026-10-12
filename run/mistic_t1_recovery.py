@@ -114,11 +114,7 @@ def main():
           "information. Pass: every parameter of the primary draw within 2 SE.", "",
           *tab, "",
           "Coverage, mean z and sd z are over 50 further draws, reported rather than "
-          "tested: about 95%, 0 and 1 if the estimator and its standard errors are right.",
-          "",
-          "The mixture half of T1 is Test 01 with the theta m term "
-          "(`tests/test_01_recovery.py::test_01_recovery_mistic`, in "
-          "`outputs/validation_report.md`)."]
+          "tested: about 95%, 0 and 1 if the estimator and its standard errors are right."]
     open(f"{OUT}/t1.md", "w").write("\n".join(md) + "\n")
     print("\n".join(tab))
     print(f"T1 null recovery: {'PASS' if ok else 'FAIL'} ({time.time() - t0:.0f}s)")

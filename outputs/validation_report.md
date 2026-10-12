@@ -535,3 +535,198 @@ degeneracy flags fired: **False**
 - `mean(w)` = 0.5838; log-likelihood -130148.79
 
 **Spec 6.7:** a failure here means the mixture is separating cells on size and segmentation quality rather than biology. It is not a tuning problem -- the area spline must be made flexible enough, the model refit, and this test re-run **before any real-data result is reported**.
+
+## Test 04 -- gradient check (spec 6.4)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+| trial | loglik | n params | max relative error |
+|---|---:|---:|---:|
+| 0 | -6260.26 | 54 | 1.60e-07 |
+| 1 | -6276.46 | 54 | 2.11e-07 |
+| 2 | -6277.33 | 54 | 3.36e-07 |
+
+- threshold (spec 6.4): **1e-5**; worst observed **3.36e-07**
+
+## Test 04 -- gradient check (spec 6.4)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+| trial | loglik | n params | max relative error |
+|---|---:|---:|---:|
+| 0 | -6260.26 | 54 | 1.60e-07 |
+| 1 | -6276.46 | 54 | 2.11e-07 |
+| 2 | -6277.33 | 54 | 3.36e-07 |
+
+- threshold (spec 6.4): **1e-5**; worst observed **3.36e-07**
+
+## Test 05 -- EM monotonicity (spec 6.5)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+| stage | iterations | final loglik | min step | monotone |
+|---|---:|---:|---:|---|
+| A | 116 | -27355.605051 | +2.663e-09 | True |
+| B | 88 | -26698.938205 | +2.397e-09 | True |
+
+## Test 06 -- optimiser agreement (spec 6.6)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+- EM: loglik **-27355.60505074** in 116 iterations
+- L-BFGS: loglik **-27355.60505073** in 37 iterations (||grad||inf 2.5e-06)
+- relative log-likelihood difference: **4.45e-13** (threshold 1e-6 -> pass)
+
+| parameter | EM | L-BFGS | relative difference |
+|---|---:|---:|---:|
+| `b0` | -0.53929585 | -0.53929786 | 3.73e-06 |
+| `theta` | 0.84969199 | 0.84969261 | 7.25e-07 |
+| `delta` | 0.32642559 | 0.32642526 | 1.00e-06 |
+| `s[0]` | -0.03472152 | -0.03472125 | 7.66e-06 |
+| `s[1]` | -0.02448024 | -0.02448001 | 9.18e-06 |
+| `s[2]` | 0.02472097 | 0.02472100 | 1.47e-06 |
+
+## Test 01 with theta_m m -- simulation recovery (MisTIC spec T1, mixture)
+
+**FAIL**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+| parameter | truth | mean estimate | MC SE | bias / SE |
+|---|---:|---:|---:|---:|
+| `b0` | -0.5500 | -0.5449 | 0.0063 | 0.81 |
+| `theta` | 0.8500 | 0.8506 | 0.0031 | 0.19 |
+| `delta` | 0.3266 | 0.3240 | 0.0048 | 0.55 |
+| `a0` | -1.7346 | -1.7109 | 0.0164 | 1.44 |
+| `eta_m` | 0.0000 | -0.0234 | 0.0316 | 0.74 |
+
+- replicates: **8** at n = **30,000**; Stage B; theta free (V); state 6x8, rank 2; MisTIC theta_m m, no area
+- `||B_hat - B||_F / ||B||_F`: mean **0.2526**, max 0.3473 (threshold 0.15 -> FAIL)
+
+git: **409f969**
+loglik: **-41138.953326**
+||grad||inf: **6.84e-06**
+iterations: **336**
+converged: **True**
+restart agreement: **67%**
+wall time: **4.2s**
+normalised entropy (spec 8.7): **0.6001**
+rate ratio exp(e^delta): **4.096**
+mean w: **0.1769**
+degeneracy flags fired: **False**
+
+## Test 04 -- gradient check (spec 6.4)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+| trial | loglik | n params | max relative error |
+|---|---:|---:|---:|
+| 0 | -6260.26 | 54 | 1.60e-07 |
+| 1 | -6276.46 | 54 | 2.11e-07 |
+| 2 | -6277.33 | 54 | 3.36e-07 |
+
+- threshold (spec 6.4): **1e-5**; worst observed **3.36e-07**
+
+## Test 05 -- EM monotonicity (spec 6.5)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+| stage | iterations | final loglik | min step | monotone |
+|---|---:|---:|---:|---|
+| A | 116 | -27355.605051 | +2.663e-09 | True |
+| B | 88 | -26698.938205 | +2.397e-09 | True |
+
+## Test 06 -- optimiser agreement (spec 6.6)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+- EM: loglik **-27355.60505074** in 116 iterations
+- L-BFGS: loglik **-27355.60505073** in 37 iterations (||grad||inf 2.5e-06)
+- relative log-likelihood difference: **4.45e-13** (threshold 1e-6 -> pass)
+
+| parameter | EM | L-BFGS | relative difference |
+|---|---:|---:|---:|
+| `b0` | -0.53929585 | -0.53929786 | 3.73e-06 |
+| `theta` | 0.84969199 | 0.84969261 | 7.25e-07 |
+| `delta` | 0.32642559 | 0.32642526 | 1.00e-06 |
+| `s[0]` | -0.03472152 | -0.03472125 | 7.66e-06 |
+| `s[1]` | -0.02448024 | -0.02448001 | 9.18e-06 |
+| `s[2]` | 0.02472097 | 0.02472100 | 1.47e-06 |
+
+## Test 08 -- held-out gene machinery (spec 6.8)
+
+**PASS**
+
+_Run at reduced scale (set `MIXTURE_FULL=1` for the sizes named in the spec)._
+
+- real `w`: coef **+1.4145**, delta-deviance **2491.7** vs permuted mean 35.2 (ratio **70.8x**, p = 0.032)
+- unrelated `w`: delta-deviance 41.2 vs permuted mean 20.7 (ratio 2.0x, p = 0.161)
+
+Verifies the statistic separates a `w` that drives the held-out counts from one that does not, using the same spatially-blocked permutation null the real-data job uses.
+
+## Test 01 with theta_m m -- simulation recovery (MisTIC spec T1, mixture)
+
+**FAIL**
+
+| parameter | truth | mean estimate | MC SE | bias / SE |
+|---|---:|---:|---:|---:|
+| `b0` | -0.5500 | -0.5517 | 0.0018 | 0.94 |
+| `theta` | 0.8500 | 0.8497 | 0.0007 | 0.37 |
+| `delta` | 0.3266 | 0.3279 | 0.0011 | 1.17 |
+| `a0` | -1.7346 | -1.7072 | 0.0053 | 5.14 |
+| `eta_m` | 0.0000 | -0.0080 | 0.0072 | 1.11 |
+
+- replicates: **20** at n = **100,000**; Stage B; theta free (V); state 6x8, rank 2; MisTIC theta_m m, no area
+- `||B_hat - B||_F / ||B||_F`: mean **0.1277**, max 0.1992 (threshold 0.15 -> pass)
+
+git: **b14ce20**
+loglik: **-138374.965600**
+||grad||inf: **1.95e-05**
+iterations: **421**
+converged: **True**
+restart agreement: **80%**
+wall time: **9.9s**
+normalised entropy (spec 8.7): **0.5819**
+rate ratio exp(e^delta): **3.971**
+mean w: **0.1882**
+degeneracy flags fired: **False**
+
+## Test 01 -- simulation recovery (spec 6.1)
+
+**FAIL**
+
+| parameter | truth | mean estimate | MC SE | bias / SE |
+|---|---:|---:|---:|---:|
+| `b0` | -0.5500 | -0.5527 | 0.0018 | 1.52 |
+| `theta` | 0.8500 | 0.8505 | 0.0010 | 0.47 |
+| `delta` | 0.3266 | 0.3292 | 0.0010 | 2.46 |
+| `a0` | -1.7346 | -1.7073 | 0.0060 | 4.57 |
+
+- replicates: **20** at n = **100,000**; Stage B; theta free (V); state 6x8, rank 2; area spline, df 3
+- `||B_hat - B||_F / ||B||_F`: mean **0.1250**, max 0.2664 (threshold 0.15 -> pass)
+
+git: **b14ce20**
+loglik: **-132139.141505**
+||grad||inf: **3.14e-05**
+iterations: **833**
+converged: **True**
+restart agreement: **80%**
+wall time: **11.7s**
+normalised entropy (spec 8.7): **0.6149**
+rate ratio exp(e^delta): **4.045**
+mean w: **0.1824**
+degeneracy flags fired: **False**

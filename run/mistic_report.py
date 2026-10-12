@@ -47,6 +47,29 @@ covariate the models read uses p of a cycle-gene transcript.
 """
 
 
+VALIDATION = "outputs/validation_report.md"
+TEST01 = [("Test 01 with theta_m m", "with the theta_m m term"),
+          ("Test 01 -- simulation recovery", "as configured (the comparison)")]
+T1_MIXTURE_NOTE = """T1's mixture half is Test 01 (spec 6.1) with the theta_m m term in every
+component's mean, beside the same test as configured. Both are the latest runs
+in `outputs/validation_report.md`. At full scale on 2026-10-12 (git b14ce20,
+weight_ridge 300) the two failed identically, on a0 alone: the intercept of
+the cycling probability, estimated -1.707 against -1.735 in both, because the
+ridge on the weight slopes narrows the spread of the logit and the unpenalised
+intercept moves to keep mean pi. The failure predates the MisTIC term. theta_m,
+b0, theta, delta and B were all recovered."""
+
+
+def latest_section(path, prefix):
+    """The last `## <prefix>...` section of a markdown file, demoted to ###."""
+    import re
+
+    if not os.path.exists(path):
+        return None
+    hits = [s for s in re.split(r"(?m)^## ", open(path).read()) if s.startswith(prefix)]
+    return "### " + hits[-1].strip() if hits else None
+
+
 def main():
     try:
         sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True,
@@ -57,6 +80,21 @@ def main():
     status = []
     for key, title in SECTIONS:
         path = os.path.join(OUT, f"{key}.md")
+        if key == "t1":
+            text = (open(path).read().strip() if os.path.exists(path)
+                    else f"## {title}\n\n_Null half not yet run._")
+            null_state = ("PASS" if "PASS" in text.splitlines()[0] else "FAIL"
+                          if "FAIL" in text.splitlines()[0] else "not yet run")
+            mix = [(latest_section(VALIDATION, p), lab) for p, lab in TEST01]
+            mix_state = ("not yet run" if mix[0][0] is None else
+                         "PASS" if "**PASS**" in mix[0][0] else "FAIL")
+            text += "\n\n" + T1_MIXTURE_NOTE + "\n"
+            for sec, lab in mix:
+                if sec:
+                    text += f"\n_Test 01 {lab}:_\n\n{sec}\n"
+            parts.append(text + "\n")
+            status.append((title, f"null: {null_state}; mixture: {mix_state}"))
+            continue
         if key == "t5":
             parts.append("## T5. PhiSpace feature check (report)\n\nDeferred: PhiSpace is "
                          "trained in R. Its MisTIC input, X~ = sum of q per cell and gene, is "
