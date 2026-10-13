@@ -248,3 +248,5 @@ outputs/nb_baseline/cache_area/
 outputs/hpc_log1p_v*/
 # The area-based fits, archived before the MisTIC refits (read by run/mistic_t6_old_vs_new.py)
 outputs/hpc_area/
+# The plain baseline (no area, no MisTIC), fitted beside production (MIX_OUT=outputs/hpc_plain)
+outputs/hpc_plain/

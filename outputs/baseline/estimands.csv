@@ -1,6 +1,6 @@
 quantity,MisTIC,plain
-e^delta,"1.9020 (1.8831, 1.9251)",pending
-theta_m,"1.5938 (1.5329, 1.6613)",pending
-"cycling fraction, mean prior pi",0.0982,pending
-"cycling fraction, mean posterior w","0.0982 (0.0934, 0.1029)",pending
-rate ratio exp(e^delta),6.699,pending
+e^delta,"1.9020 (1.8831, 1.9251)",1.7572
+theta_m,"1.5938 (1.5329, 1.6613)",--
+"cycling fraction, mean prior pi",0.0982,0.1011
+"cycling fraction, mean posterior w","0.0982 (0.0934, 0.1029)",0.1011
+rate ratio exp(e^delta),6.699,5.796
