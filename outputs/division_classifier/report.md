@@ -2080,3 +2080,190 @@ A5 job. Labels and predictions in `labels_state.parquet`. Stage A4 done in
 
 - **A4 approved**: BASE-O-state run (above), and `division_sim_state: true` set in config.yaml so the A5 simulation rebuilds BASE-O-state on the simulated counts and fits LOG-O-state (section 4.3, X15). Configuration fingerprint unchanged (402722e6157fa828).
 - **The primary alpha_B is reported by the registered section 2.3 rule.** If its pick has a LOG-T slope above 1 (over-recovery), the A5 gather flags it and shows the (null, alpha_B) pair whose slope is closest to 1 beside it, for comparison only; the rule's pick is the one reported.
+
+
+## Addendum stage A5 -- simulation extension (2026-10-14 10:36)
+
+Spartan job `division_sim_addendum`: 30 replicates
+(G1 10, G2 10, G3 10), n = 100,000 cells each,
+the same cells, truth and Stage 6 labels as `division_sim` (same seeds), plus the
+extended BASE-T grid for the naive null and the truncated null refitted on the
+simulated y at each alpha_trim, LOG-T on every grid label, TWO-P and TWO-PNB,
+and the section 6 metrics. Every arm fitted on four folds and scored on the
+fifth. Medians over replicates [min, max]. The slope is that of predicted on true
+per-type logit contrast through the origin, over types whose median true contrast
+is at least 0.1 (G1: 9 types; G2: 9).
+
+### Fits
+
+| generator | rep | all fits converged | LOG max sd(eta) | TWO-PNB starts agree | TWO-PNB alpha1 | minutes |
+| --- | --- | --- | --- | --- | --- | --- |
+| G1 | 0 | True | 1.091 | True | 0.001 | 10.756 |
+| G1 | 1 | False | 1.147 | True | 0.000 | 11.072 |
+| G1 | 2 | True | 1.235 | True | 0.002 | 11.779 |
+| G1 | 3 | True | 1.094 | True | 0.006 | 10.672 |
+| G1 | 4 | False | 1.009 | True | 0.000 | 9.672 |
+| G1 | 5 | True | 1.132 | True | 0.004 | 11.016 |
+| G1 | 6 | True | 1.111 | True | 0.002 | 11.007 |
+| G1 | 7 | True | 1.094 | True | 0.002 | 15.352 |
+| G1 | 8 | False | 1.287 | True | 0.000 | 10.056 |
+| G1 | 9 | True | 1.284 | True | 0.004 | 12.468 |
+| G2 | 0 | True | 1.292 | True | 0.461 | 14.801 |
+| G2 | 1 | True | 1.229 | True | 0.478 | 11.740 |
+| G2 | 2 | True | 1.168 | True | 0.461 | 14.218 |
+| G2 | 3 | True | 1.104 | True | 0.446 | 10.407 |
+| G2 | 4 | True | 1.126 | True | 0.397 | 13.043 |
+| G2 | 5 | True | 1.208 | True | 0.410 | 12.285 |
+| G2 | 6 | True | 1.135 | True | 0.420 | 13.268 |
+| G2 | 7 | True | 1.072 | True | 0.398 | 12.933 |
+| G2 | 8 | True | 1.171 | True | 0.416 | 13.066 |
+| G2 | 9 | True | 1.243 | True | 0.437 | 14.821 |
+| G3 | 0 | True | 1.152 | True | 0.846 | 10.856 |
+| G3 | 1 | True | 1.021 | True | 0.828 | 12.230 |
+| G3 | 2 | True | 1.002 | True | 0.782 | 9.587 |
+| G3 | 3 | True | 0.976 | True | 0.828 | 11.306 |
+| G3 | 4 | True | 1.157 | True | 0.814 | 11.632 |
+| G3 | 5 | True | 0.991 | True | 0.906 | 10.091 |
+| G3 | 6 | True | 1.007 | True | 0.904 | 8.300 |
+| G3 | 7 | True | 1.066 | True | 0.921 | 9.823 |
+| G3 | 8 | True | 1.068 | True | 0.824 | 11.220 |
+| G3 | 9 | True | 1.054 | True | 0.838 | 11.913 |
+
+Pairing with Stage 6 (same draws): largest label-rate difference 0.0e+00, largest Spearman difference on the shared arms 0.0e+00.
+
+### The alpha_B surface (section 2.3)
+
+| generator | null | alpha_B | LOG-T slope | LOG-T slope range | LOG-T spread (median |log ratio|) | LOG-T B cosine | NB-c slope | MIX slope | TWO-P slope | TWO-PNB slope |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| G1 | naive | 0.001 | 0.415 | 0.415 [0.268, 0.644] | 0.716 | 0.084 | 0.728 | 0.429 | -0.249 | -0.237 |
+| G1 | naive | 0.010 | 0.806 | 0.806 [0.636, 0.945] | 0.415 | 0.469 | 0.547 | 0.651 | 0.059 | 0.062 |
+| G1 | naive | 0.050 | 0.730 | 0.730 [0.574, 0.874] | 0.431 | 0.709 | 0.431 | 0.557 | 0.159 | 0.159 |
+| G1 | naive | 0.100 | 0.539 | 0.539 [0.397, 0.584] | 0.618 | 0.708 | 0.392 | 0.451 | 0.165 | 0.164 |
+| G1 | naive | 0.200 | 0.318 | 0.318 [0.246, 0.364] | 0.778 | 0.650 | 0.302 | 0.280 | 0.106 | 0.106 |
+| G1 | trunc 0.001 | 0.001 | 0.431 | 0.431 [0.272, 0.585] | 0.787 | 0.094 | 0.717 | 0.405 | -0.273 | -0.261 |
+| G1 | trunc 0.001 | 0.010 | 0.789 | 0.789 [0.695, 0.945] | 0.427 | 0.446 | 0.544 | 0.637 | 0.056 | 0.058 |
+| G1 | trunc 0.001 | 0.050 | 0.728 | 0.728 [0.550, 0.897] | 0.419 | 0.697 | 0.431 | 0.556 | 0.156 | 0.156 |
+| G1 | trunc 0.001 | 0.100 | 0.536 | 0.536 [0.400, 0.597] | 0.614 | 0.711 | 0.390 | 0.451 | 0.163 | 0.162 |
+| G1 | trunc 0.001 | 0.200 | 0.319 | 0.319 [0.255, 0.364] | 0.771 | 0.654 | 0.303 | 0.281 | 0.110 | 0.109 |
+| G1 | trunc 0.01 | 0.001 | 1.026 | 1.026 [0.803, 1.172] | 0.361 | 0.549 | 0.733 | 0.860 | 0.236 | 0.236 |
+| G1 | trunc 0.01 | 0.010 | 0.893 | 0.893 [0.687, 1.000] | 0.367 | 0.683 | 0.549 | 0.663 | 0.216 | 0.215 |
+| G1 | trunc 0.01 | 0.050 | 0.601 | 0.601 [0.452, 0.795] | 0.484 | 0.715 | 0.452 | 0.485 | 0.210 | 0.210 |
+| G1 | trunc 0.01 | 0.100 | 0.425 | 0.425 [0.313, 0.529] | 0.845 | 0.677 | 0.381 | 0.356 | 0.159 | 0.159 |
+| G1 | trunc 0.01 | 0.200 | 0.281 | 0.281 [0.203, 0.342] | 0.991 | 0.620 | 0.301 | 0.255 | 0.116 | 0.116 |
+| G1 | trunc 0.05 | 0.001 | 1.142 | 1.142 [0.884, 1.191] | 0.283 | 0.609 | 0.773 | 0.890 | 0.327 | 0.326 |
+| G1 | trunc 0.05 | 0.010 | 0.931 | 0.931 [0.674, 1.009] | 0.283 | 0.708 | 0.568 | 0.658 | 0.253 | 0.252 |
+| G1 | trunc 0.05 | 0.050 | 0.590 | 0.590 [0.416, 0.753] | 0.502 | 0.736 | 0.482 | 0.496 | 0.235 | 0.235 |
+| G1 | trunc 0.05 | 0.100 | 0.423 | 0.423 [0.319, 0.499] | 0.865 | 0.690 | 0.410 | 0.369 | 0.189 | 0.188 |
+| G1 | trunc 0.05 | 0.200 | 0.290 | 0.290 [0.212, 0.365] | 1.042 | 0.631 | 0.326 | 0.278 | 0.142 | 0.142 |
+| G2 | naive | 0.001 | 0.847 | 0.847 [0.584, 1.123] | 0.412 | 0.447 | 0.681 | 0.770 | 0.142 | 0.157 |
+| G2 | naive | 0.010 | 0.839 | 0.839 [0.671, 1.014] | 0.357 | 0.678 | 0.501 | 0.693 | 0.229 | 0.148 |
+| G2 | naive | 0.050 | 0.588 | 0.588 [0.474, 0.676] | 0.531 | 0.714 | 0.408 | 0.470 | 0.197 | 0.126 |
+| G2 | naive | 0.100 | 0.374 | 0.374 [0.264, 0.446] | 0.857 | 0.681 | 0.352 | 0.334 | 0.156 | 0.100 |
+| G2 | naive | 0.200 | 0.223 | 0.223 [0.188, 0.319] | 1.109 | 0.588 | 0.275 | 0.191 | 0.089 | 0.063 |
+| G2 | trunc 0.001 | 0.001 | 0.885 | 0.885 [0.597, 1.123] | 0.394 | 0.474 | 0.680 | 0.776 | 0.148 | 0.159 |
+| G2 | trunc 0.001 | 0.010 | 0.830 | 0.830 [0.665, 1.018] | 0.380 | 0.666 | 0.504 | 0.692 | 0.230 | 0.149 |
+| G2 | trunc 0.001 | 0.050 | 0.599 | 0.599 [0.479, 0.666] | 0.532 | 0.716 | 0.412 | 0.470 | 0.196 | 0.125 |
+| G2 | trunc 0.001 | 0.100 | 0.364 | 0.364 [0.258, 0.449] | 0.830 | 0.674 | 0.351 | 0.331 | 0.154 | 0.097 |
+| G2 | trunc 0.001 | 0.200 | 0.222 | 0.222 [0.184, 0.311] | 1.131 | 0.589 | 0.275 | 0.191 | 0.089 | 0.064 |
+| G2 | trunc 0.01 | 0.001 | 0.999 | 0.999 [0.885, 1.154] | 0.269 | 0.673 | 0.744 | 0.896 | 0.344 | 0.253 |
+| G2 | trunc 0.01 | 0.010 | 0.826 | 0.826 [0.538, 0.917] | 0.356 | 0.736 | 0.546 | 0.618 | 0.260 | 0.183 |
+| G2 | trunc 0.01 | 0.050 | 0.492 | 0.492 [0.349, 0.596] | 0.558 | 0.705 | 0.461 | 0.427 | 0.226 | 0.176 |
+| G2 | trunc 0.01 | 0.100 | 0.335 | 0.335 [0.248, 0.442] | 0.987 | 0.655 | 0.381 | 0.317 | 0.176 | 0.138 |
+| G2 | trunc 0.01 | 0.200 | 0.244 | 0.244 [0.191, 0.334] | 1.096 | 0.598 | 0.312 | 0.221 | 0.130 | 0.103 |
+| G2 | trunc 0.05 | 0.001 | 1.020 | 1.020 [0.891, 1.233] | 0.256 | 0.694 | 0.754 | 0.891 | 0.366 | 0.273 |
+| G2 | trunc 0.05 | 0.010 | 0.825 | 0.825 [0.550, 0.878] | 0.386 | 0.757 | 0.552 | 0.599 | 0.269 | 0.197 |
+| G2 | trunc 0.05 | 0.050 | 0.495 | 0.495 [0.345, 0.581] | 0.585 | 0.703 | 0.472 | 0.429 | 0.234 | 0.185 |
+| G2 | trunc 0.05 | 0.100 | 0.334 | 0.334 [0.253, 0.436] | 0.994 | 0.652 | 0.388 | 0.313 | 0.184 | 0.149 |
+| G2 | trunc 0.05 | 0.200 | 0.242 | 0.242 [0.191, 0.336] | 1.119 | 0.601 | 0.316 | 0.234 | 0.146 | 0.119 |
+
+Figure: `sim_alpha_surface.png`.
+
+**Rule (pre-registered):** Largest median G2 slope 1.020; 1 (null, alpha_B) pairs lie within 0.02 of it; the smallest alpha_B among them is 0.001, and there the highest is trunc 0.05 (1.020). **Primary: alpha_B 0.001, null trunc 0.05.**
+
+**Flag for Lachy:** the maximum exceeds 1, i.e. LOG-T over-states the neighbourhood effect there (median per-type spread 0.256). The rule assumed attenuation. For comparison only, the pair closest to a slope of 1 is trunc 0.01 at alpha_B 0.001 (0.999, spread 0.269). Which governs is Lachy's decision; the registered rule's pick stands until then.
+
+### State recovery (G1, G2)
+
+Spread = |log(predicted / true contrast)| over the same types, median and max within a
+replicate (a sign flip counts as infinite).
+
+| prediction | G1 Spearman | G1 slope | G1 spread median | G1 spread max | G1 fraction error | G2 Spearman | G2 slope | G2 spread median | G2 spread max | G2 fraction error |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| MIX pi | 0.970 [0.957, 0.974] | 0.974 [0.781, 1.153] | 0.116 [0.044, 0.216] | 0.408 [0.176, 1.283] | 0.007 [0.004, 0.009] | 0.960 [0.954, 0.965] | 0.958 [0.726, 0.984] | 0.173 [0.081, 0.206] | 0.712 [0.266, 2.347] | 0.032 [0.030, 0.035] |
+| TWO-P pi | 0.941 [0.935, 0.949] | 0.175 [0.131, 0.204] | 1.341 [1.138, 1.846] | inf [2.268, inf] | 0.029 [0.028, 0.032] | 0.946 [0.937, 0.955] | 0.208 [0.177, 0.276] | 1.172 [0.952, 1.447] | 3.320 [2.016, inf] | 0.029 [0.025, 0.033] |
+| TWO-PNB pi | 0.941 [0.935, 0.949] | 0.175 [0.131, 0.203] | 1.344 [1.144, 1.848] | inf [2.272, inf] | 0.030 [0.028, 0.033] | 0.938 [0.926, 0.943] | 0.110 [0.093, 0.137] | 1.651 [1.429, 1.999] | 5.985 [2.791, inf] | 0.049 [0.043, 0.057] |
+| LOG-T | 0.846 [0.812, 0.875] | 0.730 [0.574, 0.874] | 0.431 [0.317, 0.545] | 1.834 [1.307, 3.514] | 0.055 [0.052, 0.059] | 0.867 [0.845, 0.883] | 0.588 [0.474, 0.676] | 0.531 [0.282, 0.677] | 1.643 [1.083, 3.519] | 0.055 [0.049, 0.057] |
+| LOG-O | 0.771 [0.725, 0.826] | 0.130 [0.038, 0.165] | 1.997 [1.596, 2.512] | inf [3.258, inf] | 0.089 [0.086, 0.093] | 0.478 [0.397, 0.540] | 0.043 [0.012, 0.108] | 3.277 [1.896, inf] | inf [inf, inf] | 0.081 [0.078, 0.085] |
+| LOG-S | 0.785 [0.779, 0.833] | 0.229 [0.149, 0.271] | 1.225 [0.922, 1.614] | 2.299 [1.777, 3.018] | 0.132 [0.126, 0.140] | 0.769 [0.752, 0.818] | 0.188 [0.119, 0.236] | 1.504 [1.112, 1.822] | 2.302 [1.882, 2.997] | 0.124 [0.121, 0.131] |
+| MIX, BASE-T | 0.792 [0.757, 0.809] | 0.557 [0.450, 0.669] | 0.552 [0.444, 0.739] | 1.842 [1.376, 3.629] | 0.055 [0.052, 0.059] | 0.775 [0.735, 0.801] | 0.470 [0.411, 0.610] | 0.654 [0.383, 0.779] | 1.860 [1.274, 3.619] | 0.054 [0.049, 0.057] |
+| TWO-P, BASE-T | 0.461 [0.417, 0.519] | 0.159 [0.108, 0.241] | 1.882 [1.702, 2.324] | inf [2.949, inf] | 0.052 [0.049, 0.055] | 0.546 [0.504, 0.610] | 0.197 [0.138, 0.284] | 1.713 [1.271, 2.113] | inf [2.469, inf] | 0.051 [0.047, 0.053] |
+| TWO-PNB, BASE-T | 0.460 [0.416, 0.519] | 0.159 [0.107, 0.240] | 1.880 [1.706, 2.325] | inf [2.949, inf] | 0.052 [0.049, 0.055] | 0.418 [0.365, 0.492] | 0.126 [0.077, 0.174] | 2.082 [1.732, 2.438] | inf [3.523, inf] | 0.052 [0.048, 0.054] |
+| NB-c, BASE-T | 0.718 [0.677, 0.755] | 0.431 [0.322, 0.537] | 0.784 [0.660, 0.864] | 2.008 [1.116, 3.598] | 0.061 [0.059, 0.065] | 0.671 [0.613, 0.703] | 0.408 [0.313, 0.525] | 0.833 [0.534, 1.108] | 2.076 [1.538, 4.687] | 0.053 [0.047, 0.055] |
+| LOG-O-state | 0.692 [0.649, 0.765] | 0.109 [0.038, 0.148] | 2.072 [1.766, 2.675] | inf [3.655, inf] | 0.090 [0.088, 0.095] | 0.223 [0.155, 0.291] | 0.022 [-0.008, 0.086] | 3.439 [2.183, inf] | inf [inf, inf] | 0.085 [0.082, 0.089] |
+
+### B direction recovery (cosine of vec(B-hat) with vec(B_true))
+
+B_true is the production MIX's U V' under G1 and G2 and the full-data NB-c's under G3.
+LOG-T here is the naive alpha_B 0.05 label; every grid label's is in the surface table
+and `sim_recovery_addendum.csv`.
+
+| model | G1 | G2 | G3 |
+| --- | --- | --- | --- |
+| MIX | 0.841 [0.805, 0.887] | 0.797 [0.697, 0.845] | 0.835 [0.787, 0.877] |
+| TWO-P | 0.593 [0.529, 0.630] | 0.647 [0.597, 0.679] | 0.795 [0.750, 0.875] |
+| TWO-PNB | 0.592 [0.529, 0.630] | 0.554 [0.513, 0.627] | 0.607 [0.377, 0.744] |
+| NB-c | 0.714 [0.672, 0.760] | 0.695 [0.634, 0.749] | 0.910 [0.895, 0.922] |
+| LOG-T | 0.709 [0.583, 0.723] | 0.714 [0.628, 0.771] | 0.709 [0.662, 0.770] |
+| LOG-O | 0.666 [0.569, 0.697] | 0.590 [0.520, 0.704] | 0.869 [0.808, 0.906] |
+| LOG-S | 0.671 [0.589, 0.726] | 0.624 [0.560, 0.693] | 0.861 [0.821, 0.895] |
+| LOG-O-state | 0.650 [0.552, 0.669] | 0.573 [0.495, 0.681] | 0.871 [0.817, 0.899] |
+
+### G3: implied cycling fractions (median over replicates)
+
+| type | MIX pi | TWO-P pi | TWO-PNB pi |
+| --- | --- | --- | --- |
+| Endothelial | 0.100 | 0.184 | 0.902 |
+| CAFs | 0.072 | 0.175 | 0.901 |
+| PVL | 0.147 | 0.202 | 0.905 |
+| B-cells | 0.224 | 0.232 | 0.908 |
+| T-cells | 0.260 | 0.238 | 0.909 |
+| Myeloid | 0.124 | 0.200 | 0.904 |
+| Normal Epithelial | 0.217 | 0.231 | 0.908 |
+| Plasmablasts | 0.251 | 0.250 | 0.909 |
+| Cancer Epithelial | 0.374 | 0.303 | 0.916 |
+
+### Pre-stated expectations
+
+- **X11** (under G2, LOG-T's slope peaks at alpha_B 0.05-0.1 for every null, below 0.8):
+  naive: peak 0.847 at alpha_B 0.001; trunc 0.001: peak 0.885 at alpha_B 0.001; trunc 0.01: peak 0.999 at alpha_B 0.001; trunc 0.05: peak 1.020 at alpha_B 0.001. **does not hold**.
+- **X13** (TWO-P's rank agreement within 0.05 of MIX's under G1 and G2; its slope strictly
+  between LOG-T's best and MIX's): G1: Spearman TWO-P 0.941 vs MIX 0.970, slope TWO-P 0.175 vs LOG-T best 1.142 and MIX 0.974; G2: Spearman TWO-P 0.946 vs MIX 0.960, slope TWO-P 0.208 vs LOG-T best 1.020 and MIX 0.958. **partly holds**.
+- **X14**, G3 clause (TWO-PNB's implied cycling fraction at least MIX's in every type): **holds**.
+- **X15** (LOG-O-state's G2 slope improves on LOG-O's by less than 0.1; its spread not
+  smaller than LOG-T's at the primary alpha_B): G2 slope LOG-O-state minus LOG-O -0.021; median spread LOG-O-state 3.439 against LOG-T at the primary alpha_B 0.256: **holds**.
+
+Every replicate, metric and prediction is in `sim_recovery_addendum.csv`. Collated in
+0.1 min. **Review point** (A1, A3, A5 and A6 pause for review).
+
+### A5: the primary alpha_B, and notes (2026-10-14)
+
+**Primary, by the registered section 2.3 rule: alpha_B = 0.001 with the truncated null at alpha_trim = 0.05** (BASE-T-trunc; on the real data a label rate of 1.35%). LOG-T's median G2 slope there is 1.020 [0.891, 1.233], the largest on the surface and the only pair within 0.02 of it. It is flagged, as decided, because it exceeds 1. The over-statement is 2%, so the flag is close to moot. The pair closest to 1 is the same alpha_B with alpha_trim 0.01 (0.999, spread 0.269). The pick also has the smallest per-type spread of any LOG-T label under G2 (median |log ratio| 0.256). The rule's pick is the reported primary.
+
+What the pick does and does not buy, under G2 against the old primary (naive, alpha_B 0.05) and MIX's pi:
+
+| | pooled slope | per-type spread (median) | Spearman with pi_true | B cosine |
+| --- | --- | --- | --- | --- |
+| LOG-T, trunc 0.05, alpha_B 0.001 (new primary) | 1.020 | 0.256 | 0.770 | 0.694 |
+| LOG-T, naive, alpha_B 0.05 (Stage 3 primary) | 0.588 | 0.531 | 0.867 | 0.714 |
+| MIX pi | 0.958 | 0.173 | 0.960 | 0.797 |
+
+The rule targets the size of the neighbourhood effect, and the strict truncated label recovers it. Its cell-level ranking is worse than the looser label's (Spearman 0.77 against 0.87), since a 1.35% label carries less information per cell. MIX's pi stays ahead on spread, ranking and B direction. Under G1 the same pick over-states the effect more (slope 1.142).
+
+Notes:
+- **The three non-converged fits** (G1 reps 1, 4 and 8) are all TWO-PNB step 1 under G1. There the true cycling component is Poisson, so alpha1 runs to its boundary at 0 (fitted 1e-8 to 5e-4). log alpha1 then has no finite optimum, and the gradient criterion cannot be met. The three starts agree to 3e-8 (relative) in each, and every other fit in every replicate converged. These replicates are kept.
+- **Pairing with Stage 6 is exact**: label rates and the shared arms' Spearman correlations reproduce `division_sim` to 0.
+- **TWO-P is far more attenuated than expected.** Its pooled slope is 0.18 (G1) and 0.21 (G2), against MIX's 0.97 and 0.96. Its ranking is close to MIX's (Spearman 0.94-0.95). Step 1's constant-pi posterior shrinks w towards the mean, so the step 2 regression of w on state under-states every contrast. That is X13's slope clause failing, and it is the clearest evidence that joint estimation, not deconvolution alone, is what recovers the neighbourhood effects. V12 shows where the path ends.
+- **LOG-O-state** (X15 holds): its G2 slope is 0.022, against LOG-O's 0.043, so making OSDR's scale continuous in state does not repair BASE-O's attenuation. It slightly worsens its ranking (Spearman 0.22 against 0.48).
+- **X11 does not hold**: under G2, every null's LOG-T slope peaks at the strictest alpha_B (0.001), not at 0.05-0.1, and the truncated nulls' peaks reach 1.0.
+
+Stage A5 complete. **Review point.** The addendum's stages are all run.
