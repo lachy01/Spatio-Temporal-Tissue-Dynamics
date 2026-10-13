@@ -1149,3 +1149,48 @@ clause by clause: median |log ratio| over the 9 types with a true contrast of at
 Figure: `sim_recovery.png`, the neighbourhood-effect ratio by arm and
 generator, and the rank agreement. Every replicate value is in
 `sim_recovery.csv`. **Review point** (stages 1, 3 and 6 pause for review).
+
+
+## Addendum 1 -- pre-registration (recorded 2026-10-13, before any addendum result)
+
+Spec: `instructions/division_classifier_addendum_1.md`. Recorded here before A1 runs, so
+before any A2 or simulation result exists. Not edited afterwards.
+
+### Rule for the primary alpha_B and null (addendum section 2.3)
+
+The primary alpha_B, and the primary null (naive, or truncated at some alpha_trim), are the
+pair that maximises the median over replicates of LOG-T's pooled neighbourhood-effect slope
+under G2. Ties within 0.02 go to the smaller alpha_B. The full surface of slope against
+alpha_B is reported for every null under G1 and G2. The choice is fixed by this rule, not by
+label rate or by comparability with OSDR. NB and MIX push-through slopes on every grid label
+are reported but do not enter the rule.
+
+### Pre-stated expectations X9-X15 (addendum section 8)
+
+- **X9.** BASE-T-trunc gives a lower alpha0 than naive trimming, a higher label rate at each
+  alpha_B, and fewer types with a negative Rogan-Gladen fraction. The gain grows with alpha_trim.
+- **X10.** V2-trunc passes at every alpha_trim; truncation removes the bias that naive trimming
+  would show at alpha_trim = 0.05.
+- **X11.** Under G2, LOG-T's neighbourhood slope peaks at alpha_B between 0.05 and 0.1 for every
+  null, and stays below 0.8 at its peak (MIX pi: 0.96).
+- **X12.** BASE-M's overall rate is below BASE-T's rate at alpha_B = 0.05.
+- **X13.** TWO-P's rank agreement with pi_true is within 0.05 of MIX's under G1 and G2. Its
+  neighbourhood slope lies strictly between LOG-T's best and MIX's.
+- **X14.** Poisson + NB fits clearly better than Poisson + Poisson (likelihood-ratio statistic
+  in the hundreds or more), with most of the gain in the 15 to 30+ count range of Cancer
+  Epithelial. TWO-PNB's multi-start optima agree. Under G3, TWO-PNB's implied cycling fraction
+  is at least as large as MIX's in every type.
+- **X15.** If BASE-O-state runs, LOG-O-state's G2 slope improves on LOG-O's by less than 0.1,
+  and its per-type ratio spread is not smaller than LOG-T's at the primary alpha_B.
+
+### Decisions on the addendum (user, 2026-10-13)
+
+- V12 runs full (generalised) EM from the TWO-P solution, rates refitted each iteration, up to
+  2,000 iterations (SQUAREM allowed); the addendum's section 3.4 records the pass rule and the
+  three ways a failure is reported.
+- BASE-O-state's s+ is the square root of a gamma GLM fitted to (r - m1(phi))^2 (section 4.2).
+- In TWO-P, theta_m m stays outside the component ratio, as in MIX: mu_z = lambda_z + theta_m m.
+- Step 2 of the two-step arm uses all 141 shared weight-block columns, density terms included.
+- The alpha_B grid {0.001, 0.01, 0.05, 0.1, 0.2} adds 0.1 and 0.2; the 0.0001 labels already
+  reported are kept.
+- BASE-M comes from TWO-P's step 1; TWO-PNB's rates are reported beside it.
