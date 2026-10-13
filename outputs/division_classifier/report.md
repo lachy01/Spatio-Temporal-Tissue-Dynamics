@@ -1241,3 +1241,119 @@ Largest relative error of the truncated fit: 0.0250 (criterion 0.02): **FAIL**. 
 largest relative error 0.0250 > 0.02
 
 Per the addendum's section 6, nothing further was run.
+
+### A1 continued: V11 accepted (user, 2026-10-13) (2026-10-13 23:02)
+
+V11 missed its 2% tolerance on theta_m at alpha_trim 0.05 (+2.5%, z = 1.9). The untrimmed maximum-likelihood fit of the same simulated draw is already +1.1% on theta_m (and -1.9 SE on b0), so the truncated fits inherit most of the miss; their departure from that fit is under 2 SE. The user accepted V11 on this evidence, to be tested on more simulated draws later. The section 1.4 diagnostics follow, written from the saved outputs (`run/division_addendum_a1_report.py`).
+
+### Fitted nulls
+
+| null | beta0 | theta_m | alpha0 | trimmed fraction | iterations | stopped on |
+| --- | --- | --- | --- | --- | --- | --- |
+| naive (Stage 1) | -4.944 | 2.818 | 0.7889 | 0.00213 | 2 | tolerance |
+| trunc 0.001 | -4.946 | 2.847 | 0.7901 | 0.00212 | 10 | thresholds unchanged |
+| trunc 0.01 | -5.063 | 2.64 | 0.5249 | 0.01879 | 16 | thresholds unchanged |
+| trunc 0.05 | -5.137 | 1.963 | 0.2961 | 0.05487 | 20 | max_iter |
+
+At alpha_trim 0.001 the truncated null matches the naive one, which also trims at 0.001. The thresholds at alpha_trim 0.05 still moved for a few dozen boundary cells at the 20-iteration cap; the parameters had settled to 1e-4.
+
+Trimmed fraction (y >= c_trim at the final fit) by N decile and cell type:
+
+| stratum | alpha_trim 0.001 | alpha_trim 0.01 | alpha_trim 0.05 |
+| --- | --- | --- | --- |
+| N decile 1 | 0.0007268 | 0.008047 | 0.0114 |
+| N decile 2 | 0.0004275 | 0.005476 | 0.02019 |
+| N decile 3 | 0.0003549 | 0.005081 | 0.03065 |
+| N decile 4 | 0.0004361 | 0.006802 | 0.0404 |
+| N decile 5 | 0.0004989 | 0.006236 | 0.03776 |
+| N decile 6 | 0.0009691 | 0.007358 | 0.02891 |
+| N decile 7 | 0.001401 | 0.01167 | 0.04563 |
+| N decile 8 | 0.002292 | 0.01769 | 0.05949 |
+| N decile 9 | 0.004343 | 0.03517 | 0.09407 |
+| N decile 10 | 0.009756 | 0.08439 | 0.1821 |
+| Endothelial | 0.0003694 | 0.004207 | 0.01849 |
+| CAFs | 0.000192 | 0.002957 | 0.01667 |
+| PVL | 0.0003735 | 0.006093 | 0.02542 |
+| B-cells | 0.0007273 | 0.00724 | 0.0331 |
+| T-cells | 0.00154 | 0.01169 | 0.0438 |
+| Myeloid | 0.0003732 | 0.005397 | 0.02281 |
+| Normal Epithelial | 0.001046 | 0.01394 | 0.05095 |
+| Plasmablasts | 0.001458 | 0.01677 | 0.0579 |
+| Cancer Epithelial | 0.007825 | 0.06301 | 0.1458 |
+
+### Label rates
+
+All cells:
+
+| null | alpha_B 0.001 | alpha_B 0.01 | alpha_B 0.05 | alpha_B 0.1 | alpha_B 0.2 |
+| --- | --- | --- | --- | --- | --- |
+| naive (Stage 1) | 0.00213 | 0.01138 | 0.03293 | 0.0578 | 0.1121 |
+| trunc 0.001 | 0.00212 | 0.01134 | 0.03286 | 0.05772 | 0.1121 |
+| trunc 0.01 | 0.006183 | 0.01879 | 0.04266 | 0.06958 | 0.1249 |
+| trunc 0.05 | 0.01352 | 0.02816 | 0.05487 | 0.08385 | 0.1407 |
+
+By type at alpha_B 0.05:
+
+| type | naive (Stage 1) | trunc 0.001 | trunc 0.01 | trunc 0.05 |
+| --- | --- | --- | --- | --- |
+| Endothelial | 0.01069 | 0.01069 | 0.01432 | 0.01849 |
+| CAFs | 0.008679 | 0.008679 | 0.0124 | 0.01667 |
+| PVL | 0.01464 | 0.01457 | 0.01856 | 0.02542 |
+| B-cells | 0.01981 | 0.01977 | 0.02595 | 0.0331 |
+| T-cells | 0.02727 | 0.02722 | 0.03485 | 0.0438 |
+| Myeloid | 0.0129 | 0.01288 | 0.01734 | 0.02281 |
+| Normal Epithelial | 0.02644 | 0.02634 | 0.03581 | 0.05093 |
+| Plasmablasts | 0.03292 | 0.03288 | 0.0432 | 0.0579 |
+| Cancer Epithelial | 0.09122 | 0.09105 | 0.1164 | 0.1458 |
+
+### Rogan-Gladen, sensitivity borrowed from MIX
+
+Fraction (rate - mean alpha_i) / (sens - mean alpha_i) per type, sens = mean P1(Y >= c^T_i) under MIX's out-of-fold cycling component; 95% block-bootstrap intervals (Stage 5's 300 replicates). At alpha_B 0.05:
+
+| type | naive (Stage 1) | trunc 0.001 | trunc 0.01 | trunc 0.05 |
+| --- | --- | --- | --- | --- |
+| Endothelial | -0.062 [-0.066, -0.057] | -0.062 [-0.066, -0.057] | -0.031 [-0.034, -0.027] | -0.007 [-0.011, -0.004] |
+| CAFs | -0.068 [-0.071, -0.065] | -0.068 [-0.071, -0.065] | -0.038 [-0.041, -0.035] | -0.016 [-0.019, -0.013] |
+| PVL | -0.053 [-0.058, -0.047] | -0.053 [-0.059, -0.047] | -0.019 [-0.024, -0.013] | +0.013 [+0.008, +0.018] |
+| B-cells | -0.025 [-0.032, -0.016] | -0.025 [-0.032, -0.016] | +0.017 [+0.010, +0.026] | +0.051 [+0.043, +0.059] |
+| T-cells | +0.006 [-0.000, +0.012] | +0.006 [-0.001, +0.011] | +0.043 [+0.037, +0.049] | +0.074 [+0.068, +0.081] |
+| Myeloid | -0.056 [-0.060, -0.052] | -0.056 [-0.060, -0.052] | -0.022 [-0.026, -0.019] | +0.004 [+0.001, +0.008] |
+| Normal Epithelial | -0.016 [-0.022, -0.010] | -0.016 [-0.022, -0.010] | +0.020 [+0.015, +0.025] | +0.056 [+0.050, +0.063] |
+| Plasmablasts | +0.011 [+0.002, +0.020] | +0.011 [+0.002, +0.020] | +0.049 [+0.041, +0.057] | +0.085 [+0.077, +0.092] |
+| Cancer Epithelial | +0.110 [+0.101, +0.121] | +0.110 [+0.101, +0.120] | +0.137 [+0.128, +0.147] | +0.169 [+0.159, +0.180] |
+
+Types (of 9) whose interval lies wholly below 0:
+
+| null | alpha_B 0.001 | alpha_B 0.01 | alpha_B 0.05 | alpha_B 0.1 | alpha_B 0.2 |
+| --- | --- | --- | --- | --- | --- |
+| naive (Stage 1) | 3 | 5 | 6 | 6 | 7 |
+| trunc 0.001 | 3 | 5 | 6 | 6 | 7 |
+| trunc 0.01 | 0 | 2 | 4 | 4 | 5 |
+| trunc 0.05 | 0 | 0 | 2 | 3 | 4 |
+
+Every type, null and alpha_B is in `trunc_diagnostics.csv`.
+
+### X9 and X10
+
+- **X9** (lower alpha0, higher label rate at each alpha_B, fewer negative Rogan-Gladen types, gains growing with alpha_trim). alpha0 lower at every alpha_trim: **no** (0.7901, 0.5249, 0.2961 against 0.7889; at 0.001 it is marginally higher). Label rate higher at every alpha_B: **no**. Fewer types below 0: **no**. Gain grows with alpha_trim: **yes**. Overall: **partly holds**; every clause holds at alpha_trim 0.01 and 0.05, and at 0.001 the truncated null is the naive one.
+- **X10** (V2-trunc passes at every alpha_trim; truncation removes the bias naive trimming shows at 0.05). V2-trunc **passes**. In V11 the naive-trimmed fit at 0.05 is off by up to 84% (alpha0), against 2.5% for the truncated fit. Overall: **holds**.
+
+Stage A1 complete. **Review point** (A1, A3, A5 and A6 pause for review).
+
+### Addendum 1 -- pre-registration of X16-X19 (recorded 2026-10-13, before any section 5 result)
+
+Section 5 (E, depth diagnostics against the Wu reference) was added to the addendum after A1
+ran. Recorded here before E1 runs; not edited afterwards.
+
+- **X16.** Over shared technical genes, this section's transcripts per cell are at least 10 times
+  lower than Wu's in every type, unlike Ren et al.'s comparable figures. The Tirosh genes' median
+  sensitivity ratio is within 2 times of the technical genes', so there is no Tirosh-specific
+  probe failure.
+- **X17.** Coverage costs little and depth costs a lot. With panel genes at full depth (condition
+  ii), SCORE's AUROC against the primary truth stays above 0.9. At this section's depth
+  (condition iii, ladder level 1) it falls below 0.75 for SCORE and BASE-T, with w from the
+  constant-pi mixture scoring highest of the three.
+- **X18.** On the ladder, AUROC rises steeply between factors 1 and 10, and approaches condition
+  (ii) by factor 25.
+- **X19.** Wu's S/G2M versus G1 composite ratio is at least 4 under the stricter grouping. The
+  constant-pi mixture on thinned Wu recovers a ratio closer to Wu's than to 1.9.

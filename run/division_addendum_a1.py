@@ -45,6 +45,10 @@ REPORT = f"{OUT}/report.md"
 N_BOOT, SEED = 300, 20261008          # Stage 5's bootstrap, so the intervals compare
 GRID = L.ALPHA_B_GRID_EXT
 TOL_V11, TOL_V2 = 0.02, 0.30
+# V11 missed 2% on theta_m at alpha_trim 0.05 (+2.5%, z = 1.9; the untrimmed MLE of the
+# same draw was already +1.1%): accepted by the user on 2026-10-13, to be tested on more
+# draws later. A rerun reports the miss and continues instead of stopping.
+V11_ACCEPTED = {0.05: 0.03}
 
 
 def say(*a):
@@ -282,7 +286,9 @@ def main():
     nv05 = v11[(v11["fit"] != "truncated") & (v11["alpha_trim"] == 0.05)]
     bias05 = float(nv05[[c for c in v11.columns if c.startswith("rel err")]].abs().to_numpy().max())
 
-    v11_ok = worst <= TOL_V11
+    v11_ok = worst <= TOL_V11 or all(
+        float(r[[c for c in v11.columns if c.startswith("rel err")]].abs().max())
+        <= V11_ACCEPTED.get(r["alpha_trim"], TOL_V11) for _, r in tr.iterrows())
     text = [f"\n## Addendum stage A1 -- BASE-T-trunc ({time.strftime('%Y-%m-%d %H:%M')})\n",
             "The MisTIC null (mu0 = Nt e^b0 + theta_m m, NB2) refitted by iterated right-truncation "
             "(addendum section 1.2) from the untrimmed fit, at alpha_trim 0.001, 0.01 and 0.05. "
@@ -295,7 +301,7 @@ def main():
             "naive-trimmed fit at the same level is the contrast (not part of the criterion).\n",
             md_table(v11), "",
             f"Largest relative error of the truncated fit: {worst:.4f} (criterion {TOL_V11}): "
-            f"**{'pass' if v11_ok else 'FAIL'}**. The z columns give the same errors in standard "
+            f"**{'pass' if worst <= TOL_V11 else 'accepted exception (user, 2026-10-13)' if v11_ok else 'FAIL'}**. The z columns give the same errors in standard "
             "errors of the truncated fit (exact Hessian), so a miss can be told from sampling noise.\n",
             "### V2-trunc -- null calibration, end to end\n",
             md_table(v2), "", f"**{'pass' if v2_ok else 'FAIL'}**.\n"]
