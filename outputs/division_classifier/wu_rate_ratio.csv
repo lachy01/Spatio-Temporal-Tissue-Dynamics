@@ -1,0 +1,121 @@
+data,truth,stratum,rate ratio,95% CI
+"(ii) panel, full depth",primary,pooled,7.9629936,6.98-8.63
+"(ii) panel, full depth",primary,Endothelial,5.207854,4.15-6.22
+"(ii) panel, full depth",primary,CAFs,3.915433,3.19-4.98
+"(ii) panel, full depth",primary,PVL,5.10866,4.25-6.4
+"(ii) panel, full depth",primary,B-cells,2.4390512,2.06-2.98
+"(ii) panel, full depth",primary,T-cells,5.258121,3.77-6.74
+"(ii) panel, full depth",primary,Myeloid,7.247,5.87-8.38
+"(ii) panel, full depth",primary,Normal Epithelial,2.3306506,2.22-2.43
+"(ii) panel, full depth",primary,Plasmablasts,4.976999,3.98-5.81
+"(ii) panel, full depth",primary,Cancer Epithelial,7.9500046,6.95-9.08
+"(ii) panel, full depth",stricter,pooled,8.130456,7.19-8.79
+"(ii) panel, full depth",stricter,Endothelial,5.207854,4.15-6.22
+"(ii) panel, full depth",stricter,CAFs,3.915433,3.19-4.98
+"(ii) panel, full depth",stricter,PVL,5.10866,4.25-6.4
+"(ii) panel, full depth",stricter,B-cells,2.4390512,2.06-2.98
+"(ii) panel, full depth",stricter,T-cells,5.7463217,4.12-7.3
+"(ii) panel, full depth",stricter,Myeloid,7.247,5.87-8.38
+"(ii) panel, full depth",stricter,Normal Epithelial,2.3306506,2.22-2.43
+"(ii) panel, full depth",stricter,Plasmablasts,4.976999,3.98-5.81
+"(ii) panel, full depth",stricter,Cancer Epithelial,7.966641,6.98-9.11
+"(iii) thinned x1, seed 0",primary,pooled,7.398419,6.45-8.12
+"(iii) thinned x1, seed 0",primary,Endothelial,5.5370746,4.18-6.83
+"(iii) thinned x1, seed 0",primary,CAFs,3.3810577,2.19-4.63
+"(iii) thinned x1, seed 0",primary,PVL,5.6644406,4.65-7.07
+"(iii) thinned x1, seed 0",primary,B-cells,2.6311164,2.23-3.24
+"(iii) thinned x1, seed 0",primary,T-cells,4.641901,3.37-6
+"(iii) thinned x1, seed 0",primary,Myeloid,6.9295387,5.43-7.98
+"(iii) thinned x1, seed 0",primary,Normal Epithelial,2.2086363,2.08-2.37
+"(iii) thinned x1, seed 0",primary,Plasmablasts,5.016589,3.85-6.12
+"(iii) thinned x1, seed 0",primary,Cancer Epithelial,7.867826,6.77-9.11
+"(iii) thinned x1, seed 0",stricter,pooled,7.5817876,6.7-8.32
+"(iii) thinned x1, seed 0",stricter,Endothelial,5.5370746,4.18-6.83
+"(iii) thinned x1, seed 0",stricter,CAFs,3.3810577,2.19-4.63
+"(iii) thinned x1, seed 0",stricter,PVL,5.6644406,4.65-7.07
+"(iii) thinned x1, seed 0",stricter,B-cells,2.6311164,2.23-3.24
+"(iii) thinned x1, seed 0",stricter,T-cells,5.1139083,3.7-6.55
+"(iii) thinned x1, seed 0",stricter,Myeloid,6.9295387,5.43-7.98
+"(iii) thinned x1, seed 0",stricter,Normal Epithelial,2.2086363,2.08-2.37
+"(iii) thinned x1, seed 0",stricter,Plasmablasts,5.016589,3.85-6.12
+"(iii) thinned x1, seed 0",stricter,Cancer Epithelial,7.887467,6.79-9.14
+"(iii) thinned x1, seed 1",primary,pooled,7.3790493,6.36-8.06
+"(iii) thinned x1, seed 1",primary,Endothelial,4.8397756,3.93-5.95
+"(iii) thinned x1, seed 1",primary,CAFs,3.9815013,2.95-5.11
+"(iii) thinned x1, seed 1",primary,PVL,4.92407,3.73-6.39
+"(iii) thinned x1, seed 1",primary,B-cells,2.530972,2.02-3.2
+"(iii) thinned x1, seed 1",primary,T-cells,4.6310463,3.33-5.97
+"(iii) thinned x1, seed 1",primary,Myeloid,7.5514708,5.61-8.99
+"(iii) thinned x1, seed 1",primary,Normal Epithelial,2.0809834,1.67-2.47
+"(iii) thinned x1, seed 1",primary,Plasmablasts,4.962577,3.43-6.23
+"(iii) thinned x1, seed 1",primary,Cancer Epithelial,7.896744,6.87-9.12
+"(iii) thinned x1, seed 1",stricter,pooled,7.559861,6.61-8.28
+"(iii) thinned x1, seed 1",stricter,Endothelial,4.8397756,3.93-5.95
+"(iii) thinned x1, seed 1",stricter,CAFs,3.9815013,2.95-5.11
+"(iii) thinned x1, seed 1",stricter,PVL,4.92407,3.73-6.39
+"(iii) thinned x1, seed 1",stricter,B-cells,2.530972,2.02-3.2
+"(iii) thinned x1, seed 1",stricter,T-cells,5.0911417,3.65-6.52
+"(iii) thinned x1, seed 1",stricter,Myeloid,7.5514708,5.61-8.99
+"(iii) thinned x1, seed 1",stricter,Normal Epithelial,2.0809834,1.67-2.47
+"(iii) thinned x1, seed 1",stricter,Plasmablasts,4.962577,3.43-6.23
+"(iii) thinned x1, seed 1",stricter,Cancer Epithelial,7.917944,6.89-9.15
+"(iii) thinned x1, seed 2",primary,pooled,7.39622,6.42-8.11
+"(iii) thinned x1, seed 2",primary,Endothelial,5.3153086,4.26-6.22
+"(iii) thinned x1, seed 2",primary,CAFs,3.7224174,2.75-5.26
+"(iii) thinned x1, seed 2",primary,PVL,5.144392,4.06-6.78
+"(iii) thinned x1, seed 2",primary,B-cells,2.4514163,1.92-3.05
+"(iii) thinned x1, seed 2",primary,T-cells,4.594778,3.31-5.95
+"(iii) thinned x1, seed 2",primary,Myeloid,6.9909005,5.58-8.05
+"(iii) thinned x1, seed 2",primary,Normal Epithelial,2.5776553,2.06-3.14
+"(iii) thinned x1, seed 2",primary,Plasmablasts,4.6701856,3.86-5.54
+"(iii) thinned x1, seed 2",primary,Cancer Epithelial,7.8929167,6.85-9.09
+"(iii) thinned x1, seed 2",stricter,pooled,7.573852,6.63-8.3
+"(iii) thinned x1, seed 2",stricter,Endothelial,5.3153086,4.26-6.22
+"(iii) thinned x1, seed 2",stricter,CAFs,3.7224174,2.75-5.26
+"(iii) thinned x1, seed 2",stricter,PVL,5.144392,4.06-6.78
+"(iii) thinned x1, seed 2",stricter,B-cells,2.4514163,1.92-3.05
+"(iii) thinned x1, seed 2",stricter,T-cells,5.0436497,3.63-6.45
+"(iii) thinned x1, seed 2",stricter,Myeloid,6.9909005,5.58-8.05
+"(iii) thinned x1, seed 2",stricter,Normal Epithelial,2.5776553,2.06-3.14
+"(iii) thinned x1, seed 2",stricter,Plasmablasts,4.6701856,3.86-5.54
+"(iii) thinned x1, seed 2",stricter,Cancer Epithelial,7.912586,6.86-9.12
+"(iii) thinned x1, seed 3",primary,pooled,7.371413,6.4-8.09
+"(iii) thinned x1, seed 3",primary,Endothelial,5.6605754,4.18-7.17
+"(iii) thinned x1, seed 3",primary,CAFs,3.4805174,2.62-4.84
+"(iii) thinned x1, seed 3",primary,PVL,5.0894985,3.91-6.68
+"(iii) thinned x1, seed 3",primary,B-cells,2.3555694,1.91-3.19
+"(iii) thinned x1, seed 3",primary,T-cells,4.663747,3.38-6.05
+"(iii) thinned x1, seed 3",primary,Myeloid,7.0753946,5.6-8.17
+"(iii) thinned x1, seed 3",primary,Normal Epithelial,2.0284343,1.22-2.56
+"(iii) thinned x1, seed 3",primary,Plasmablasts,4.942364,3.96-5.62
+"(iii) thinned x1, seed 3",primary,Cancer Epithelial,7.8901434,6.83-9.13
+"(iii) thinned x1, seed 3",stricter,pooled,7.5488453,6.64-8.28
+"(iii) thinned x1, seed 3",stricter,Endothelial,5.6605754,4.18-7.17
+"(iii) thinned x1, seed 3",stricter,CAFs,3.4805174,2.62-4.84
+"(iii) thinned x1, seed 3",stricter,PVL,5.0894985,3.91-6.68
+"(iii) thinned x1, seed 3",stricter,B-cells,2.3555694,1.91-3.19
+"(iii) thinned x1, seed 3",stricter,T-cells,5.118909,3.69-6.61
+"(iii) thinned x1, seed 3",stricter,Myeloid,7.0753946,5.6-8.17
+"(iii) thinned x1, seed 3",stricter,Normal Epithelial,2.0284343,1.22-2.56
+"(iii) thinned x1, seed 3",stricter,Plasmablasts,4.942364,3.96-5.62
+"(iii) thinned x1, seed 3",stricter,Cancer Epithelial,7.9108787,6.86-9.15
+"(iii) thinned x1, seed 4",primary,pooled,7.375327,6.41-8.09
+"(iii) thinned x1, seed 4",primary,Endothelial,4.9748735,3.83-6.03
+"(iii) thinned x1, seed 4",primary,CAFs,3.500603,2.72-4.67
+"(iii) thinned x1, seed 4",primary,PVL,4.9475355,4.05-5.98
+"(iii) thinned x1, seed 4",primary,B-cells,2.4729161,2.13-3.32
+"(iii) thinned x1, seed 4",primary,T-cells,4.6671267,3.41-5.97
+"(iii) thinned x1, seed 4",primary,Myeloid,7.094698,5.35-8.31
+"(iii) thinned x1, seed 4",primary,Normal Epithelial,2.3248804,1.5-2.86
+"(iii) thinned x1, seed 4",primary,Plasmablasts,4.8577633,3.41-5.52
+"(iii) thinned x1, seed 4",primary,Cancer Epithelial,7.910235,6.91-9.14
+"(iii) thinned x1, seed 4",stricter,pooled,7.555343,6.67-8.29
+"(iii) thinned x1, seed 4",stricter,Endothelial,4.9748735,3.83-6.03
+"(iii) thinned x1, seed 4",stricter,CAFs,3.500603,2.72-4.67
+"(iii) thinned x1, seed 4",stricter,PVL,4.9475355,4.05-5.98
+"(iii) thinned x1, seed 4",stricter,B-cells,2.4729161,2.13-3.32
+"(iii) thinned x1, seed 4",stricter,T-cells,5.1356916,3.73-6.5
+"(iii) thinned x1, seed 4",stricter,Myeloid,7.094698,5.35-8.31
+"(iii) thinned x1, seed 4",stricter,Normal Epithelial,2.3248804,1.5-2.86
+"(iii) thinned x1, seed 4",stricter,Plasmablasts,4.8577633,3.41-5.52
+"(iii) thinned x1, seed 4",stricter,Cancer Epithelial,7.929264,6.92-9.16

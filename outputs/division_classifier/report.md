@@ -1357,3 +1357,160 @@ ran. Recorded here before E1 runs; not edited afterwards.
   (ii) by factor 25.
 - **X19.** Wu's S/G2M versus G1 composite ratio is at least 4 under the stricter grouping. The
   constant-pi mixture on thinned Wu recovers a ratio closer to Wu's than to 1.9.
+
+## Addendum stage A6 -- depth diagnostics against Wu et al. (2026-10-13 23:13)
+
+### E1 -- per-gene sensitivity of this section
+
+Shared genes (this panel and Wu's transcriptome): 4,917 -- the 53 Tirosh genes, 467 other blocklist genes and 4,397 technical genes. Means per cell of each type; s_gk = mean here / mean in Wu. Intervals pair a 1,000-replicate spatial block bootstrap here with a 1,000-replicate patient bootstrap in Wu.
+
+| type | median transcripts/cell, technical, here | median transcripts/cell, technical, Wu | ratio here/Wu | ratio 95% CI | median s_gk, technical | median s_gk, technical, 95% CI | median s_gk, Tirosh | median s_gk, Tirosh, 95% CI |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Endothelial | 46 | 648 | 0.07099 | 0.0602-0.134 | 0.1533 | 0.112-0.203 | 0.1746 | 0.122-0.322 |
+| CAFs | 58 | 604 | 0.09603 | 0.0756-0.13 | 0.167 | 0.112-0.228 | 0.3485 | 0.233-0.484 |
+| PVL | 44 | 438 | 0.1005 | 0.0749-0.159 | 0.2079 | 0.127-0.307 | 0.2177 | 0.121-0.412 |
+| B-cells | 35 | 190 | 0.1842 | 0.148-0.232 | 0.3884 | 0.299-0.454 | 0.44 | 0.313-0.656 |
+| T-cells | 43 | 221 | 0.1946 | 0.15-0.249 | 0.4607 | 0.337-0.595 | 0.1364 | 0.0952-0.242 |
+| Myeloid | 48 | 772 | 0.06218 | 0.0507-0.105 | 0.1523 | 0.101-0.219 | 0.07286 | 0.0497-0.117 |
+| Normal Epithelial | 78 | 727 | 0.1073 | 0.083-0.136 | 0.2269 | 0.148-0.283 | 0.5844 | 0.428-0.761 |
+| Plasmablasts | 59 | 204 | 0.2892 | 0.187-0.46 | 0.8619 | 0.505-1.12 | 1.143 | 0.752-1.49 |
+| Cancer Epithelial | 208 | 854 | 0.2436 | 0.167-0.318 | 0.3198 | 0.255-0.443 | 0.1525 | 0.105-0.285 |
+
+ER+ patients only (the closest Wu subtype):
+
+| type | ratio here/Wu | median s_gk, technical | median s_gk, Tirosh |
+| --- | --- | --- | --- |
+| Endothelial | 0.06345 | 0.1369 | 0.3017 |
+| CAFs | 0.09667 | 0.1679 | 0.3592 |
+| PVL | 0.09129 | 0.2017 | 0.3423 |
+| B-cells | 0.2509 | 0.3661 | 0.6508 |
+| T-cells | 0.3071 | 0.5668 | 0.3113 |
+| Myeloid | 0.1098 | 0.2152 | 0.1323 |
+| Normal Epithelial | 0.1041 | 0.1888 | 0.59 |
+| Plasmablasts | 0.3806 | 0.6747 | 0.8863 |
+| Cancer Epithelial | 0.2748 | 0.4958 | 0.5171 |
+
+Every type, scope and gene group, with detection rates and genes per cell, is in `depth_sensitivity.csv`; every gene in `depth_sensitivity_genes.csv`.
+
+Caveats. The Tirosh ratios mix sensitivity with biology: they also carry differences in cycling fraction between this tumour and Wu's patients, so read them against the technical genes. The ratio includes section geometry: a 5 um section captures part of each cell's volume, which is part of this section's sensitivity, not an artefact to remove.
+
+**Against Ren et al. (2025)**, who found transcripts and genes per cell comparable to scRNA-seq on shared genes: this section captures at most 28.9% of Wu's transcripts per cell on shared technical genes in any type (Wu is at least 3.5 times higher), so it does not agree.
+
+- **X16** (at least 10 times fewer transcripts per cell here in every type; Tirosh median sensitivity within 2 times of the technical genes'): first clause **does not hold**; second clause **does not hold** (Tirosh over technical median ratio 0.30-2.58 across types). Overall: **does not hold**.
+
+### V15 -- thinning
+
+Whole Wu transcriptome, 20,000 random cells, every entry thinned at p = 0.1. Of 10,190 genes with at least 1,000 counts: largest relative error 0.2919, literal 1% criterion **not met**. A correct binomial thinning cannot meet it at 1,000 counts, where the thinned total's SD is 9.5% of its mean. Judged instead: on the 3 genes with at least 1.44 million counts (where 1% is four SDs) the largest error is 0.0021 (**pass**), and the largest |z| over every gene with >= 1,000 counts is 3.70 against 4.5 (**pass**). With p = 1 for every cell the thinned panel matrix equals condition (ii) exactly: **pass**. V15: **pass**.
+
+### V16 -- pipeline parity on this section's own counts
+
+The code path run on thinned Wu, run instead on this section's raw counts (every panel gene): y and N equal Stage 1's for every cell: **True**; SCORE label equals Stage 1's LS: **True**; BASE-T at alpha_B 0.05 equals a plain-N rebuild (robust null with a log N offset, no MisTIC term): **True**. V16: **pass**.
+
+### E2 -- thinning Wu to this section's depth
+
+Same Wu cells in every condition: (i) whole transcriptome, (ii) panel genes only at full depth, (iii) panel genes binomially thinned so each cell's depth matches the same quantile of this section's depth distribution within its type, times the ladder factor (5 seeds per level; mean shown). Every condition keeps cells with N >= 10, as this section does. Methods as on this section: SCORE (scanpy score_genes, pool = the condition's genes minus the blocklist; robust half-normal threshold), BASE-T (NB null with a plain log N offset, trimmed as in Stage 1, alpha_B 0.05; statistic -log p) and the constant-pi Poisson mixture (posterior w; MAP call w > 0.5). Truth: Seurat's whole-transcriptome S/G2M calls (primary); stricter: S/G2M cells above their type's 75th percentile of max(S, G2M) against G1 cells with both scores below 0.
+
+Primary truth, all cells:
+
+| condition | thinning | factor | method | median depth | AUROC | kappa | sensitivity | specificity | call rate | calls with y <= 1 | Spearman (type rates) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| (i) whole transcriptome | none | nan | BASE-T | 3573 | 0.8848 | 0.5203 | 0.4238 | 0.9912 | 0.09263 | 0 | 0.9 |
+| (i) whole transcriptome | none | nan | SCORE | 3573 | 0.9091 | 0.6157 | 0.606 | 0.9576 | 0.1563 | 0.05377 | 0.9667 |
+| (i) whole transcriptome | none | nan | mixture w | 3573 | 0.8597 | 0.4353 | 0.3308 | 0.9974 | 0.06895 | 0 | 0.8833 |
+| (ii) panel, full depth | none | nan | BASE-T | 475 | 0.8877 | 0.5248 | 0.4314 | 0.9898 | 0.09531 | 0 | 0.9667 |
+| (ii) panel, full depth | none | nan | SCORE | 475 | 0.9123 | 0.6206 | 0.705 | 0.9202 | 0.2061 | 0.05615 | 0.9667 |
+| (ii) panel, full depth | none | nan | mixture w | 475 | 0.8558 | 0.4357 | 0.3323 | 0.9968 | 0.06971 | 0 | 0.9333 |
+| (iii) panel, thinned | gene-specific | 1 | BASE-T | 66 | 0.6983 | 0.2701 | 0.1906 | 0.9979 | 0.03928 | 0 | 0.93 |
+| (iii) panel, thinned | gene-specific | 1 | SCORE | 66 | 0.7503 | 0.3817 | 0.5024 | 0.8787 | 0.1965 | 0.5339 | 0.9467 |
+| (iii) panel, thinned | gene-specific | 1 | mixture w | 66 | 0.7753 | 0.3405 | 0.2545 | 0.9936 | 0.05534 | 0 | 0.9367 |
+| (iii) panel, thinned | quantile-matched | 1 | BASE-T | 67.8 | 0.719 | 0.2903 | 0.2088 | 0.9966 | 0.04428 | 0 | 0.9167 |
+| (iii) panel, thinned | quantile-matched | 1 | SCORE | 67.8 | 0.7623 | 0.3842 | 0.5637 | 0.8466 | 0.2351 | 0.5067 | 0.9467 |
+| (iii) panel, thinned | quantile-matched | 1 | mixture w | 67.8 | 0.7778 | 0.3423 | 0.2581 | 0.9926 | 0.05728 | 0 | 0.94 |
+| (iii) panel, thinned | quantile-matched | 2 | BASE-T | 131 | 0.7717 | 0.3689 | 0.2766 | 0.9952 | 0.0597 | 0 | 0.9533 |
+| (iii) panel, thinned | quantile-matched | 2 | SCORE | 131 | 0.8113 | 0.4459 | 0.643 | 0.8452 | 0.2534 | 0.3552 | 0.9667 |
+| (iii) panel, thinned | quantile-matched | 2 | mixture w | 131 | 0.8063 | 0.3798 | 0.2882 | 0.994 | 0.06298 | 0 | 0.9467 |
+| (iii) panel, thinned | quantile-matched | 5 | BASE-T | 322.8 | 0.8636 | 0.4875 | 0.3905 | 0.9919 | 0.0854 | 0 | 0.9533 |
+| (iii) panel, thinned | quantile-matched | 5 | SCORE | 322.8 | 0.8892 | 0.5828 | 0.6838 | 0.9087 | 0.211 | 0.1062 | 0.96 |
+| (iii) panel, thinned | quantile-matched | 5 | mixture w | 322.8 | 0.8316 | 0.4119 | 0.3108 | 0.9969 | 0.06525 | 0 | 0.9467 |
+| (iii) panel, thinned | quantile-matched | 10 | BASE-T | 430 | 0.8856 | 0.5171 | 0.4212 | 0.991 | 0.09228 | 0 | 0.96 |
+| (iii) panel, thinned | quantile-matched | 10 | SCORE | 430 | 0.9093 | 0.6147 | 0.7157 | 0.9128 | 0.2142 | 0.06016 | 0.9567 |
+| (iii) panel, thinned | quantile-matched | 10 | mixture w | 430 | 0.8497 | 0.4254 | 0.3225 | 0.9971 | 0.06745 | 0 | 0.9467 |
+| (iii) panel, thinned | quantile-matched | 25 | BASE-T | 475 | 0.8877 | 0.5248 | 0.4314 | 0.9898 | 0.09531 | 0 | 0.9567 |
+| (iii) panel, thinned | quantile-matched | 25 | SCORE | 475 | 0.9123 | 0.6205 | 0.7049 | 0.9202 | 0.2061 | 0.0561 | 0.9667 |
+| (iii) panel, thinned | quantile-matched | 25 | mixture w | 475 | 0.8556 | 0.4352 | 0.3318 | 0.9968 | 0.06959 | 0 | 0.9333 |
+
+Stricter truth, all cells:
+
+| condition | thinning | factor | method | median depth | AUROC | kappa | sensitivity | specificity | call rate | calls with y <= 1 | Spearman (type rates) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| (i) whole transcriptome | none | nan | BASE-T | 3573 | 0.894 | 0.5528 | 0.4536 | 0.9912 | 0.09263 | 0 | 0.9 |
+| (i) whole transcriptome | none | nan | SCORE | 3573 | 0.9148 | 0.6345 | 0.6318 | 0.9576 | 0.1563 | 0.05377 | 0.9667 |
+| (i) whole transcriptome | none | nan | mixture w | 3573 | 0.8632 | 0.4686 | 0.3577 | 0.9974 | 0.06895 | 0 | 0.8833 |
+| (ii) panel, full depth | none | nan | BASE-T | 475 | 0.8966 | 0.5576 | 0.462 | 0.9898 | 0.09531 | 0 | 0.9667 |
+| (ii) panel, full depth | none | nan | SCORE | 475 | 0.9191 | 0.6302 | 0.7272 | 0.9202 | 0.2061 | 0.05615 | 0.9667 |
+| (ii) panel, full depth | none | nan | mixture w | 475 | 0.86 | 0.4694 | 0.3596 | 0.9968 | 0.06971 | 0 | 0.9333 |
+| (iii) panel, thinned | gene-specific | 1 | BASE-T | 66 | 0.7135 | 0.2946 | 0.2072 | 0.9979 | 0.03928 | 0 | 0.93 |
+| (iii) panel, thinned | gene-specific | 1 | SCORE | 66 | 0.7613 | 0.3935 | 0.5245 | 0.8787 | 0.1965 | 0.5339 | 0.9467 |
+| (iii) panel, thinned | gene-specific | 1 | mixture w | 66 | 0.7825 | 0.3686 | 0.2756 | 0.9936 | 0.05534 | 0 | 0.9367 |
+| (iii) panel, thinned | quantile-matched | 1 | BASE-T | 67.8 | 0.7323 | 0.315 | 0.226 | 0.9966 | 0.04428 | 0 | 0.9167 |
+| (iii) panel, thinned | quantile-matched | 1 | SCORE | 67.8 | 0.773 | 0.3902 | 0.5823 | 0.8466 | 0.2351 | 0.5067 | 0.9467 |
+| (iii) panel, thinned | quantile-matched | 1 | mixture w | 67.8 | 0.7837 | 0.3687 | 0.2779 | 0.9926 | 0.05728 | 0 | 0.94 |
+| (iii) panel, thinned | quantile-matched | 2 | BASE-T | 131 | 0.7831 | 0.3982 | 0.2989 | 0.9952 | 0.0597 | 0 | 0.9533 |
+| (iii) panel, thinned | quantile-matched | 2 | SCORE | 131 | 0.8213 | 0.449 | 0.6602 | 0.8452 | 0.2534 | 0.3552 | 0.9667 |
+| (iii) panel, thinned | quantile-matched | 2 | mixture w | 131 | 0.8127 | 0.4089 | 0.3106 | 0.994 | 0.06298 | 0 | 0.9467 |
+| (iii) panel, thinned | quantile-matched | 5 | BASE-T | 322.8 | 0.8721 | 0.5203 | 0.4194 | 0.9919 | 0.0854 | 0 | 0.9533 |
+| (iii) panel, thinned | quantile-matched | 5 | SCORE | 322.8 | 0.8968 | 0.5924 | 0.7065 | 0.9087 | 0.211 | 0.1062 | 0.96 |
+| (iii) panel, thinned | quantile-matched | 5 | mixture w | 322.8 | 0.8383 | 0.4446 | 0.3367 | 0.9969 | 0.06525 | 0 | 0.9467 |
+| (iii) panel, thinned | quantile-matched | 10 | BASE-T | 430 | 0.8943 | 0.5501 | 0.4514 | 0.991 | 0.09228 | 0 | 0.96 |
+| (iii) panel, thinned | quantile-matched | 10 | SCORE | 430 | 0.9162 | 0.6231 | 0.7375 | 0.9128 | 0.2142 | 0.06016 | 0.9567 |
+| (iii) panel, thinned | quantile-matched | 10 | mixture w | 430 | 0.8547 | 0.4589 | 0.3493 | 0.9971 | 0.06745 | 0 | 0.9467 |
+| (iii) panel, thinned | quantile-matched | 25 | BASE-T | 475 | 0.8966 | 0.5576 | 0.462 | 0.9898 | 0.09531 | 0 | 0.9567 |
+| (iii) panel, thinned | quantile-matched | 25 | SCORE | 475 | 0.9191 | 0.6302 | 0.7272 | 0.9202 | 0.2061 | 0.0561 | 0.9667 |
+| (iii) panel, thinned | quantile-matched | 25 | mixture w | 475 | 0.8598 | 0.4689 | 0.3591 | 0.9968 | 0.06959 | 0 | 0.9333 |
+
+AUROC by type at this section's depth (ladder x1, primary truth):
+
+| stratum | BASE-T | SCORE | mixture w |
+| --- | --- | --- | --- |
+| B-cells | 0.6178 | 0.6284 | 0.6296 |
+| CAFs | 0.5325 | 0.6672 | 0.8213 |
+| Cancer Epithelial | 0.8572 | 0.8812 | 0.8777 |
+| Endothelial | 0.5849 | 0.7078 | 0.808 |
+| Myeloid | 0.6919 | 0.746 | 0.7742 |
+| Normal Epithelial | 0.4912 | 0.6266 | 0.7518 |
+| PVL | 0.5926 | 0.7049 | 0.7755 |
+| Plasmablasts | 0.6368 | 0.7135 | 0.816 |
+| T-cells | 0.6647 | 0.6845 | 0.6824 |
+
+Figure `thinning_ladder.png`; every condition, level, seed, method, truth and type in `thinning_ladder.csv`.
+
+- **X17** (condition (ii) SCORE AUROC above 0.9; at x1 SCORE and BASE-T below 0.75 with w highest): (ii) SCORE 0.912 -> **yes**; x1 SCORE 0.762, BASE-T 0.719 -> **no**; w 0.778, highest -> **yes**. Overall: **partly holds**.
+- **X18** (AUROC rises steeply from x1 to x10, approaches (ii) by x25): gain x1->x10 BASE-T +0.167, SCORE +0.147, mixture w +0.072, x10->x25 BASE-T +0.002, SCORE +0.003, mixture w +0.006 -> steep-then-flat **yes**; within 0.02 of (ii) at x25 **yes**. Overall: **holds**.
+
+### E3 -- the cycling rate ratio in Wu
+
+Tirosh composite per panel library (sum y / sum N) in S/G2M-called cells over G1-called cells, pooled and per type, with a 1,000-replicate patient bootstrap. Thinned: ladder x1, five seeds.
+
+| data | truth | mean | min | max |
+| --- | --- | --- | --- | --- |
+| (ii) panel, full depth | primary | 7.963 | 7.963 | 7.963 |
+| (ii) panel, full depth | stricter | 8.13 | 8.13 | 8.13 |
+| (iii) thinned x1 | primary | 7.384 | 7.371 | 7.398 |
+| (iii) thinned x1 | stricter | 7.564 | 7.549 | 7.582 |
+
+Per type, every seed and both truths in `wu_rate_ratio.csv`. The constant-pi mixture fitted to the same data (`wu_rate_ratio_mixture.csv`):
+
+| data | mixture pi | mixture e^delta | mixture rate ratio |
+| --- | --- | --- | --- |
+| (iii) thinned x1, seed 0 | 0.07898 | 2.311 | 10.09 |
+| (iii) thinned x1, seed 1 | 0.07983 | 2.307 | 10.04 |
+| (iii) thinned x1, seed 2 | 0.08174 | 2.297 | 9.947 |
+| (iii) thinned x1, seed 3 | 0.08162 | 2.301 | 9.987 |
+| (iii) thinned x1, seed 4 | 0.08024 | 2.302 | 9.989 |
+| (ii) panel, full depth | 0.07339 | 2.297 | 9.943 |
+
+**Scale.** This project's e^delta is the log of the component rate ratio: MIX on this section has e^delta = 1.90, a rate ratio of 6.70. The addendum's '1.9' is MIX's e^delta, so the like-for-like comparison with Wu's rate ratios is 6.70.
+
+- **X19** (Wu's stricter-grouping ratio at least 4; the mixture on thinned Wu closer to Wu's ratio than to 1.9): Wu's ratio 8.13 (primary grouping 7.96) -> **yes**; the mixture on thinned Wu gives 10.01, closer to Wu's than to 1.9 -> **yes** (and than to MIX's rate ratio 6.70 -> yes). Overall, as written: **holds**.
+
+Stage A6 complete in 17 min. **Review point** (A1, A3, A5 and A6 pause for review).
