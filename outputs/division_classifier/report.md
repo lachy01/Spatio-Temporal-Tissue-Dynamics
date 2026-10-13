@@ -2035,3 +2035,48 @@ A4 (BASE-O-state) runs.
 - **V12 passes**: generalised EM from TWO-P reaches production MIX's penalised optimum (gap 6e-13 relative, largest coefficient difference 1e-6) with the objective never rising. TWO-P is therefore an early point on the EM path whose end is MIX, as section 3.4 argues.
 - **Real-data scoring.** On log loss LOG-T leads only where it is trained, at the stricter alpha_B (0.001-0.05); from alpha_B 0.1 MIX and the NBs are better on log loss, and from 0.2 MIX is also better on AUPRC. MIX beats TWO-P on every label and metric shown (log loss and AUPRC intervals excluding 0), the real-data face of the joint-estimation gain. TWO-PNB is the worst-calibrated arm by type (CAFs 3.6x, Cancer Epithelial 0.53x at the primary label).
 - **A3 reading.** The max/min ratio is at least 1 by construction, so its interval excluding 1 is a weak test; the per-type intervals are the informative ones (3-6 of 9 types exclude 1 in every scope and selection). The highest and lowest types move between selections (B- and T-cells highest under the primary selection, Normal Epithelial under the stricter; CAFs lowest throughout). Per 1,000 panel transcripts, a type's value also depends on which non-Tirosh panel genes it expresses, so these are differences in the composite relative to this panel's library, which is the quantity the null scales by.
+
+
+## Addendum stage A4 -- BASE-O-state (2026-10-14 10:00)
+
+`run/division_addendum_a4_state.py`, run with Lachy's approval after the A3 gate.
+s+(phi) = sqrt(v(phi)), with m1 and v gamma GLMs (log link) on an intercept and the
+8-dim projected own state, fitted on the 156,141 cells with r > 0
+(`labels.base_o_state_scale`).
+
+V14: with one-hot type indicators the procedure reproduces primary BASE-O's per-type
+s+ to 4.2e-13 (Stage 1's stored values to 4.2e-13): **pass**. V10 (1{a > Td} ==
+1{y >= c} at every Td): **pass**.
+
+| type | s+ (BASE-O, per type) | s+(phi) median | s+(phi) 10th-90th | BASE-O rate (Td 0.5) | BASE-O-state rate (Td 0.5) | LOG-O-state mean p |
+| --- | --- | --- | --- | --- | --- | --- |
+| Endothelial | 1.087 | 1.046 | 0.927-1.177 | 0.1242 | 0.1276 | 0.1343 |
+| CAFs | 0.918 | 0.9148 | 0.779-1.054 | 0.1318 | 0.1316 | 0.1316 |
+| PVL | 1.092 | 1.065 | 0.918-1.249 | 0.1462 | 0.1469 | 0.15 |
+| B-cells | 1.082 | 1.115 | 1.019-1.221 | 0.2018 | 0.1996 | 0.1982 |
+| T-cells | 1.118 | 1.125 | 1.034-1.235 | 0.2286 | 0.2274 | 0.221 |
+| Myeloid | 1.065 | 1.079 | 0.960-1.202 | 0.1367 | 0.1356 | 0.1469 |
+| Normal Epithelial | 1.175 | 1.24 | 1.017-1.410 | 0.1632 | 0.1574 | 0.1681 |
+| Plasmablasts | 1.184 | 1.213 | 0.986-1.440 | 0.1906 | 0.1872 | 0.1875 |
+| Cancer Epithelial | 1.54 | 1.471 | 1.349-1.616 | 0.2338 | 0.2382 | 0.227 |
+
+LOG-O-state, out of fold on LOs_td050: all folds converged
+**yes**; largest sd(eta)
+0.346 (V7 criterion 20).
+
+| fold | converged | grad_inf | sd(eta) | minutes |
+| --- | --- | --- | --- | --- |
+| 0 | pass | 3.154e-08 | 0.3447 | 0.5957 |
+| 1 | pass | 4.073e-08 | 0.3426 | 0.7324 |
+| 2 | pass | 2.155e-06 | 0.3456 | 0.6077 |
+| 3 | pass | 2.602e-11 | 0.3462 | 0.712 |
+| 4 | pass | 9.268e-10 | 0.3416 | 0.7023 |
+
+Judged in the simulation (section 4.3): set `division_sim_state: true` and run the
+A5 job. Labels and predictions in `labels_state.parquet`. Stage A4 done in
+3 min.
+
+### Decisions after A3 (user, 2026-10-14)
+
+- **A4 approved**: BASE-O-state run (above), and `division_sim_state: true` set in config.yaml so the A5 simulation rebuilds BASE-O-state on the simulated counts and fits LOG-O-state (section 4.3, X15). Configuration fingerprint unchanged (402722e6157fa828).
+- **The primary alpha_B is reported by the registered section 2.3 rule.** If its pick has a LOG-T slope above 1 (over-recovery), the A5 gather flags it and shows the (null, alpha_B) pair whose slope is closest to 1 beside it, for comparison only; the rule's pick is the one reported.
