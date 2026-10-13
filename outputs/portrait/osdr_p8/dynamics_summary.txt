@@ -1,0 +1,48 @@
+PORTRAIT DYNAMICS SUMMARY  (561,897 cells; technical: mistic, lambda 300, rank 3; spec 3.2 signed anchor)
+SENSITIVITY VARIANT: OSDR maximal-density correction, power 8
+
+Loadings: 19.4% of entries outside [0, 1]; 15.8% of cells have every X_k > 0.
+
+1. Density thresholds per archetype, swept at that archetype's own mean
+   neighbourhood composition (stable = ceiling, UNSTABLE = escape threshold).
+
+   Endothelial          none (always shrinks)
+   CAFs                 none (always shrinks)
+   PVL                  none (always shrinks)
+   B-cells              n=156 [pct 89] stable (grow->shrink)
+   T-cells              n=171 [pct 92] stable (grow->shrink)
+   Myeloid              none (always shrinks)
+   Normal Epithelial    none (always shrinks)
+   Plasmablasts         n=125 [pct 78] stable (grow->shrink)
+   Cancer Epithelial    n=85 [pct 52] stable (grow->shrink)
+
+2. Are the nullclines total-density contours?  (n along the zero contour, q50)
+   pair                             nullcline              mean n     sd n      cv
+   CAFs x Myeloid                   CAFs                 no contour in the window (shrinks throughout)
+   CAFs x Myeloid                   Myeloid              no contour in the window (shrinks throughout)
+   Cancer Epithelial x CAFs         Cancer Epithelial        90.6     4.93  0.0544
+   Cancer Epithelial x CAFs         CAFs                 no contour in the window (shrinks throughout)
+   Cancer Epithelial x Myeloid      Cancer Epithelial        88.1     6.45  0.0733
+   Cancer Epithelial x Myeloid      Myeloid                  70.3    14.68  0.2088
+   Cancer Epithelial x T-cells      Cancer Epithelial        97.4    22.52  0.2311
+   Cancer Epithelial x T-cells      T-cells                 119.9    16.36  0.1364
+
+3. Angle between the two nullcline gradients at the 80th pct (0 deg = degenerate)
+   CAFs x Myeloid                    11.98 deg
+   Cancer Epithelial x CAFs          89.03 deg
+   Cancer Epithelial x Myeloid       75.61 deg
+   Cancer Epithelial x T-cells       11.01 deg
+
+4. Atilde = A B A^T (row <- column: effect of the column archetype's share on the row's log-odds)
+   symmetric / antisymmetric Frobenius norms 5.931 / 1.495; largest entries:
+   PVL <- PVL                                   -2.119
+   Endothelial <- PVL                           -1.542
+   Plasmablasts <- Plasmablasts                 -1.494
+   Myeloid <- Myeloid                           -1.437
+   Myeloid <- Plasmablasts                      +1.306
+   Plasmablasts <- Myeloid                      +1.265
+   Endothelial <- Endothelial                   -1.170
+   Cancer Epithelial <- Normal Epithelial       -1.165
+   Cancer Epithelial <- Cancer Epithelial       -1.076
+   CAFs <- Plasmablasts                         -1.030
+   diagonal (self-terms): Endothelial -1.170, CAFs -0.436, PVL -2.119, B-cells -0.535, T-cells -0.547, Myeloid -1.437, Normal Epithelial -1.025, Plasmablasts -1.494, Cancer Epithelial -1.076

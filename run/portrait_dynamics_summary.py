@@ -1,6 +1,7 @@
 """Numbers behind outputs/portrait/FINDINGS.md that the portrait scripts do not print.
 
-    python run/portrait_dynamics_summary.py
+    python run/portrait_dynamics_summary.py                    # unbounded (the default)
+    python run/portrait_dynamics_summary.py --bound osdr [--power 8] [--target-at-max]
 
 From the production point estimate, as run/portrait_preliminary.py builds it:
 
@@ -14,8 +15,11 @@ From the production point estimate, as run/portrait_preliminary.py builds it:
    (0 degrees = degenerate);
 4. the largest entries of Atilde = A B A^T, and the loadings' sign structure.
 
-Writes outputs/portrait/dynamics_summary.txt.
+Writes outputs/portrait/dynamics_summary.txt, or with `--bound osdr` (OSDR's
+maximal-density correction, a flagged sensitivity variant, spec 5) the same file
+in outputs/portrait/osdr_p<power>[_target_at_max]/.
 """
+import argparse
 import json
 import os
 import sys
@@ -36,7 +40,8 @@ from tissue_dynamics.mixture.basis import build_basis, spec_from_basis    # noqa
 from tissue_dynamics.mixture.data import load_config                      # noqa: E402
 from tissue_dynamics.mixture.model import build_data, responsibilities    # noqa: E402
 from tissue_dynamics.portrait.core import (PortraitModel, build_archetypes,  # noqa: E402
-                                           interaction_matrix, velocity)
+                                           fit_osdr_bound, interaction_matrix, net_rate,
+                                           simplex_loadings)
 
 OUT = "outputs/portrait"
 PAIRS = [("CAFs", "Myeloid"), ("Cancer Epithelial", "CAFs"),
@@ -44,6 +49,15 @@ PAIRS = [("CAFs", "Myeloid"), ("Cancer Epithelial", "CAFs"),
 
 
 def main():
+    global OUT
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--bound", choices=("none", "osdr"), default="none")
+    ap.add_argument("--power", type=int, default=8)
+    ap.add_argument("--target-at-max", action="store_true")
+    a = ap.parse_args()
+    if a.bound == "osdr":
+        OUT = f"outputs/portrait/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
+    os.makedirs(OUT, exist_ok=True)
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
     df.attrs["phi_names"] = json.load(open("data/mixture_cells_major.phi_names.json"))
@@ -60,12 +74,18 @@ def main():
     dens = df["density"].to_numpy(float)
     arche = df["archetype"].astype(str).to_numpy()
     nbr_own = basis.disc_in_own(df)
+    bound = (None if a.bound == "none" else
+             fit_osdr_bound(model, arch, ox, cell_archetype=arche, power=a.power,
+                            target_at_max=a.target_at_max))
     out = []
     say = out.append
 
     say(f"PORTRAIT DYNAMICS SUMMARY  ({len(df):,} cells; technical: "
         f"{cfg['model'].get('technical', 'area')}, lambda {pe['weight_ridge']:g}, rank "
-        f"{cfg['model']['rank']}; spec 3.2 signed anchor)\n")
+        f"{cfg['model']['rank']}; spec 3.2 signed anchor)"
+        + ("" if bound is None else
+           f"\nSENSITIVITY VARIANT: OSDR maximal-density correction, power {bound.power}"
+           f"{', target held at its max' if bound.target_at_max else ''}") + "\n")
     say(f"Loadings: {100 * np.mean((W < 0) | (W > 1)):.1f}% of entries outside [0, 1]; "
         f"{100 * np.mean((W > 0).all(1)):.1f}% of cells have every X_k > 0.\n")
 
@@ -74,9 +94,13 @@ def main():
     grid = np.linspace(np.percentile(dens, .5), np.percentile(dens, 99.9), 6000)
     for k, x in enumerate(nm):
         pb = nbr_own[arche == x].mean(0)
-        e = model.eta(np.repeat(arch.A[k][None], len(grid), 0),
-                      np.repeat(pb[None], len(grid), 0), grid, ox)
-        f = 1 / (1 + np.exp(-e)) - arch.pi_bar[k]
+        if bound is None:
+            e = model.eta(np.repeat(arch.A[k][None], len(grid), 0),
+                          np.repeat(pb[None], len(grid), 0), grid, ox)
+            f = 1 / (1 + np.exp(-e)) - arch.pi_bar[k]
+        else:      # the correction acts on the type's own density, X_k = n w_k
+            w = simplex_loadings(pb[None], arch.A)[0]
+            f = net_rate(grid[:, None] * w[None, :], model, arch, ox, bound)[0][:, k]
         s = np.where(np.diff(np.sign(f)))[0]
         if not len(s):
             say(f"   {x:<20} none (always {'grows' if f[0] > 0 else 'shrinks'})")
@@ -97,9 +121,9 @@ def main():
         GA, GB = np.meshgrid(ga, gb)
         X = np.repeat(ref[None], GA.size, 0)
         X[:, ka], X[:, kb] = GA.ravel(), GB.ravel()
-        _F, Pi = velocity(X, model, arch, ox)
+        R, _Pi = net_rate(X, model, arch, ox, bound)
         for lbl, k in ((na, ka), (nb, kb)):
-            Z = (Pi[:, k] - arch.pi_bar[k]).reshape(GA.shape)
+            Z = R[:, k].reshape(GA.shape)
             segs = [g for g in plt.contour(np.log2(ga), np.log2(gb), Z, [0]).allsegs[0] if len(g)]
             plt.close("all")
             if not segs:
@@ -126,8 +150,8 @@ def main():
                 Zp, Zm = Z.copy(), Z.copy()
                 Zp[j] += e
                 Zm[j] -= e
-                gr[t] = (velocity(Zp[None], model, arch, ox)[1][0, k]
-                         - velocity(Zm[None], model, arch, ox)[1][0, k]) / (2 * e)
+                gr[t] = (net_rate(Zp[None], model, arch, ox, bound)[0][0, k]
+                         - net_rate(Zm[None], model, arch, ox, bound)[0][0, k]) / (2 * e)
             g.append(gr / np.linalg.norm(gr))
         ang = np.degrees(np.arccos(np.clip(abs(g[0] @ g[1]), 0, 1)))
         say(f"   {na + ' x ' + nb:<32} {ang:6.2f} deg")

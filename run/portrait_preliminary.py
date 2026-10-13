@@ -1,12 +1,16 @@
 """Preliminary phase portrait from the fitted mixture (portrait spec 3-7).
 
-    python run/portrait_preliminary.py
+    python run/portrait_preliminary.py                    # unbounded (the default)
+    python run/portrait_preliminary.py --bound osdr [--power 8] [--target-at-max]
 
 No refitting and no simulation: the field is the ODE's right-hand side on a grid.
-Deliberately run UNBOUNDED -- OSDR's `p_correction = c_k * d_k^n` is not applied.
-Spec 5 says to check confinement first and only add the correction as a flagged
-sensitivity variant; the check is reported in outputs/generated/portrait_preliminary.md.
+The default is UNBOUNDED -- OSDR's `p_correction = c_k * d_k^n` is not applied.
+Spec 5 says to check confinement first and add the correction only as a flagged
+sensitivity variant, never as the default. `--bound osdr` is that variant
+(`portrait.core.fit_osdr_bound`, OSDR's code and settings); it writes to its own
+folder, outputs/portrait/osdr_p<power>[_target_at_max]/, and flags every figure.
 """
+import argparse
 import json
 import os
 import sys
@@ -26,8 +30,8 @@ from tissue_dynamics.mixture.basis import build_basis, spec_from_basis    # noqa
 from tissue_dynamics.mixture.data import load_config                      # noqa: E402
 from tissue_dynamics.mixture.model import build_data, responsibilities    # noqa: E402
 from tissue_dynamics.portrait.core import (PortraitModel, build_archetypes,  # noqa: E402
-                                           covariates_from_state, interaction_matrix,
-                                           jacobian, velocity)
+                                           covariates_from_state, fit_osdr_bound,
+                                           interaction_matrix, jacobian, net_rate)
 
 PAIRS = [("CAFs", "Myeloid"), ("Cancer Epithelial", "CAFs"),
          ("Cancer Epithelial", "Myeloid"), ("Cancer Epithelial", "T-cells")]
@@ -56,7 +60,7 @@ def support_mask(GA, GB, obs_ab, held_ok, ka, kb, Xo):
     return (cap & hull & local).reshape(GA.shape), int(held_ok.sum())
 
 
-def find_fixed_points(ref, ka, kb, model, arch, ox, lo, hi, F_red, GA, GB, mask):
+def find_fixed_points(ref, ka, kb, model, arch, ox, lo, hi, F_red, GA, GB, mask, bound=None):
     """Spec 6.1 grid-seeded multistart + 6.2 faces, in log X with a finite guard."""
     lb, ub = np.log([lo[0], lo[1]]) - 2.0, np.log([hi[0], hi[1]]) + 2.0
 
@@ -70,8 +74,8 @@ def find_fixed_points(ref, ka, kb, model, arch, ox, lo, hi, F_red, GA, GB, mask)
         for i, f in zip((ka, kb), free):
             if not f:
                 Z[i] = 0.0
-        _f, p_ = velocity(Z[None], model, arch, ox)
-        r = [p_[0, i] - arch.pi_bar[i] for i in idx]
+        rate, _p = net_rate(Z[None], model, arch, ox, bound)
+        r = [rate[0, i] for i in idx]
         return np.where(np.isfinite(r), r, 1e3)
 
     seeds = []
@@ -102,8 +106,8 @@ def find_fixed_points(ref, ka, kb, model, arch, ox, lo, hi, F_red, GA, GB, mask)
     return found, faces
 
 
-def classify(Z, model, arch, ox, ka, kb):
-    J = jacobian(Z, model, arch, ox)
+def classify(Z, model, arch, ox, ka, kb, bound=None):
+    J = jacobian(Z, model, arch, ox, bound=bound)
     ev_f = np.linalg.eigvals(J)
     ev_r = np.linalg.eigvals(J[np.ix_([ka, kb], [ka, kb])])
     cls = ("stable" if np.all(ev_r.real < 0) else
@@ -112,6 +116,19 @@ def classify(Z, model, arch, ox, ka, kb):
 
 
 def main():
+    global OUT, OUT_F
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--bound", choices=("none", "osdr"), default="none")
+    ap.add_argument("--power", type=int, default=8, help="OSDR's published analyses use 8")
+    ap.add_argument("--target-at-max", action="store_true",
+                    help="hold the target type at its maximal density when setting c_k "
+                         "(OSDR's docstring) instead of sampling it (OSDR's code)")
+    a = ap.parse_args()
+    if a.bound == "osdr":
+        OUT = OUT_F = f"outputs/portrait/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
+    flag = ("[UNBOUNDED: no OSDR density correction]" if a.bound == "none" else
+            f"[SENSITIVITY: OSDR density correction, power {a.power}"
+            f"{', target held at max' if a.target_at_max else ''}]")
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
     df.attrs["phi_names"] = json.load(open("data/mixture_cells_major.phi_names.json"))
@@ -127,11 +144,16 @@ def main():
     names, K, Xo = arch.names, arch.K, arch.X_obs
     ox = float(np.median(df["oxygen"]))
     os.makedirs(OUT, exist_ok=True)
+    bound = None
+    if a.bound == "osdr":
+        bound = fit_osdr_bound(model, arch, ox, cell_archetype=df["archetype"].astype(str).to_numpy(),
+                               power=a.power, target_at_max=a.target_at_max)
     man = {"n_cells": int(len(df)), "K": K, "r2_recon": arch.r2_recon,
-           "oxygen_held_at": ox, "bounded": False, "n_grid": NGRID,
+           "oxygen_held_at": ox, "bounded": bound is not None, "n_grid": NGRID,
            "min_cells": MIN_CELLS, "support_bins": NSUPP,
            "weight_ridge": float(pe["weight_ridge"]),
-           "note": "unbounded: OSDR p_correction deliberately not applied",
+           "note": ("unbounded: OSDR p_correction deliberately not applied" if bound is None
+                    else "SENSITIVITY VARIANT: OSDR maximal-density correction applied"),
            "assumptions": [
                "mean-field closure: E[dX/dt | all cells share neighbourhood N(x)]; "
                "spatial correlation is not represented",
@@ -187,6 +209,19 @@ def main():
         print(f"  {nm:<20}{s:>+8.4f}   {'confining' if s < 0 else 'OUTWARD'}")
     man["density_slope_at_q90"] = conf
     man["confining"] = bool(all(v < 0 for v in conf.values()))
+    if bound is not None:
+        print(f"\n=== OSDR density correction (power {bound.power}; c_k from "
+              f"{'the target held at its max' if bound.target_at_max else 'every type sampled'}) ===")
+        print(f"  {'archetype':<20}{'x_max (q95)':>12}{'pi cap':>9}{'max net rate':>14}{'c_k':>12}"
+              f"{'corr at x_max':>15}")
+        for k, nm in enumerate(names):
+            print(f"  {nm:<20}{bound.x_max[k]:>12.2f}{bound.pi_cap[k]:>9.4f}"
+                  f"{bound.max_flux[k]:>14.4f}{bound.c[k]:>12.3e}"
+                  f"{float(bound.correction(bound.x_max[None])[0, k]):>15.4f}")
+        man["osdr_bound"] = {"power": bound.power, "target_at_max": bound.target_at_max,
+                             "floor": bound.floor,
+                             **{f: {n: float(v) for n, v in zip(names, getattr(bound, f))}
+                                for f in ("c", "x_max", "pi_cap", "max_flux")}}
 
     # ---- spec 6 + 7: slices ------------------------------------------------
     rows, mask_frac = [], {}
@@ -214,9 +249,10 @@ def main():
 
             X = np.repeat(ref[None], GA.size, axis=0)
             X[:, ka], X[:, kb] = GA.ravel(), GB.ravel()
-            _F, Pi = velocity(X, model, arch, ox)
-            U = ((Pi[:, ka] - arch.pi_bar[ka]) / np.log(2)).reshape(GA.shape)
-            V = ((Pi[:, kb] - arch.pi_bar[kb]) / np.log(2)).reshape(GA.shape)
+            R, Pi = net_rate(X, model, arch, ox, bound)
+            _F = X * R
+            U = (R[:, ka] / np.log(2)).reshape(GA.shape)
+            V = (R[:, kb] / np.log(2)).reshape(GA.shape)
             La, Lb = np.log2(ga), np.log2(gb)
             ax.pcolormesh(La, Lb, np.where(M, np.nan, 1.0), cmap="Greys",
                           vmin=0, vmax=3, shading="auto", zorder=0, alpha=.55)
@@ -236,10 +272,10 @@ def main():
                               f"F_{nb}": _F[:, kb], "in_mask": M.ravel()}).to_parquet(
                     f"{OUT}/grid_velocities_{na}_{nb}_q50.parquet".replace(" ", "-"))
             fps, faces = find_fixed_points(ref, ka, kb, model, arch, ox, lo, hi,
-                                           np.stack([U, V]), GA, GB, M)
+                                           np.stack([U, V]), GA, GB, M, bound)
             for xf in fps:
                 Z = ref.copy(); Z[ka], Z[kb] = xf
-                cls, ev_r, ev_f = classify(Z, model, arch, ox, ka, kb)
+                cls, ev_r, ev_f = classify(Z, model, arch, ox, ka, kb, bound)
                 gi = (np.abs(ga - xf[0]).argmin(), np.abs(gb - xf[1]).argmin())
                 inside = bool(M[gi[1], gi[0]])
                 hidden = cls == "stable" and bool(np.any(ev_f.real > 1e-12))
@@ -266,11 +302,11 @@ def main():
         fig.suptitle(f"Phase portraits, held coordinates at q{qref}   "
                      "blue = x-nullcline, red = y-nullcline;  filled circle stable, "
                      "square saddle, triangle unstable;  grey = outside support  "
-                     "[UNBOUNDED: no OSDR density correction]", fontsize=9.5)
+                     + flag, fontsize=9.5)
         fig.tight_layout(rect=[0, 0, 1, .97])
         fig.savefig(f"{OUT}/portrait_q{qref}.png", dpi=140)
         plt.close(fig)
-        print(f"  wrote {OUT_F}/phase_portraits_q{qref}.png")
+        print(f"  wrote {OUT_F}/portrait_q{qref}.png")
 
     # ---- spec 7 secondary output: all K-choose-2 pairs at q50 -------------
     ref = np.percentile(Xo, 50, axis=0)
@@ -286,9 +322,9 @@ def main():
         GA, GB = np.meshgrid(ga, gb)
         X = np.repeat(ref[None], GA.size, axis=0)
         X[:, ka], X[:, kb] = GA.ravel(), GB.ravel()
-        _F, Pi = velocity(X, model, arch, ox)
-        U = ((Pi[:, ka] - arch.pi_bar[ka]) / np.log(2)).reshape(GA.shape)
-        V = ((Pi[:, kb] - arch.pi_bar[kb]) / np.log(2)).reshape(GA.shape)
+        R, _Pi = net_rate(X, model, arch, ox, bound)
+        U = (R[:, ka] / np.log(2)).reshape(GA.shape)
+        V = (R[:, kb] / np.log(2)).reshape(GA.shape)
         La, Lb = np.log2(ga), np.log2(gb)
         ax.plot(np.log2(obs[:1500, 0]), np.log2(obs[:1500, 1]), ".", ms=1,
                 color="C2", alpha=.2)
@@ -301,11 +337,11 @@ def main():
     for ax in axes.ravel()[len(combos):]:
         ax.axis("off")
     fig.suptitle("All 36 archetype pairs, held coordinates at q50, unmasked "
-                 "(secondary output; blue = x-nullcline, red = y-nullcline)", fontsize=12)
+                 "(secondary output; blue = x-nullcline, red = y-nullcline)  " + flag, fontsize=12)
     fig.tight_layout(rect=[0, 0, 1, .98])
     fig.savefig(f"{OUT}/portrait_contact_sheet.png", dpi=110)
     plt.close(fig)
-    print(f"wrote {OUT_F}/phase_portraits_all_pairs.png ({len(combos)} pairs)")
+    print(f"wrote {OUT_F}/portrait_contact_sheet.png ({len(combos)} pairs)")
 
     fp = pd.DataFrame(rows)
     fp.to_csv(f"{OUT}/fixed_points.csv", index=False)
@@ -320,7 +356,7 @@ def main():
     print(f"\nmasked fraction, median over panels: "
           f"{np.median(list(mask_frac.values())):.2f}")
     print(f"wrote {OUT}/{{Atilde.csv,fixed_points.csv,portrait_manifest.json}} "
-          f"and {OUT_F}/interaction_matrix.png")
+          f"and {OUT_F}/Atilde_heatmap.png")
 
 
 if __name__ == "__main__":

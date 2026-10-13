@@ -2,7 +2,9 @@
 
 **Status: preliminary, and deliberately UNBOUNDED.** OSDR's `p_correction = c_k · d_k^n`
 is not applied. Spec §5 says to check confinement first and add the correction only as a
-flagged sensitivity variant; the check (§2 below) fails for one of nine archetypes.
+flagged sensitivity variant; the check (§2 below) fails for one of nine archetypes. The
+correction is run as that variant in §10: it bounds every type, but where it puts the
+tumour's ceiling is set by the correction's power, not by the fit.
 
 Rewritten 2026-10-13 for the production model: MisTIC technical covariates in place of
 cell area, log1p PhiSpace states, the contact/regional neighbourhood split, λ = 300,
@@ -217,8 +219,82 @@ not been recomputed under this fit.
   at the 98th percentile of density is exactly the kind of claim that needs an interval.
 - **Spec §9, sensitivity grid: none of it** (the `π̄` multiplier, calibration and `δ`
   perturbations, radius/`L0`, `K`, `own_state_mode`, `τ`, and the clipped anchor).
-- **The OSDR maximal-density bound**, needed for CAFs (§2).
+- ~~The OSDR maximal-density bound~~: run as a sensitivity variant (§10). Its fixed points and
+  nullclines are not reported as findings.
 - Spec §7's q25/q50/q75 robustness check is only partly possible (§6).
+
+## 10. Sensitivity: OSDR's maximal-density correction
+
+**A sensitivity variant only, never the default (spec §5).** `portrait.core.fit_osdr_bound`
+transcribes OSDR's `CellTypeSpecificDensityEnforcer` (`tdm.model.maximal_density_enforcer`,
+commit 7d04970) with the settings of OSDR's published analyses: power p = 8 and the division
+rate truncated. Each script takes `--bound osdr [--power p] [--target-at-max]` and writes to
+`outputs/portrait/osdr_p<p>[_target_at_max]/`, with every figure flagged.
+
+Each archetype's net rate becomes
+
+```
+min(π_k(X), cap_k) − π̄_k + max(c_k · X_k^p, −0.5),     c_k = −max(0, r_k) / x_max,k^p
+```
+
+in its own density `X_k`. Here `x_max,k` is the 95th percentile of `X_k`, `cap_k` the largest
+`π_k` over the observed neighbourhoods of type-*k* cells, and `r_k` the largest capped net rate
+over 10,000 draws of the state, every density uniform on log2(1 + x) up to its `x_max`. OSDR's
+code draws the target type too; its docstring says the target is held at its maximum. The
+docstring version (`--target-at-max`) gives smaller corrections and the same conclusions.
+
+| archetype | x_max (q95) | π cap | r_k, OSDR's code | r_k, target at max |
+|---|---|---|---|---|
+| Endothelial | 21.1 | 0.298 | 0.119 | 0.033 |
+| CAFs | 23.2 | 0.090 | 0.004 | 0 |
+| PVL | 19.0 | 0.310 | 0.135 | 0.041 |
+| B-cells | 61.4 | 0.491 | 0.303 | 0.086 |
+| T-cells | 88.0 | 0.571 | 0.324 | 0.154 |
+| Myeloid | 27.2 | 0.376 | 0.112 | 0.036 |
+| Normal Epithelial | 25.4 | 0.281 | 0.143 | 0.081 |
+| Plasmablasts | 21.4 | 0.242 | 0.118 | 0.087 |
+| Cancer Epithelial | 55.9 | 0.448 | 0.285 | 0.172 |
+
+Every archetype grows somewhere in the observed range, so every one is corrected; `r_k` is
+also the correction at `x_max,k`. CAFs barely: they shrink almost everywhere, so the one type
+that fails §2's confinement check is the one the bound hardly touches.
+
+**What the bound changes, at p = 8:**
+
+- **The tumour's ceiling moves into the data.** At its own composition it falls from n = 203
+  (97th percentile) to n = 85 (52nd). On the composition path (§4) it runs from n = 213 at the
+  reference blend to n = 46 in a pure tumour neighbourhood, against 214 and 207 unbounded.
+- **Fixed points appear inside support.** Cancer Epithelial × Myeloid has a point stable within
+  its slice at q25 (n = 73) and q50 (n = 100). Both are unstable in the held directions (largest
+  real eigenvalue 0.20 and 0.14), so the full system does not settle there. The tumour-face
+  equilibria move from X_CE = 112–198 to about 45.
+- **The tumour's nullcline becomes a wall.** In every tumour slice it runs near-vertically at
+  X_CE ≈ 44–45, whatever the other type's density (`osdr_p8/portrait_q50.png`).
+- **CAF × Myeloid is unchanged:** both shrink throughout the slice, so OSDR's fibroblast–
+  macrophage bistability is not recovered with OSDR's own correction either.
+
+**Those changes are the correction's, not the fit's.** Every tumour equilibrium sits at
+X_CE = 44–49, 0.8–0.9 of `x_max` (55.9). Where the correction dominates, the equilibrium solves
+`rate = r_k (X_k / x_max)^p`, so its position is set by p. The ceilings at each archetype's own
+composition (`osdr_p<p>/dynamics_summary.txt`; n, with its density percentile):
+
+| archetype | p = 2 | p = 4 | p = 8 (OSDR) | p = 16 | unbounded |
+|---|---|---|---|---|---|
+| Cancer Epithelial | 46 (11th) | 70 (33rd) | 85 (52nd) | 95 (61st) | 203 (97th) |
+| Plasmablasts | 47 (12th) | 81 (47th) | 125 (78th) | 140 (84th) | 201 (97th) |
+| B-cells | 60 (21st) | 115 (74th) | 156 (89th) | 183 (95th) | 205 (98th) |
+| T-cells | 68 (31st) | 133 (82nd) | 171 (92nd) | 192 (96th) | 200 (97th) |
+
+The pure-tumour ceiling moves the same way: n = 25, 37, 46 and 50 for p = 2, 4, 8 and 16.
+Endothelial, CAFs, PVL and Myeloid shrink at every density under every power, as unbounded.
+
+**Reading.** OSDR's correction does what it is built to do: no type grows at its maximal
+density. But it gives the tumour a ceiling anywhere from the 11th to the 61st percentile of
+density depending on a power OSDR chose by hand, and the in-support fixed points sit on the
+wall that power builds. They are a property of the bound, not an estimate, and are not
+reported as findings. The fit's own density response confines eight of nine archetypes
+(§2) and puts the tumour's ceiling at the 97th–98th percentile (§3, §4); that, with its
+caveat about sparse data, is the result.
 
 ## Files
 
@@ -233,4 +309,6 @@ outputs/portrait/
   portrait_q25.png, portrait_q50.png, portrait_q75.png    priority pairs, masked
   portrait_contact_sheet.png                   all 36 pairs at q50, unmasked
   grid_velocities_<a>_<b>_q50.parquet          150x150 grids: n, pi, F, in_mask
+  osdr_p8/, osdr_p8_target_at_max/             section 10: the same set under OSDR's correction
+  osdr_p2/, osdr_p4/, osdr_p16/                section 10: the power sweep (summary, bifurcation)
 ```

@@ -250,3 +250,7 @@ outputs/hpc_log1p_v*/
 outputs/hpc_area/
 # The plain baseline (no area, no MisTIC), fitted beside production (MIX_OUT=outputs/hpc_plain)
 outputs/hpc_plain/
+# OSDR-bounded portrait sensitivity (run/portrait_*.py --bound osdr): the 150x150
+# velocity grids and contact sheets regenerate in minutes
+outputs/portrait/osdr_*/grid_velocities_*.parquet
+outputs/portrait/osdr_*/portrait_contact_sheet.png

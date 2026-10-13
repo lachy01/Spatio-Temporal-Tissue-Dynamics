@@ -5,9 +5,10 @@ import numpy as np
 import pytest
 from mixture_report import ROOT
 
-from tissue_dynamics.portrait.core import (Archetypes, PortraitModel, build_archetypes,
-                                           covariates_from_state, interaction_matrix,
-                                           jacobian, velocity)
+from tissue_dynamics.portrait.core import (Archetypes, DensityBound, PortraitModel,
+                                           build_archetypes, covariates_from_state,
+                                           fit_osdr_bound, interaction_matrix, jacobian,
+                                           net_rate, velocity)
 
 
 @pytest.fixture(scope="module")
@@ -301,3 +302,77 @@ def test_11_6_face_fixed_points_exist_on_single_type_axes():
     xa = brentq(f, 1e-3, 1e3)
     F, _ = velocity(np.array([[xa, 0.0]]), model, arch, 0.0)
     assert abs(F[0, 0]) < 1e-9 and F[0, 1] == 0.0
+
+
+# ---- OSDR's maximal-density correction (spec 5, sensitivity variant) ----------------
+
+def test_osdr_bound_of_zero_is_the_unbounded_field(setup):
+    model, arch, df, W = setup
+    ox = float(np.median(df["oxygen"]))
+    zero = DensityBound(c=np.zeros(arch.K), power=8,
+                        x_max=np.quantile(arch.X_obs, 0.95, axis=0), pi_cap=None)
+    X = arch.X_obs[np.all(arch.X_obs > 0, axis=1)][:50]
+    np.testing.assert_array_equal(velocity(X, model, arch, ox, bound=zero)[0],
+                                  velocity(X, model, arch, ox)[0])
+    np.testing.assert_array_equal(jacobian(X[0], model, arch, ox, bound=zero),
+                                  jacobian(X[0], model, arch, ox))
+
+
+def test_osdr_bound_jacobian_matches_finite_differences(setup):
+    """The correction's diagonal term, checked as spec 11.2 checks the rest. The
+    constants are set so the -0.5 floor never binds at these states."""
+    model, arch, df, W = setup
+    ox = float(np.median(df["oxygen"]))
+    x_max = np.quantile(arch.X_obs, 0.95, axis=0)
+    bound = DensityBound(c=-0.2 / x_max ** 8, power=8, x_max=x_max, pi_cap=None)
+    rng = np.random.default_rng(1)
+    Xo = arch.X_obs[np.all((arch.X_obs > 0) & (arch.X_obs < x_max), axis=1)]
+    worst = 0.0
+    for _ in range(10):
+        X = Xo[rng.integers(len(Xo))].copy()
+        J = jacobian(X, model, arch, ox, bound=bound)
+        for j in range(arch.K):
+            rel_best = np.inf
+            for eps_rel in (1e-4, 1e-5, 1e-6):
+                eps = max(eps_rel * abs(X[j]), 1e-10)
+                Xp, Xm = X.copy(), X.copy()
+                Xp[j] += eps
+                Xm[j] -= eps
+                fd = (velocity(Xp[None], model, arch, ox, bound=bound)[0][0]
+                      - velocity(Xm[None], model, arch, ox, bound=bound)[0][0]) / (2 * eps)
+                denom = np.maximum(np.abs(fd), np.abs(J[:, j]))
+                rel_best = min(rel_best, float((np.abs(fd - J[:, j])
+                                                / np.maximum(denom, 1e-8)).max()))
+            worst = max(worst, rel_best)
+    assert worst < 1e-6, f"max relative Jacobian error with the bound {worst:.2e}"
+
+
+def test_osdr_bound_removes_net_growth_at_maximal_density():
+    """A two-type system whose cycling rises with density without limit: after
+    OSDR's correction no state with a type at its maximal density grows. With
+    the death anchor at 0.6 the net rate stays below 0.5, so OSDR's floor on the
+    correction (-0.5) never binds; above that it would, by design."""
+    model, arch = _synthetic(-1.0, -1.0, 0.5, 0.5, pi_bar=[0.6, 0.6], h_coef=+1.0)
+    rng = np.random.default_rng(0)
+    arch.X_obs = np.exp(rng.normal(1.0, 0.8, size=(5000, 2)))
+    for target_at_max in (False, True):
+        b = fit_osdr_bound(model, arch, 0.0, truncate=False, n_samples=20_000,
+                           target_at_max=target_at_max)
+        assert np.all(b.c < 0), "this system grows at high density, so both need a correction"
+        assert np.all(b.max_flux < 0.5)
+        for k in range(2):
+            g = np.exp(np.linspace(-3, np.log(b.x_max[1 - k]), 200))
+            X = np.zeros((200, 2))
+            X[:, k] = b.x_max[k]
+            X[:, 1 - k] = g
+            rate, _P = net_rate(X, model, arch, 0.0, b)
+            assert rate[:, k].max() < 1e-3, (target_at_max, k, rate[:, k].max())
+
+
+def test_osdr_bound_floor_caps_the_correction_at_minus_half():
+    """OSDR truncates the correction at -0.5 (`np.where(correction < -0.5, -0.5, ...)`)."""
+    b = DensityBound(c=np.array([-1.0, -1e-9]), power=8, x_max=np.array([1.0, 1.0]),
+                     pi_cap=None)
+    corr = b.correction(np.array([[3.0, 3.0]]))[0]
+    assert corr[0] == -0.5 and -0.5 < corr[1] < 0
+    assert b.dcorrection(np.array([[3.0, 3.0]]))[0, 0] == 0.0

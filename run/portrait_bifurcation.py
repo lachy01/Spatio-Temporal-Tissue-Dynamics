@@ -1,6 +1,7 @@
 """Cancer Epithelial equilibria as a function of neighbourhood composition.
 
-    python run/portrait_bifurcation.py
+    python run/portrait_bifurcation.py                    # unbounded (the default)
+    python run/portrait_bifurcation.py --bound osdr [--power 8] [--target-at-max]
 
 Resolves an apparent contradiction in the portrait: at the q50 mixed composition
 the tumour compartment has a stable density ceiling, but at its own
@@ -8,8 +9,12 @@ tumour-dominated composition it has none. Blending between the two shows why --
 the ceiling is born and dies in a pair of saddle-node bifurcations, so it exists
 only inside a window of tumour fraction.
 
-Runs UNBOUNDED, like the rest of the portrait: no OSDR density correction.
+Runs UNBOUNDED by default, like the rest of the portrait. `--bound osdr` adds
+OSDR's maximal-density correction as a flagged sensitivity variant (spec 5) and
+writes to outputs/portrait/osdr_p<power>[_target_at_max]/, as
+run/portrait_preliminary.py does.
 """
+import argparse
 import json
 import os
 import sys
@@ -26,13 +31,25 @@ import jax.numpy as jnp                                              # noqa: E40
 from tissue_dynamics.mixture.basis import build_basis, spec_from_basis    # noqa: E402
 from tissue_dynamics.mixture.data import load_config                      # noqa: E402
 from tissue_dynamics.mixture.model import build_data, responsibilities    # noqa: E402
-from tissue_dynamics.portrait.core import PortraitModel, build_archetypes  # noqa: E402
+from tissue_dynamics.portrait.core import (PortraitModel, build_archetypes,  # noqa: E402
+                                           fit_osdr_bound, net_rate)
 
 OUT = "outputs/portrait"
 N_BLEND, N_DENS = 301, 12000
 
 
 def main():
+    global OUT
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--bound", choices=("none", "osdr"), default="none")
+    ap.add_argument("--power", type=int, default=8)
+    ap.add_argument("--target-at-max", action="store_true")
+    a = ap.parse_args()
+    if a.bound == "osdr":
+        OUT = f"outputs/portrait/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
+    os.makedirs(OUT, exist_ok=True)
+    flag = ("  (UNBOUNDED: no OSDR density correction)" if a.bound == "none" else
+            f"  (SENSITIVITY: OSDR density correction, power {a.power})")
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
     df.attrs["phi_names"] = json.load(open("data/mixture_cells_major.phi_names.json"))
@@ -48,6 +65,9 @@ def main():
     names, Xo = arch.names, arch.X_obs
     ox = float(np.median(df["oxygen"]))
     dens = df["density"].to_numpy(float)
+    bound = (None if a.bound == "none" else
+             fit_osdr_bound(model, arch, ox, cell_archetype=df["archetype"].astype(str).to_numpy(),
+                            power=a.power, target_at_max=a.target_at_max))
     k = names.index("Cancer Epithelial")
 
     ref = np.percentile(Xo, 50, axis=0)
@@ -61,9 +81,12 @@ def main():
     for t in np.linspace(0, 1, N_BLEND):
         w = (1 - t) * w0 + t * w1
         phibar = w @ arch.A
-        eta = model.eta(np.repeat(arch.A[k][None], len(grid), axis=0),
-                        np.repeat(phibar[None], len(grid), axis=0), grid, ox)
-        f = 1.0 / (1.0 + np.exp(-eta)) - arch.pi_bar[k]
+        if bound is None:
+            eta = model.eta(np.repeat(arch.A[k][None], len(grid), axis=0),
+                            np.repeat(phibar[None], len(grid), axis=0), grid, ox)
+            f = 1.0 / (1.0 + np.exp(-eta)) - arch.pi_bar[k]
+        else:      # the correction acts on the type's own density, X_k = n w_k
+            f = net_rate(grid[:, None] * w[None, :], model, arch, ox, bound)[0][:, k]
         cr = sorted((grid[i], bool(f[i] > 0)) for i in np.where(np.diff(np.sign(f)))[0])
         per_t.append((float(w[k]), cr))
 
@@ -118,7 +141,7 @@ def main():
     ax.set_title("Cancer Epithelial equilibria vs neighbourhood composition"
                  + (f"\nfolds at $\\bar{{w}}_{{CE}}$ = {', '.join(f'{f:.3f}' for f in folds)}"
                     if folds else "\nno folds: the equilibrium structure is the same at every blend")
-                 + "  (UNBOUNDED: no OSDR density correction)", fontsize=10.5)
+                 + flag, fontsize=10.5)
     ax.legend(fontsize=8.5, loc="upper left")
     fig.tight_layout()
     fig.savefig(f"{OUT}/composition_bifurcation.png", dpi=150)

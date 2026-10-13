@@ -197,38 +197,132 @@ def covariates_from_state(X, A):
     return wbar @ A, n
 
 
-def velocity(X, model, arch, oxygen, tau=None):
-    """`F_k(X) = X_k (pi_k(X) - pi_bar_k) / tau_k` (spec 3.3).
+@dataclass(frozen=True)
+class DensityBound:
+    """OSDR's maximal-density correction -- a SENSITIVITY variant only (spec 5).
+
+    Somer et al.'s `CellTypeSpecificDensityEnforcer` (tdm.model.
+    maximal_density_enforcer, commit 7d04970) adds to each type's net rate
+
+        corr_k(X) = max(c_k * X_k ** power, floor),      c_k <= 0,
+
+    in the type's OWN density, and caps the division rate at its largest
+    in-sample value (`truncate_division_rate`). `c_k` is the smallest constant
+    that leaves no positive net rate at the type's maximal density `x_max_k`
+    (95th percentile): `c_k = -max(0, max_flux_k) / x_max_k ** power`. Built by
+    `fit_osdr_bound`; the unbounded field is `bound=None` everywhere.
+    """
+
+    c: np.ndarray                 # (K,) correction constants, <= 0
+    power: int
+    x_max: np.ndarray             # (K,) maximal density, 95th percentile of X_k
+    pi_cap: np.ndarray | None     # (K,) division-rate cap, or None (no truncation)
+    floor: float = -0.5
+    max_flux: np.ndarray | None = None   # (K,) the net rate c_k was set from
+    target_at_max: bool = False
+
+    def correction(self, X):
+        return np.maximum(self.c[None, :] * np.power(X, self.power), self.floor)
+
+    def dcorrection(self, X):
+        """d corr_k / d X_k; zero where the floor binds."""
+        raw = self.c[None, :] * np.power(X, self.power)
+        return np.where(raw > self.floor,
+                        self.power * self.c[None, :] * np.power(X, self.power - 1), 0.0)
+
+
+def net_rate(X, model, arch, oxygen, bound=None):
+    """Per-capita net rate `pi_k(X) - pi_bar_k`, OSDR-corrected when `bound` is
+    given. Returns (rate, P) with P the uncorrected cycling probability."""
+    X = np.atleast_2d(np.asarray(X, dtype=float))
+    phibar, n = covariates_from_state(X, arch.A)
+    P = np.empty((len(X), arch.K))
+    for k in range(arch.K):
+        P[:, k] = model.pi(np.repeat(arch.A[k][None], len(X), axis=0), phibar, n, oxygen)
+    if bound is None:
+        return P - arch.pi_bar[None, :], P
+    Pc = P if bound.pi_cap is None else np.minimum(P, bound.pi_cap[None, :])
+    return Pc - arch.pi_bar[None, :] + bound.correction(X), P
+
+
+def velocity(X, model, arch, oxygen, tau=None, bound=None):
+    """`F_k(X) = X_k (pi_k(X) - pi_bar_k) / tau_k` (spec 3.3), plus OSDR's
+    correction inside the bracket when `bound` is given.
 
     `n = sum(X)` is recomputed at every point. Freezing it would delete the
     density channel, which is the only thing that can bound the flow.
     """
     X = np.atleast_2d(np.asarray(X, dtype=float))
     tau = np.ones(arch.K) if tau is None else np.asarray(tau, dtype=float)
-    phibar, n = covariates_from_state(X, arch.A)
-    P = np.empty((len(X), arch.K))
-    for k in range(arch.K):
-        P[:, k] = model.pi(np.repeat(arch.A[k][None], len(X), axis=0), phibar, n, oxygen)
-    return X * (P - arch.pi_bar[None, :]) / tau[None, :], P
+    rate, P = net_rate(X, model, arch, oxygen, bound)
+    return X * rate / tau[None, :], P
 
 
-def jacobian(X, model, arch, oxygen, tau=None):
-    """Analytic Jacobian of `F` (spec 4), one state at a time."""
+def jacobian(X, model, arch, oxygen, tau=None, bound=None):
+    """Analytic Jacobian of `F` (spec 4), one state at a time.
+
+    With a bound: a capped division rate contributes no derivative, and the
+    correction adds `X_k d corr_k / d X_k` on the diagonal.
+    """
     X = np.asarray(X, dtype=float).ravel()
     tau = np.ones(arch.K) if tau is None else np.asarray(tau, dtype=float)
     phibar, n = covariates_from_state(X[None], arch.A)
     phibar, n = phibar[0], float(n[0])
-    F, P = velocity(X[None], model, arch, oxygen, tau)
-    P = P[0]
+    rate, P = net_rate(X[None], model, arch, oxygen, bound)
+    rate, P = rate[0], P[0]
+    live = np.ones(arch.K) if bound is None or bound.pi_cap is None \
+        else (P < bound.pi_cap).astype(float)
+    dcorr = np.zeros(arch.K) if bound is None else bound.dcorrection(X[None])[0]
     J = np.zeros((arch.K, arch.K))
     for k in range(arch.K):
         g_k = model.deta_dphibar(arch.A[k])[0]
         sp = float(model.dh_dlogn(arch.A[k], np.array([n]))[0]) / n   # d/dn, not d/dlog n
         for j in range(arch.K):
             deta = g_k @ (arch.A[j] - phibar) / n + sp
-            J[k, j] = (1.0 if k == j else 0.0) * (P[k] - arch.pi_bar[k]) / tau[k] \
-                + X[k] * P[k] * (1 - P[k]) / tau[k] * deta
+            J[k, j] = X[k] * live[k] * P[k] * (1 - P[k]) / tau[k] * deta
+        J[k, k] += (rate[k] + X[k] * dcorr[k]) / tau[k]
     return J
+
+
+def fit_osdr_bound(model, arch, oxygen, cell_archetype=None, power=8, quantile=0.95,
+                   n_samples=10_000, seed=0, truncate=True, target_at_max=False):
+    """OSDR's correction constants for every archetype (see `DensityBound`).
+
+    As OSDR's code does it (`_fluxes_at_max_density`): every archetype's
+    density, the target's included, is drawn uniformly on the log2(1 + x)
+    scale between 0 and its maximal density, and the largest net rate among
+    the draws sets `c_k`. OSDR's docstring says the target is held at its
+    maximal density; `target_at_max=True` does that instead, which gives a
+    smaller correction. OSDR's published analyses use `power=8` with the
+    division rate truncated.
+
+    The division-rate cap is the largest `pi_k` over the observed
+    neighbourhoods of the cells assigned to archetype `k` (`cell_archetype`,
+    one name per row of `arch.X_obs`); OSDR's is the largest predicted
+    division rate over the cells of each type.
+    """
+    rng = np.random.default_rng(seed)
+    Xo = arch.X_obs
+    x_max = np.quantile(Xo, quantile, axis=0)
+    cap = None
+    if truncate:
+        if cell_archetype is None:
+            raise ValueError("truncate=True needs cell_archetype to find each type's cells")
+        cell_archetype = np.asarray(cell_archetype)
+        _r, P = net_rate(Xo, model, arch, oxygen)
+        cap = np.array([P[cell_archetype == nm, k].max() for k, nm in enumerate(arch.names)])
+    unb = DensityBound(c=np.zeros(arch.K), power=power, x_max=x_max, pi_cap=cap)
+    lmax = np.log2(1.0 + x_max)
+    max_flux = np.zeros(arch.K)
+    for k in range(arch.K):
+        S = 2.0 ** rng.uniform(0.0, lmax[None, :], size=(n_samples, arch.K)) - 1.0
+        if target_at_max:
+            S[:, k] = x_max[k]
+        rate, _P = net_rate(S, model, arch, oxygen, unb)       # capped, no correction
+        max_flux[k] = max(0.0, float(rate[:, k].max()))
+    c = -max_flux / x_max ** power
+    return DensityBound(c=c, power=power, x_max=x_max, pi_cap=cap, max_flux=max_flux,
+                        target_at_max=target_at_max)
 
 
 def interaction_matrix(model, arch):
