@@ -256,6 +256,16 @@ model:
   # NB baseline estimates theta = 1.0007 (SE 0.004), and freeing it moves no state
   # coefficient by more than 0.03 SE (notebooks/nb_baseline.ipynb, section 2).
   # The theta_bracket job still fits F and V side by side.
+  # 2026-10-13, decided by the user: still pinned on the MisTIC model, with the
+  # free fit reported beside it as the bracket (outputs/theta_bracket/report.md,
+  # from run/theta_bracket_summary.py). Without the area spline theta is no
+  # longer ~1: the NB baseline estimates 1.097 and the mixture 1.119, and the
+  # departure tracks proliferation, which a free exponent would partly absorb
+  # (notebooks/nb_baseline.ipynb, section 2). Freed, it leaves the priority-pair
+  # effects in place (15 of 16 inside the pinned fit's intervals, median shift
+  # 0.9 SE) but raises the cycling fraction from 0.098 to 0.133, by x1.5-1.7 in
+  # the immune and stromal types and x1.11 in Cancer Epithelial. Cycling levels
+  # and between-type contrasts are therefore reported as a range.
   theta_free: false
   # 2026-10-06, decided by the user: psi * oxygen is removed from the weight. On
   # the log1p table the field marks vessels (AUROC 0.79) but explains nothing
