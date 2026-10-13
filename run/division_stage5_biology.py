@@ -602,7 +602,7 @@ borrows from MIX (mean P1(Y >= c^T_i)).
 The Rogan-Gladen fraction is negative, with its interval below 0, in
 {len(rg_neg)} types ({', '.join(rg_neg) or 'none'}). There the BASE-T label
 fires less often than its own mean alpha_i: the technical null, fitted across
-all types with one dispersion (alpha0 = 0.83, widened by the cycling cells),
+all types with one dispersion (widened by the cycling cells),
 overstates those types' false-positive rate. The correction is not usable
 there; it says the label's false positives are type-dependent, not that the
 fraction is below zero.

@@ -250,15 +250,15 @@ def main():
     report(f"""
 ## Stage 2 -- NB refits ({time.strftime('%Y-%m-%d %H:%M')})
 
-**The model changed after Stage 1** (decisions recorded in the mixture's
-specification doc, 2026-10-06 to 10-07, all by the user): log N is an offset
+**The shared model** (decisions recorded in the mixture's specification doc,
+2026-10-06 to 10-07, and 2026-10-12 for the MisTIC technical terms; all by the user): log N is an offset
 (theta = 1) in every count arm, MIX included; the oxygen term is dropped; the
 neighbour block is split into contact (0-15 um) and regional (15-80 um) means;
 both state blocks are whitened; B is penalised by lambda ||UV'||_F^2 with the
 balance term tau ||U'U - V'V||_F^2; lambda was selected on null-calibrated
 Test 03 and the rank by spatial CV. With theta = 1 in MIX too, the spec's offset
 mismatch (section 1) no longer arises. The labels are unaffected: they depend
-only on y, N, A and the technical null.
+only on y, the library size and the technical null.
 
 NB-c and NB-d, matched to the mixture's covariates and penalty: the shared weight
 block ({D['own'].shape[1]} own and {D['nbr'].shape[1]} neighbour coordinates,

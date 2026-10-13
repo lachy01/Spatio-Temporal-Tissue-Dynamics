@@ -79,21 +79,23 @@ def main():
     wks = np.array([wk for wk, _ in per_t])
     folds = [float((wks[i] + wks[i + 1]) / 2) for i in np.where(np.diff(n_cross) != 0)[0]]
     obs = Xo[:, k] / Xo.sum(1)
+    lines = []
+    say = lambda m: (print(m), lines.append(m))
     if len(stab):
         lo, hi = stab[:, 0].min(), stab[:, 0].max()
         frac = (100 * np.mean(obs < lo), 100 * np.mean((obs >= lo) & (obs <= hi)),
                 100 * np.mean(obs > hi))
-        print(f"stable ceiling exists for {lo:.3f} <= w_CE <= {hi:.3f} "
+        say(f"stable ceiling exists for {lo:.3f} <= w_CE <= {hi:.3f} "
               f"(blends run {wks.min():.3f} to {wks.max():.3f})")
-        print(f"observed neighbourhoods: {frac[0]:.1f}% below, {frac[1]:.1f}% inside, "
+        say(f"observed neighbourhoods: {frac[0]:.1f}% below, {frac[1]:.1f}% inside, "
               f"{frac[2]:.1f}% above")
-        print(f"ceiling density spans n = {stab[:, 1].min():.0f} to {stab[:, 1].max():.0f} "
+        say(f"ceiling density spans n = {stab[:, 1].min():.0f} to {stab[:, 1].max():.0f} "
               f"(pct {100*np.mean(dens < stab[:, 1].min()):.1f} to "
               f"{100*np.mean(dens < stab[:, 1].max()):.1f})")
     else:
         lo = hi = None
-        print("no stable ceiling at any blend")
-    print(f"crossings per blend: {sorted(set(n_cross.tolist()))}; "
+        say("no stable ceiling at any blend")
+    say(f"crossings per blend: {sorted(set(n_cross.tolist()))}; "
           f"unstable thresholds at {len(unst)} of {len(per_t)} blends; "
           f"folds at w_CE = {[round(f, 3) for f in folds] or 'none'}")
 
@@ -124,7 +126,11 @@ def main():
     pd.DataFrame({"w_CE": [w for w, _ in per_t],
                   "crossings": [json.dumps(c) for _, c in per_t]}).to_csv(
         f"{OUT}/composition_bifurcation.csv", index=False)
-    print(f"wrote {OUT}/composition_bifurcation.{{png,csv}}")
+    with open(f"{OUT}/composition_bifurcation.txt", "w") as fh:
+        fh.write(f"Blend from the q50 reference neighbourhood (w_CE = {wks.min():.3f}) to a pure "
+                 "tumour neighbourhood, sweeping total density at each blend.\n"
+                 + "\n".join(lines) + "\n")
+    print(f"wrote {OUT}/composition_bifurcation.{{png,csv,txt}}")
 
 
 if __name__ == "__main__":

@@ -365,7 +365,8 @@ partition. NB-c and NB-d are Stage 2's fold fits. MIX is refitted per training
 fold (penalty scaled to training size) from the full-data point estimate, to
 the mixture's convergence criteria. LOG-T, LOG-O and LOG-S regress the primary
 labels ({LOG_ARMS['LOG-T']}, {LOG_ARMS['LOG-O']}, LS) on the shared weight
-block plus b0 + theta log N + s(log A), with the mixture's penalty term for
+block plus b0 + theta log N (log N the MisTIC-weighted Nt under `technical: mistic`; plus s(log A)
+under `technical: area`), with the mixture's penalty term for
 term. Count arms are pushed through every threshold on the alpha_B and Td
 grids: NB p = P(Y >= c); MIX p = pi P1(Y >= c) + (1 - pi) P0(Y >= c), with the
 prior pi.

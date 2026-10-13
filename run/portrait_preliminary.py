@@ -173,7 +173,7 @@ def main():
     ax.set_xticks(range(K)); ax.set_xticklabels(names, rotation=45, ha="right", fontsize=8)
     ax.set_yticks(range(K)); ax.set_yticklabels(names, fontsize=8)
     ax.set_title(r"$\tilde{A}=ABA^\top$: effect of column archetype on row's log-odds"
-                 "\n(rank 2 by construction)", fontsize=10)
+                 f"\n(rank {int(np.sum(sv > 1e-8))}, inherited from rank(B))", fontsize=10)
     fig.colorbar(im); fig.tight_layout(); fig.savefig(f"{OUT}/Atilde_heatmap.png", dpi=150)
     plt.close(fig)
 

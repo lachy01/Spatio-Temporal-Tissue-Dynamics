@@ -38,8 +38,8 @@ log: pre-stated rules and expectations first, then one status note per stage.
 
 | item | spec | adopted | why |
 | --- | --- | --- | --- |
-| NB arms' depth term | fixed offset, theta = 1 | **theta free**, as MIX | parity with MIX, so arms differ only in likelihood; fixing the offset cost ~880 log-likelihood on the division NB. Fixed-offset NB and MIX with theta = 1 are sensitivity rows. Decided by the user. |
-| technical null depth term | fixed offset | fixed offset, raw log N | unchanged; labels are definitions |
+| NB arms' depth term | fixed offset, theta = 1 | fixed offset (theta = 1) in every count arm, MIX included, since 2026-10-06 (theta free before, for parity with the mixture of that time) | parity with MIX, so arms differ only in likelihood. Decided by the user. |
+| technical null depth term | fixed offset | fixed offset, by `model.technical`: log Nt (MisTIC-weighted N) plus theta_m m under `mistic` (production since 2026-10-12, decided by the user), raw log N under `plain`; the Stage 1 section gives the fitted form | labels are definitions, rebuilt whenever the null changes |
 | NB-d dispersion | type indicators | **log alpha_i = gamma0 + phi_i^T gamma**, 8-dim projected state | matches the earlier dispersion submodel the spec refers to. Decided by the user. |
 | Wu et al. reference; nucleus-only matrix | used in 5.2 and stage 7 | code paths built; **runs wait for the user to supply the files** | neither is on this machine. Decided by the user. |
 | stage gating | stop after every stage | review after stages 1, 3 and 6; stop on any V-test failure | decided by the user |
@@ -179,15 +179,15 @@ Stage 1 complete in 0.3 min. **Review point** (stages 1,
 
 ## Stage 2 -- NB refits (2026-10-13 01:56)
 
-**The model changed after Stage 1** (decisions recorded in the mixture's
-specification doc, 2026-10-06 to 10-07, all by the user): log N is an offset
+**The shared model** (decisions recorded in the mixture's specification doc,
+2026-10-06 to 10-07, and 2026-10-12 for the MisTIC technical terms; all by the user): log N is an offset
 (theta = 1) in every count arm, MIX included; the oxygen term is dropped; the
 neighbour block is split into contact (0-15 um) and regional (15-80 um) means;
 both state blocks are whitened; B is penalised by lambda ||UV'||_F^2 with the
 balance term tau ||U'U - V'V||_F^2; lambda was selected on null-calibrated
 Test 03 and the rank by spatial CV. With theta = 1 in MIX too, the spec's offset
 mismatch (section 1) no longer arises. The labels are unaffected: they depend
-only on y, N, A and the technical null.
+only on y, the library size and the technical null.
 
 NB-c and NB-d, matched to the mixture's covariates and penalty: the shared weight
 block (8 own and 16 neighbour coordinates,
@@ -272,7 +272,8 @@ partition. NB-c and NB-d are Stage 2's fold fits. MIX is refitted per training
 fold (penalty scaled to training size) from the full-data point estimate, to
 the mixture's convergence criteria. LOG-T, LOG-O and LOG-S regress the primary
 labels (LT_a05, LO_td050, LS) on the shared weight
-block plus b0 + theta log N + s(log A), with the mixture's penalty term for
+block plus b0 + theta log N (log N the MisTIC-weighted Nt under `technical: mistic`; plus s(log A)
+under `technical: area`), with the mixture's penalty term for
 term. Count arms are pushed through every threshold on the alpha_B and Td
 grids: NB p = P(Y >= c); MIX p = pi P1(Y >= c) + (1 - pi) P0(Y >= c), with the
 prior pi.
@@ -289,6 +290,9 @@ All five converged: **yes**. Each fold's held-out
 log-likelihood per cell agrees with the Spartan CV fit for the same fold (rank
 3, lambda 300) to nan, so starting
 from the full-data estimate did not change where the fits end.
+
+_Added 2026-10-13: the MisTIC CV ran afterwards (job `cv_production`, rank 3, lambda 300);
+every fold's held-out log-likelihood per cell agrees with it to 6.5e-12._
 
 | data | converged | iterations | grad_inf | held-out loglik / cell | Spartan CV, same fold | e^delta | mean pi (test) | sd(eta) | minutes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -600,7 +604,7 @@ borrows from MIX (mean P1(Y >= c^T_i)).
 The Rogan-Gladen fraction is negative, with its interval below 0, in
 6 types (Endothelial, CAFs, PVL, B-cells, Myeloid, Normal Epithelial). There the BASE-T label
 fires less often than its own mean alpha_i: the technical null, fitted across
-all types with one dispersion (alpha0 = 0.83, widened by the cycling cells),
+all types with one dispersion (widened by the cycling cells),
 overstates those types' false-positive rate. The correction is not usable
 there; it says the label's false positives are type-dependent, not that the
 fraction is below zero.
@@ -857,6 +861,8 @@ SpaNorm-era table's). The inputs for the Spartan array are in `sim_inputs.npz`.
 ### STOPPED in Stage 6: V9 (allocation model) failed
 
 Per spec section 8, nothing further was run.
+
+_Superseded: the user accepted the V9 exception (Cancer Epithelial CENPF at 10.04%) on 2026-10-13; Stage 6 then ran ("Allocation model as adopted, and V9 (2026-10-13 09:49)" and "Stage 6 results" below)._
 
 
 ## Stage 7 -- sensitivities (2026-10-13 03:33)
