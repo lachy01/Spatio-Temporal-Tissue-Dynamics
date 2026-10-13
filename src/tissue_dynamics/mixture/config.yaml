@@ -172,6 +172,9 @@ model:
   # beats 2 by 85 +/- 16 and is 27 +/- 10 short of rank 5 -- the same size as
   # the held-out cost accepted for lambda = 300 -- so it is the smallest rank
   # practically as good as the best. Test 03 is rerun at rank 3.
+  # Re-checked on the MisTIC model, 2026-10-13 (outputs/penalty/report.md): rank
+  # 3 beats 2 by 74 +/- 15 and is 19.5 +/- 8.9 short of rank 5, the same
+  # pattern, so it stands.
   rank: 3
   ridge_tau: 1.0e-4                # spec 3.2 conditioning term on U, V (b_penalty: nuclear only)
   # 2026-10-06, decided by the user: B is penalised by weight_ridge * ||U V'||_F^2,
@@ -226,6 +229,18 @@ model:
   # held out vs the best lambda: -28.6 +/- 10.5 of 603,152 (5e-5 nats per cell);
   # e^delta 1.7212 against 1.7199 unpenalised; sigma_1(B) per SD 11% smaller.
   # From outputs/hpc/{cv_penalty, sim_single_component_path_full}, 2026-10-07.
+  # Re-checked on the MisTIC model, 2026-10-13 (outputs/penalty/report.md, from
+  # run/lambda_sensitivity.py); kept at 300, decided by the user. Taken
+  # literally, the rule now picks 100: its 4 null replicates all pass (largest
+  # entropy 0.092 against the 0.10 limit), and it beats 300 held out by
+  # 21 +/- 7 (4e-5 nats per cell). But 100 passes only narrowly -- it failed on
+  # the area model (0.127), and Test 03's 20 replicates reach 0.070 even at 300,
+  # so 4 replicates understate the tail -- while 300 passes with margin
+  # (largest 0.019 of 4 on the path; Test 03 20/20). 100 is reported as a
+  # sensitivity: 13 of the 16 priority-pair effects move by under 0.5 bootstrap
+  # SE; the contact effects of Cancer Epithelial on CAFs, Myeloid and T-cells
+  # are 6-9% larger (up to 1.9 SE) and their regional counterparts smaller; two
+  # borderline intervals change side of 1.
   weight_ridge: 300
   # Re-ranged 2026-10-06 for the whitened, Frobenius-penalised weight model:
   # on a per-SD scale a given lambda shrinks far less than it did on B's tiny

@@ -28,6 +28,41 @@ def load(job, out):
     return pd.DataFrame(rows)
 
 
+def block_scores(df, key):
+    """Held-out log-likelihood per spatial block (rows) for each value of `key`
+    (columns), summed over the folds, from each fit's `heldout_by_block`."""
+    S = {}
+    for _, r in df.iterrows():
+        col = S.setdefault(r[key], {})
+        for b, (ll, _n) in r["heldout_by_block"].items():
+            col[int(b)] = col.get(int(b), 0.0) + float(ll)
+    return pd.DataFrame(S).sort_index()
+
+
+def paired(S, a, b):
+    """Total held-out difference between columns a and b of `block_scores`, and
+    its SE: sqrt(n_blocks) x sd of the per-block differences."""
+    d = S[a] - S[b]
+    return float(d.sum()), float(d.std(ddof=1) * np.sqrt(len(d)))
+
+
+def test03_pass(df):
+    """Test 03 (criterion of 2026-10-07), per replicate: the model reports no
+    structure. A replicate passes if EITHER the mixture collapses to one
+    component (e^delta < 0.05, or mean pi within 0.01 of a boundary -- the
+    spec's own branch) OR its two components barely differ and cells are not
+    split between them (rate ratio < 1.5, the Test 07 threshold, and entropy
+    < 0.10). Entropy alone cannot judge a collapse: with pi ~ 0 for every cell
+    it is ~1, the same reading as sharply separated classes."""
+    d_ = df.assign(ratio=np.exp(df["e_delta"].astype(float)),
+                   ent=df["entropy"].astype(float),
+                   mw=df["mean_w"].astype(float))
+    d_["collapsed"] = (d_["e_delta"] < 0.05) | (np.minimum(d_["mw"], 1 - d_["mw"]) < 0.01)
+    d_["unsplit"] = (d_["ratio"] < 1.5) & (d_["ent"] < 0.10)
+    d_["pass"] = d_["collapsed"] | d_["unsplit"]
+    return d_
+
+
 def select_lambda(df, ok):
     """The largest lambda whose held-out log-likelihood is within noise of the best.
 
@@ -53,24 +88,15 @@ def select_lambda(df, ok):
     lams = sorted(ok.index)
     has_blocks = "heldout_by_block" in df and df["heldout_by_block"].notna().all()
 
-    def block_scores(lam):
-        out = {}
-        for _, r in df[df["lam"] == lam].iterrows():
-            for b, (ll, _n) in r["heldout_by_block"].items():
-                out[int(b)] = out.get(int(b), 0.0) + float(ll)
-        return pd.Series(out).sort_index()
-
     if has_blocks:
-        S = pd.DataFrame({lam: block_scores(lam) for lam in lams})
+        S = block_scores(df[df["lam"].isin(lams)], "lam")[lams]
         tot = S.sum()
         top = tot.idxmax()
         print(f"\nheld-out log-likelihood, total over {len(S)} spatial blocks; "
               f"difference from the best (lam={top:g}) with its block SE:")
         within = {}
         for lam in lams:
-            d = S[lam] - S[top]
-            se = float(d.std(ddof=1) * np.sqrt(len(d))) if lam != top else 0.0
-            diff = float(d.sum())
+            diff, se = paired(S, lam, top) if lam != top else (0.0, 0.0)
             within[lam] = lam == top or diff > -2.0 * se
             print(f"  lam {lam:<8g} total {tot[lam]:14.1f}   diff {diff:+10.1f} "
                   f"+/- {se:7.1f}   {'within noise' if within[lam] else 'worse'}")
@@ -294,20 +320,7 @@ def main():
                       f"(max {fro.max():.4f}, threshold 0.15) -> "
                       f"{'PASS' if ok else 'FAIL'}")
             if a.job.startswith("sim_single_component"):
-                # Test 03 (criterion of 2026-10-07): the model reports no
-                # structure. A replicate passes if EITHER the mixture collapses
-                # to one component (e^delta < 0.05, or mean pi within 0.01 of a
-                # boundary -- the spec's own branch) OR its two components
-                # barely differ and cells are not split between them (rate
-                # ratio < 1.5, the Test 07 threshold, and entropy < 0.10).
-                # Entropy alone cannot judge a collapse: with pi ~ 0 for every
-                # cell it is ~1, the same reading as sharply separated classes.
-                d_ = df.assign(ratio=np.exp(df["e_delta"].astype(float)),
-                               ent=df["entropy"].astype(float),
-                               mw=df["mean_w"].astype(float))
-                d_["collapsed"] = (d_["e_delta"] < 0.05) | (np.minimum(d_["mw"], 1 - d_["mw"]) < 0.01)
-                d_["unsplit"] = (d_["ratio"] < 1.5) & (d_["ent"] < 0.10)
-                d_["pass"] = d_["collapsed"] | d_["unsplit"]
+                d_ = test03_pass(df)
                 by = d_.groupby("lam") if "lam" in d_ else [(None, d_)]
                 for lam_, g_ in by:
                     ok_ = bool(g_["pass"].all())
