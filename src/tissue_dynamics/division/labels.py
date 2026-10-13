@@ -12,6 +12,9 @@ from .survival import nb_p_ge, smallest_c_below
 
 ALPHA_B_GRID = (0.05, 0.01, 0.001, 1e-4)
 ALPHA_B_PRIMARY = 0.05     # decided by the user after Stage 1 (spec default 0.001)
+# addendum 1, section 2.1: the grid every BASE-T null is built on from now on
+ALPHA_B_GRID_EXT = (0.001, 0.01, 0.05, 0.1, 0.2)
+TRUNC_GRID = (0.001, 0.01, 0.05)                  # addendum 1, section 1.3: alpha_trim
 TD_GRID = (0.0, 0.25, 0.5, 0.75, 1.0)
 TD_PRIMARY = 0.5
 TRIM_P = 0.001
@@ -19,7 +22,13 @@ SCORE_P = 0.001
 
 
 def ab_tag(a):
-    return {0.05: "a05", 0.01: "a01", 0.001: "a001", 1e-4: "a0001"}[float(a)]
+    return {0.2: "a2", 0.1: "a1", 0.05: "a05", 0.01: "a01", 0.001: "a001",
+            1e-4: "a0001"}[float(a)]
+
+
+def trunc_tag(a):
+    """`LTtr{trunc_tag}_{ab_tag}`, e.g. LTtr05_a1 (addendum 1, section 1.3)."""
+    return {0.05: "05", 0.01: "01", 0.001: "001"}[float(a)]
 
 
 def td_tag(t):
@@ -180,6 +189,132 @@ def robust_null(y, X, offset, trim_p=TRIM_P, tol_frac=0.001, max_iter=20, say=No
             break
         prev = flagged
         keep = ~flagged
+    fit["trace"] = trace
+    fit["stopped_on"] = stopped
+    return fit
+
+
+# --------------------------------------------------------------------------
+# Addendum 1, section 1: the truncated-likelihood null (BASE-T-trunc)
+# --------------------------------------------------------------------------
+def nb_trunc_nll(theta, y, X, offset, m, c, w, k_max):
+    """Negative right-truncated NB2 log-likelihood (summed, weighted by `w`).
+
+    Mean `exp(Xb + offset) + exp(eta) m`, dispersion `alpha = exp(la)`;
+    `theta = [b..., eta, la]`. Each cell with `w = 1` contributes
+    `log f(y) - log F(c - 1)`: its count is known to lie below `c`. F is
+    accumulated by the pmf recursion f(k+1) = f(k) (k + r) p / (k + 1), up to
+    `k_max` = the largest `c` among the weighted cells, so memory stays O(n).
+    A JAX function; gradients by forward mode (`trunc_value_and_grad`).
+    """
+    import jax.numpy as jnp
+    from jax import lax
+    from jax.scipy.special import gammaln
+
+    k = X.shape[1]
+    b, eta, la = theta[:k], theta[k], theta[k + 1]
+    mu = jnp.exp(jnp.clip(X @ b + offset, -30.0, 30.0)) + jnp.exp(eta) * m
+    r = jnp.exp(-la)
+    lrm = jnp.log(r + mu)
+    ll_y = (gammaln(y + r) - gammaln(r) - gammaln(y + 1.0)
+            + r * (jnp.log(r) - lrm) + y * (jnp.log(mu) - lrm))
+    logp = jnp.log(mu) - lrm
+
+    def body(j, carry):
+        logf, logF = carry
+        logF = jnp.where(j < c, jnp.logaddexp(logF, logf), logF)
+        return logf + jnp.log(j + r) - jnp.log(j + 1.0) + logp, logF
+
+    _, logF = lax.fori_loop(0, k_max, body, (r * (jnp.log(r) - lrm), jnp.full_like(mu, -jnp.inf)))
+    return -jnp.sum(w * (ll_y - logF))
+
+
+def fit_nb_truncated(y, X, offset, m, c, keep, x0, maxiter=2000):
+    """Maximise the right-truncated NB likelihood over the cells in `keep`
+    (all with y < c), holding `c` fixed. `x0 = [b..., eta, log alpha]`."""
+    import jax
+    import jax.numpy as jnp
+    from scipy.optimize import minimize
+
+    from ..additive_glm import ETA_MAX, ETA_MIN
+
+    jax.config.update("jax_enable_x64", True)
+    keep = np.asarray(keep, bool)
+    cc = np.where(keep, np.asarray(c, float), 1.0)
+    k_max = int(cc[keep].max())
+    args = [jnp.asarray(a, float) for a in (y, X, offset, m, cc, keep.astype(float))]
+    sw = float(keep.sum())
+
+    def f(t):
+        v = nb_trunc_nll(t, *args, k_max) / sw
+        return v, v
+
+    jf = jax.jit(jax.jacfwd(f, has_aux=True))     # forward mode: 3 parameters, O(n) memory
+
+    def fg(t):
+        g, v = jf(jnp.asarray(t))
+        return float(v), np.asarray(g, float)
+
+    kx = X.shape[1]
+    bounds = [(None, None)] * kx + [(ETA_MIN, ETA_MAX), (-25.0, 10.0)]
+    res = minimize(fg, np.asarray(x0, float), jac=True, method="L-BFGS-B", bounds=bounds,
+                   options={"maxiter": maxiter, "maxcor": 30, "ftol": 1e-16, "gtol": 1e-11,
+                            "maxls": 50})
+    x = res.x
+    v, g = fg(x)
+    free = np.ones(len(x), bool)
+    free[kx] = x[kx] > ETA_MIN + 1e-9
+    mu = np.exp(np.clip(np.asarray(X) @ x[:kx] + offset, -30, 30)) + np.exp(x[kx]) * m
+    # standard errors on (b, eta, log alpha) from the exact Hessian (forward over forward)
+    H = np.asarray(jax.jit(jax.jacfwd(jax.jacfwd(
+        lambda t: nb_trunc_nll(t, *args, k_max))))(jnp.asarray(x)), float)
+    try:
+        se = np.sqrt(np.diag(np.linalg.inv(H)))
+    except np.linalg.LinAlgError:
+        se = np.full(len(x), np.nan)
+    return dict(beta=x[:kx], eta=float(x[kx]), theta_m=float(np.exp(x[kx])),
+                alpha=float(np.exp(x[kx + 1])), nll_per_cell=v,
+                se={"beta0": float(se[0]), "eta": float(se[kx]), "log_alpha": float(se[kx + 1])},
+                grad_inf=float(np.max(np.abs(g[free]))), converged=bool(res.success),
+                n_iter=int(res.nit), mu=mu, k_max=k_max, x=x)
+
+
+def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None):
+    """Addendum 1, section 1.2: the iteratively truncated technical null.
+
+    From `start` (a null fit: beta, eta, alpha), repeat: c_i = smallest count
+    with P(Y >= c | previous fit) < alpha_trim; retain y_i < c_i; maximise the
+    right-truncated likelihood over the retained cells with c fixed. Stop when
+    no c_i changes, or after `max_iter` iterations. Returns the final fit,
+    its `c`, and the trace.
+    """
+    say = say or (lambda *a: None)
+    y = np.asarray(y, float)
+    x = np.concatenate([np.asarray(start["beta"], float),
+                        [float(start["eta"]), np.log(float(start["alpha"]))]])
+    kx = X.shape[1]
+    mu = np.exp(np.clip(X @ x[:kx] + offset, -30, 30)) + np.exp(x[kx]) * m
+    alpha = float(np.exp(x[kx + 1]))
+    c_prev, trace, fit, stopped = None, [], None, "max_iter"
+    for it in range(1, max_iter + 1):
+        c = smallest_c_below(mu, alpha, alpha_trim, family="nb")
+        if c_prev is not None and np.array_equal(c, c_prev):
+            stopped = "thresholds unchanged"
+            break
+        keep = y < c
+        fit = fit_nb_truncated(y, X, offset, m, c, keep, x)
+        x, mu, alpha = fit["x"], fit["mu"], fit["alpha"]
+        changed = int(np.sum(c != c_prev)) if c_prev is not None else int(len(c))
+        trace.append(dict(iteration=it, beta0=float(fit["beta"][0]), theta_m=fit["theta_m"],
+                          alpha0=fit["alpha"], n_retained=int(keep.sum()),
+                          trimmed_frac=float(1 - keep.mean()), c_changed=changed,
+                          converged=fit["converged"], grad_inf=fit["grad_inf"],
+                          nll_per_cell=fit["nll_per_cell"]))
+        say(f"    trunc {alpha_trim:g} it {it:2d}: retained {keep.sum():,} "
+            f"({100 * (1 - keep.mean()):.2f}% trimmed), alpha0 {fit['alpha']:.4f}, "
+            f"theta_m {fit['theta_m']:.4f}, b0 {fit['beta'][0]:+.4f}, c changed {changed:,}")
+        c_prev = c
+    fit["c_trim"] = c_prev
     fit["trace"] = trace
     fit["stopped_on"] = stopped
     return fit

@@ -254,3 +254,5 @@ outputs/hpc_plain/
 # velocity grids and contact sheets regenerate in minutes
 outputs/portrait/osdr_*/grid_velocities_*.parquet
 outputs/portrait/osdr_*/portrait_contact_sheet.png
+# addendum A1 labels (regenerate with run/division_addendum_a1.py)
+outputs/division_classifier/labels_trunc.parquet

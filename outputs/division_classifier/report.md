@@ -1194,3 +1194,50 @@ are reported but do not enter the rule.
 - The alpha_B grid {0.001, 0.01, 0.05, 0.1, 0.2} adds 0.1 and 0.2; the 0.0001 labels already
   reported are kept.
 - BASE-M comes from TWO-P's step 1; TWO-PNB's rates are reported beside it.
+
+## Addendum stage A1 -- BASE-T-trunc (2026-10-13 22:28)
+
+The MisTIC null (mu0 = Nt e^b0 + theta_m m, NB2) refitted by iterated right-truncation (addendum section 1.2) from the untrimmed fit, at alpha_trim 0.001, 0.01 and 0.05. Labels on the extended grid alpha_B in {0.001, 0.01, 0.05, 0.1, 0.2} for every null; the naive Stage 1 labels are unchanged and reproduced exactly at 0.05, 0.01 and 0.001.
+
+### V11 -- known-null recovery
+
+y simulated from the naive production null (b0 -4.9438, theta_m 2.8185, alpha0 0.7889) with the real Nt and m; each fit started from the untrimmed fit of the simulated data. The naive-trimmed fit at the same level is the contrast (not part of the criterion).
+
+| alpha_trim | fit | beta0 | rel err beta0 | theta_m | rel err theta_m | alpha0 | rel err alpha0 | z beta0 | z log theta_m | z log alpha0 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.001 | truncated | -4.95 | 0.001285 | 2.847 | 0.01028 | 0.787 | -0.002461 | -1.802 | 1.031 | -0.4189 |
+| 0.001 | naive-trimmed (contrast) | -4.957 | 0.002735 | 2.831 | 0.004344 | 0.7672 | -0.02746 | nan | nan | nan |
+| 0.01 | truncated | -4.952 | 0.00176 | 2.87 | 0.01819 | 0.7871 | -0.002254 | -2.259 | 1.686 | -0.3427 |
+| 0.01 | naive-trimmed (contrast) | -5.019 | 0.01531 | 2.717 | -0.03592 | 0.6461 | -0.1811 | nan | nan | nan |
+| 0.05 | truncated | -4.959 | 0.003089 | 2.889 | 0.02504 | 0.7817 | -0.009176 | -3.126 | 1.907 | -1.121 |
+| 0.05 | naive-trimmed (contrast) | -5.409 | 0.09418 | 1.65 | -0.4146 | 0.1246 | -0.8421 | nan | nan | nan |
+
+Largest relative error of the truncated fit: 0.0250 (criterion 0.02): **FAIL**. The z columns give the same errors in standard errors of the truncated fit (exact Hessian), so a miss can be told from sampling noise.
+
+### V2-trunc -- null calibration, end to end
+
+| alpha_trim | alpha_B | label rate (refit) | mean alpha_i | relative error | pass (+/-30%) |
+| --- | --- | --- | --- | --- | --- |
+| 0.001 | 0.001 | 0.0006407 | 0.0005897 | 0.08644 | pass |
+| 0.001 | 0.01 | 0.006049 | 0.00596 | 0.01504 | pass |
+| 0.001 | 0.05 | 0.02908 | 0.02896 | 0.00403 | pass |
+| 0.001 | 0.1 | 0.05972 | 0.0594 | 0.005472 | pass |
+| 0.001 | 0.2 | 0.1244 | 0.1242 | 0.001391 | pass |
+| 0.01 | 0.001 | 0.0005054 | 0.0005327 | -0.05123 | pass |
+| 0.01 | 0.01 | 0.005665 | 0.005474 | 0.03484 | pass |
+| 0.01 | 0.05 | 0.02649 | 0.02646 | 0.001159 | pass |
+| 0.01 | 0.1 | 0.05555 | 0.05561 | -0.0009339 | pass |
+| 0.01 | 0.2 | 0.1177 | 0.1176 | 0.001059 | pass |
+| 0.05 | 0.001 | 0.0005001 | 0.000467 | 0.07076 | pass |
+| 0.05 | 0.01 | 0.005017 | 0.004941 | 0.01536 | pass |
+| 0.05 | 0.05 | 0.02399 | 0.02382 | 0.007167 | pass |
+| 0.05 | 0.1 | 0.05183 | 0.05154 | 0.005658 | pass |
+| 0.05 | 0.2 | 0.111 | 0.1106 | 0.003302 | pass |
+
+**pass**.
+
+### STOPPED in addendum stage A1: V11 (truncated-likelihood recovery) failed
+
+largest relative error 0.0250 > 0.02
+
+Per the addendum's section 6, nothing further was run.
