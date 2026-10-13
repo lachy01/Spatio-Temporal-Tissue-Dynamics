@@ -1514,3 +1514,524 @@ Per type, every seed and both truths in `wu_rate_ratio.csv`. The constant-pi mix
 - **X19** (Wu's stricter-grouping ratio at least 4; the mixture on thinned Wu closer to Wu's ratio than to 1.9): Wu's ratio 8.13 (primary grouping 7.96) -> **yes**; the mixture on thinned Wu gives 10.01, closer to Wu's than to 1.9 -> **yes** (and than to MIX's rate ratio 6.70 -> yes). Overall, as written: **holds**.
 
 Stage A6 complete in 17 min. **Review point** (A1, A3, A5 and A6 pause for review).
+
+
+## Addendum stage A2 -- the two-step arm TWO (2026-10-14 00:02)
+
+`run/division_addendum_a2_twostep.py`, `tissue_dynamics.division.twostep`.
+Step 1 is a constant-pi two-component mixture on MIX's production rate block
+(Nt offset with coefficient 1, theta_m m added to both component means and kept
+outside the rate ratio, lambda_1 = exp(e^delta) lambda_0). TWO-P has Poisson
+components, MIX's own; TWO-PNB swaps the cycling component for an NB with one
+shared dispersion alpha1. Step 2 regresses step 1's posterior w on MIX's
+weight block (a0 plus all 141 eta columns),
+with MIX's penalty and weight_ridge scaled to the fitting n; nothing technical
+enters it. **TWO-P is not independent of MIX:** its components are MIX's, so
+it differs from MIX only in not estimating rates and weights jointly.
+
+As a check on step 1, the constant-pi Poisson log-likelihood written here
+equals MIX's own code at stage A (weight = intercept) at the TWO-P optimum:
+-609,653.270416 against -609,653.270416.
+
+### Step 1 fits
+
+| arm | data | converged | iterations | grad_inf | pi | e^delta | rate ratio | theta_m | alpha1 | minutes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| TWO-P | all cells | pass | 18 | 7.14e-11 | 0.1025 | 1.927 | 6.866 | 1.777 | nan | 0.768 |
+| TWO-PNB | all cells | pass | 35 | 4.847e-07 | 0.4848 | 0.9426 | 2.567 | 2.328 | 0.9975 | 0.7886 |
+| TWO-P | train fold 0 | pass | 17 | 9.04e-11 | 0.1027 | 1.925 | 6.857 | 1.772 | nan | 0.581 |
+| TWO-P | train fold 1 | pass | 20 | 1.655e-09 | 0.1023 | 1.937 | 6.936 | 1.821 | nan | 0.5873 |
+| TWO-P | train fold 2 | pass | 20 | 1.516e-10 | 0.1029 | 1.918 | 6.81 | 1.735 | nan | 0.5606 |
+| TWO-P | train fold 3 | pass | 17 | 6.974e-09 | 0.1022 | 1.924 | 6.851 | 1.766 | nan | 0.4733 |
+| TWO-P | train fold 4 | pass | 17 | 3.274e-11 | 0.1022 | 1.928 | 6.877 | 1.795 | nan | 0.4624 |
+| TWO-PNB | train fold 0 | pass | 18 | 4.814e-07 | 0.4867 | 0.9469 | 2.578 | 2.331 | 0.9956 | 0.4659 |
+| TWO-PNB | train fold 1 | pass | 16 | 4.051e-07 | 0.4892 | 0.9425 | 2.566 | 2.377 | 1.003 | 0.4925 |
+| TWO-PNB | train fold 2 | pass | 17 | 1.067e-10 | 0.4795 | 0.9509 | 2.588 | 2.269 | 0.9886 | 0.4678 |
+| TWO-PNB | train fold 3 | pass | 14 | 1.276e-10 | 0.479 | 0.9438 | 2.57 | 2.306 | 0.9982 | 0.4702 |
+| TWO-PNB | train fold 4 | pass | 17 | 5.493e-11 | 0.4904 | 0.9287 | 2.531 | 2.36 | 1.002 | 0.4801 |
+
+### V13 -- TWO-PNB multi-start (10 random starts, all cells)
+
+Starts perturb b0, delta and eta_m about MIX's values and draw pi from
+U(0.02, 0.30) and log alpha1 from N(log 0.3, 1). Criterion (reported, not
+blocking): every start within 1e-4 (relative) of the best objective.
+**agree**
+(0 of 10 starts elsewhere).
+
+| start | converged | objective | rel. gap to best | pi | e^delta | alpha1 | theta_m |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | True | 601987 | 0 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 1 | True | 601987 | 3.8677e-16 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 2 | True | 601987 | 0 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 3 | True | 601987 | 3.8677e-16 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 4 | True | 601987 | 1.93385e-16 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 5 | True | 601987 | 3.8677e-16 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 6 | True | 601987 | 0 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 7 | True | 601987 | 1.93385e-16 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 8 | True | 601987 | 3.8677e-16 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+| 9 | True | 601987 | 1.93385e-16 | 0.484837 | 0.942569 | 0.997537 | 2.3282 |
+
+### Section 3.1b -- Poisson + Poisson against Poisson + NB (all cells, constant pi)
+
+| fit | log-likelihood | pi | e^delta | rate ratio | alpha1 |
+| --- | --- | --- | --- | --- | --- |
+| Poisson + Poisson | -609,653.27 | 0.1025 | 1.9265 | 6.866 | -- |
+| Poisson + NB | -601,987.02 | 0.4848 | 0.9426 | 2.567 | 0.9975 |
+
+Likelihood-ratio statistic 2(ll_PNB - ll_PP) = **15,332.5** for one extra
+parameter (alpha1). The boundary at alpha1 = 0 makes a chi-square(1) reference
+conservative, so no p-value is given.
+
+By type: observed and predicted variance-to-mean ratio of y, rootogram misfit
+(sum of squared hanging-bar residuals on 0-29 and 30+) and the log-likelihood
+gain:
+
+| stratum | cells | observed mean | observed VMR | TWO-P VMR | TWO-PNB VMR | TWO-P rootogram misfit | TWO-PNB rootogram misfit | loglik gain (PNB - PP) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | 561897 | 1.041 | 7.724 | 4.533 | 4.858 | 1772 | 1167 | 7666 |
+| Endothelial | 48729 | 0.3484 | 1.866 | 2.632 | 2.758 | 741.2 | 672.8 | 286.8 |
+| CAFs | 52079 | 0.3883 | 1.998 | 2.789 | 2.967 | 1076 | 957 | 458.1 |
+| PVL | 42834 | 0.4198 | 2.436 | 2.421 | 2.694 | 272.6 | 237.9 | 219.1 |
+| B-cells | 59119 | 0.3918 | 2.694 | 1.812 | 1.956 | 103.7 | 102 | 60.64 |
+| T-cells | 87004 | 0.4966 | 2.912 | 1.784 | 1.905 | 250.1 | 250 | 107.4 |
+| Myeloid | 69669 | 0.4025 | 2.254 | 2.407 | 2.584 | 599.8 | 514.4 | 325.5 |
+| Normal Epithelial | 54508 | 1.178 | 4.943 | 4.421 | 5.107 | 61.79 | 43.42 | 559.8 |
+| Plasmablasts | 42523 | 1.03 | 5.239 | 3.799 | 4.509 | 50.58 | 24.25 | 384.8 |
+| Cancer Epithelial | 105432 | 3.104 | 9.205 | 5.552 | 5.863 | 1404 | 1414 | 5264 |
+
+Where the gain sits on the count axis (sum of per-cell log-likelihood
+differences, PNB - PP, by observed y):
+
+| stratum | y 0-4 | y 5-14 | y 15-29 | y >= 30 |
+| --- | --- | --- | --- | --- |
+| all | -249.4 | 5762.7 | 333.1 | 1819.8 |
+| Cancer Epithelial | -1027.8 | 4575.0 | 57.7 | 1659.2 |
+| Plasmablasts | -68.1 | 313.7 | 81.3 | 57.9 |
+
+Rootograms: `rootogram_pp_vs_pnb.png` (same axes as the NB-against-mixture
+write-up: 0-29 and a pooled 30+). Everything is in `component_family.csv`.
+MIX is not changed. Poisson + NB fits clearly better on these numbers; whether MIX's cycling component should become NB is an open specification question for Lachy.
+
+Known risks of TWO-PNB, as the addendum asks: any extra-Poisson variance among
+non-cycling cells (segmentation, spillover variance the MisTIC mean term does
+not remove) can only go into the NB cycling component, inflating pi; G3 will
+expose this, since a single overdispersed NB with no latent classes will still
+be given a cycling fraction; and G2 simulates exactly an NB cycling component
+on a Poisson null, so TWO-PNB's G2 results are a home fixture, to be read as
+MIX's G1 results are.
+
+### BASE-M (hard MAP label from TWO-P's step 1, all cells; not a target)
+
+| stratum | BASE-M rate | BASE-T (0.05) rate | mean w (TWO-P) | agreement |
+| --- | --- | --- | --- | --- |
+| all | 0.0543 | 0.0329 | 0.1025 | 0.9785 |
+| Endothelial | 0.0178 | 0.0107 | 0.0695 | 0.9925 |
+| CAFs | 0.0168 | 0.0087 | 0.0611 | 0.9919 |
+| PVL | 0.0249 | 0.0146 | 0.0797 | 0.9893 |
+| B-cells | 0.0324 | 0.0198 | 0.0986 | 0.9873 |
+| T-cells | 0.0435 | 0.0273 | 0.1058 | 0.9837 |
+| Myeloid | 0.0228 | 0.0129 | 0.0743 | 0.9898 |
+| Normal Epithelial | 0.0517 | 0.0264 | 0.0956 | 0.9745 |
+| Plasmablasts | 0.0588 | 0.0329 | 0.1075 | 0.9738 |
+| Cancer Epithelial | 0.1431 | 0.0912 | 0.1669 | 0.9481 |
+
+### Step 2 fits, V6, V7, V8
+
+V6: the step 2 predictor a0 + eta_state has the same 141
+eta columns as MIX in the same order, and equals MIX's `_logit_pi` at the
+production estimate to 3.6e-15. **pass**.
+V7: largest sd(eta) 0.420 (criterion 20). **pass**.
+V8: refitting TWO-P's step 2 on training fold 0 reproduces it to 0.0e+00.
+**pass**. Every step 2 fit started from MIX's weight
+block for the same data (production estimate on all cells, Stage 3's fold fit
+per fold) and ran to the mixture's convergence criteria.
+
+| arm | data | converged | iterations | grad_inf | objective | sd(eta) | sigma1(B) | minutes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| TWO-P | all cells | pass | 387 | 1.613e-09 | 1.813e+05 | 0.4155 | 0.1517 | 0.6437 |
+| TWO-P | train fold 0 | pass | 407 | 9.767e-06 | 1.433e+05 | 0.418 | 0.1528 | 0.9133 |
+| TWO-P | train fold 1 | pass | 275 | 5.702e-06 | 1.47e+05 | 0.413 | 0.1484 | 0.5115 |
+| TWO-P | train fold 2 | pass | 319 | 4.283e-07 | 1.438e+05 | 0.4168 | 0.1539 | 0.3861 |
+| TWO-P | train fold 3 | pass | 369 | 7.998e-06 | 1.448e+05 | 0.4199 | 0.1569 | 0.3336 |
+| TWO-P | train fold 4 | pass | 407 | 4.241e-11 | 1.462e+05 | 0.412 | 0.1475 | 0.3748 |
+| TWO-PNB | all cells | pass | 1122 | 2.53e-08 | 3.886e+05 | 0.09645 | 0.03585 | 2.08 |
+| TWO-PNB | train fold 0 | pass | 849 | 3.256e-07 | 3.068e+05 | 0.09721 | 0.03585 | 1.834 |
+| TWO-PNB | train fold 1 | pass | 1042 | 7.871e-07 | 3.155e+05 | 0.09418 | 0.03459 | 1.696 |
+| TWO-PNB | train fold 2 | pass | 1923 | 1.269e-07 | 3.07e+05 | 0.09894 | 0.03795 | 1.938 |
+| TWO-PNB | train fold 3 | pass | 1023 | 7.865e-07 | 3.108e+05 | 0.09867 | 0.0373 | 1.466 |
+| TWO-PNB | train fold 4 | pass | 1322 | 7.986e-06 | 3.141e+05 | 0.09369 | 0.03433 | 1.672 |
+
+### V4 -- push-through identity
+
+50,000 random cells, y simulated from each arm's out-of-fold predictive
+distribution (prior pi, step 1's components). Formal criterion on the primary
+thresholds (LT_a05, LO_td050): within 3 Monte Carlo SE. **pass**.
+Of the other 48 comparisons 0 are beyond 3 SE (about
+0.13 expected by chance).
+
+| arm | threshold | mean p | simulated rate | MC SE | z |
+| --- | --- | --- | --- | --- | --- |
+| TWO-P | LT_a05 | 0.039584 | 0.03972 | 0.00085899 | 0.15887 |
+| TWO-P | LO_td050 | 0.18692 | 0.18998 | 0.0017141 | 1.7831 |
+| TWO-PNB | LT_a05 | 0.033248 | 0.03282 | 0.00079872 | -0.5363 |
+| TWO-PNB | LO_td050 | 0.18798 | 0.18752 | 0.0017207 | -0.26564 |
+
+Out of fold w, pi_TWO and the pushed-through p for every threshold are in
+`two_step.parquet`; parameters in `two_step_params.json`; fits in
+`two_step_fits.csv`. X12 (BASE-M below BASE-T at 0.05): **does not hold**
+(0.0543 against 0.0329).
+X14's first clause (likelihood-ratio statistic in the hundreds or more, most of
+the gain in Cancer Epithelial's 15-30+ range): statistic 15,332; Cancer
+Epithelial gains 5,264.1 of 7,666.2, 1,716.9 of it
+from cells with y >= 15. Its second clause (V13 agreement):
+**holds**. Its third clause (G3) waits
+for A5. Part 1 of A2 done in 30 min.
+
+
+## Addendum stage A2 -- V12: iterated two-step converges to MIX (2026-10-14 00:07)
+
+`run/division_addendum_a2_v12.py`. Generalised EM on the penalised MIX
+objective over all 561,897 cells, from the TWO-P solution: E-step under the
+current pi(x); weight M-step 15 L-BFGS steps on the penalised
+fractional logistic objective (MIX's penalty); rate M-step b0, delta and eta_m
+by Newton to convergence; SQUAREM (S3) with a monotone safeguard. Cap 2000
+EM map evaluations.
+
+The run starts from TWO-P itself (step 1 rates and step 2 weights) rather than
+the constant-pi fixed point, because U = V = 0 is a saddle a partial weight
+M-step cannot leave; TWO-P is where the section 3.4 path lands after its first
+iteration with an exact weight M-step. The premise that the rates do not move
+in that first iteration holds: a rate M-step on step 1's own posteriors moves
+(b0, delta, eta_m) by 1.1e-16.
+
+| | penalised objective (-loglik + penalty) |
+| --- | --- |
+| TWO-P (start) | 603,222.055937 |
+| end of EM | 600,332.256348 |
+| production MIX | 600,332.256348 |
+| end - production | +3.801e-07 (+6.33e-13 relative) |
+
+EM map evaluations: 315. The objective never increased: **yes**
+(largest increase 0.00e+00). Both pass criteria first held after
+12 map evaluations.
+
+Largest coefficient difference from production MIX, by block (B = U V'):
+
+| block | max |difference| |
+| --- | --- |
+| a0 | 5.15e-08 |
+| a | 4.78e-08 |
+| c | 6.94e-08 |
+| h | 5.20e-07 |
+| K | 1.04e-06 |
+| b0 | 1.94e-09 |
+| delta | 7.03e-11 |
+| eta_m | 3.23e-09 |
+| B | 4.41e-08 |
+
+Trace (selected cycles; every cycle in `v12_trace.csv`):
+
+| maps | objective | step | alpha | gap to production | max |coef diff| |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 603222.06 | start | nan | nan | nan |
+| 3 | 600365.5 | squarem | -2.4312485 | 33.248585 | 0.031803262 |
+| 6 | 600333.34 | squarem | -2.7045365 | 1.0825609 | 0.011144256 |
+| 15 | 600332.26 | squarem | -1.7147475 | 0.0034228868 | 0.00022768335 |
+| 30 | 600332.26 | squarem | -1.1408225 | 0.0016257277 | 2.5164615e-05 |
+| 75 | 600332.26 | squarem | -1.1275943 | 0.00024053233 | 2.1675111e-05 |
+| 150 | 600332.26 | squarem | -1 | 3.3590011e-05 | 1.1449847e-05 |
+| 300 | 600332.26 | squarem | -1 | 6.1735045e-07 | 6.5629851e-07 |
+| 315 | 600332.26 | squarem | -1 | 3.8009603e-07 | 1.0409648e-06 |
+
+**V12: pass.**
+
+
+## Addendum stage A2 -- extended grid and TWO, scored out of fold (2026-10-14 01:02)
+
+`run/division_addendum_a2_grid.py`. Every BASE-T label of the extended grid
+(alpha_B 0.001-0.2) for the naive null and each truncated null: LOG-T fitted on
+each (Stage 3's specification, five training folds), NB-c, NB-d and MIX pushed
+through each (their out-of-fold predictive distributions, unchanged), and TWO-P
+and TWO-PNB pushed through each (part 1). Scored as Stage 4 on the same 300
+block-bootstrap replicates; * marks a 95% interval excluding 0 (differences) or
+1 (calibration). Per the interpretive rule, LOG-T is trained on the label it is
+scored against. The NB, MIX and TWO fits never see a label: across alpha_B
+only their label-scale expression changes.
+
+### LOG-T fits (V7, convergence)
+
+All 95 new fold fits converged: **yes**. V7 (sd(eta) <= 20):
+**pass** (largest 0.958).
+
+| null | alpha_B | fits | converged | max sd(eta) | mean theta | minutes |
+| --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.001 | 5 | 5/5 | 0.7113 | 1.084 | 1.404 |
+| naive | 0.01 | 5 | 5/5 | 0.9207 | 0.835 | 2.097 |
+| naive | 0.1 | 5 | 5/5 | 0.6486 | 0.3552 | 2.092 |
+| naive | 0.2 | 5 | 5/5 | 0.5286 | 0.1506 | 2.863 |
+| trunc 0.001 | 0.001 | 5 | 5/5 | 0.7101 | 1.082 | 1.335 |
+| trunc 0.001 | 0.01 | 5 | 5/5 | 0.9161 | 0.8351 | 1.885 |
+| trunc 0.001 | 0.05 | 5 | 5/5 | 0.7847 | 0.6 | 2.025 |
+| trunc 0.001 | 0.1 | 5 | 5/5 | 0.6482 | 0.3552 | 1.939 |
+| trunc 0.001 | 0.2 | 5 | 5/5 | 0.5279 | 0.1508 | 2.694 |
+| trunc 0.01 | 0.001 | 5 | 5/5 | 0.9011 | 1.388 | 1.749 |
+| trunc 0.01 | 0.01 | 5 | 5/5 | 0.9098 | 0.9146 | 2.16 |
+| trunc 0.01 | 0.05 | 5 | 5/5 | 0.7551 | 0.6538 | 1.984 |
+| trunc 0.01 | 0.1 | 5 | 5/5 | 0.6175 | 0.381 | 2.147 |
+| trunc 0.01 | 0.2 | 5 | 5/5 | 0.5139 | 0.1897 | 3.141 |
+| trunc 0.05 | 0.001 | 5 | 5/5 | 0.9584 | 1.488 | 1.939 |
+| trunc 0.05 | 0.01 | 5 | 5/5 | 0.8993 | 0.955 | 2.024 |
+| trunc 0.05 | 0.05 | 5 | 5/5 | 0.7162 | 0.686 | 2.148 |
+| trunc 0.05 | 0.1 | 5 | 5/5 | 0.6063 | 0.4037 | 2.247 |
+| trunc 0.05 | 0.2 | 5 | 5/5 | 0.5147 | 0.2268 | 2.809 |
+
+### Log loss (all cells; lower is better)
+
+| null | alpha_B | label rate | NB-c | NB-d | MIX | TWO-P | TWO-PNB | LOG-T |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.001 | 0.0021 | 0.0136 | 0.0136 | 0.0151 | 0.0153 | 0.0139 | 0.0132 |
+| naive | 0.01 | 0.0114 | 0.0550 | 0.0550 | 0.0552 | 0.0565 | 0.0577 | 0.0537 |
+| naive | 0.05 | 0.0329 | 0.1294 | 0.1294 | 0.1298 | 0.1323 | 0.1368 | 0.1293 |
+| naive | 0.1 | 0.0578 | 0.2017 | 0.2016 | 0.2018 | 0.2049 | 0.2109 | 0.2054 |
+| naive | 0.2 | 0.1121 | 0.3281 | 0.3279 | 0.3286 | 0.3330 | 0.3387 | 0.3359 |
+| trunc 0.001 | 0.001 | 0.0021 | 0.0136 | 0.0136 | 0.0150 | 0.0152 | 0.0139 | 0.0131 |
+| trunc 0.001 | 0.01 | 0.0113 | 0.0548 | 0.0548 | 0.0550 | 0.0564 | 0.0576 | 0.0535 |
+| trunc 0.001 | 0.05 | 0.0329 | 0.1293 | 0.1293 | 0.1297 | 0.1322 | 0.1366 | 0.1291 |
+| trunc 0.001 | 0.1 | 0.0577 | 0.2015 | 0.2015 | 0.2016 | 0.2047 | 0.2107 | 0.2052 |
+| trunc 0.001 | 0.2 | 0.1121 | 0.3280 | 0.3279 | 0.3285 | 0.3329 | 0.3386 | 0.3358 |
+| trunc 0.01 | 0.001 | 0.0062 | 0.0316 | 0.0315 | 0.0320 | 0.0328 | 0.0329 | 0.0298 |
+| trunc 0.01 | 0.01 | 0.0188 | 0.0795 | 0.0795 | 0.0797 | 0.0816 | 0.0845 | 0.0783 |
+| trunc 0.01 | 0.05 | 0.0427 | 0.1557 | 0.1557 | 0.1561 | 0.1590 | 0.1643 | 0.1560 |
+| trunc 0.01 | 0.1 | 0.0696 | 0.2294 | 0.2293 | 0.2296 | 0.2332 | 0.2391 | 0.2341 |
+| trunc 0.01 | 0.2 | 0.1249 | 0.3511 | 0.3509 | 0.3521 | 0.3569 | 0.3619 | 0.3594 |
+| trunc 0.05 | 0.001 | 0.0135 | 0.0567 | 0.0567 | 0.0562 | 0.0575 | 0.0602 | 0.0541 |
+| trunc 0.05 | 0.01 | 0.0282 | 0.1060 | 0.1060 | 0.1067 | 0.1091 | 0.1133 | 0.1055 |
+| trunc 0.05 | 0.05 | 0.0549 | 0.1853 | 0.1853 | 0.1860 | 0.1896 | 0.1948 | 0.1862 |
+| trunc 0.05 | 0.1 | 0.0838 | 0.2598 | 0.2597 | 0.2605 | 0.2647 | 0.2698 | 0.2653 |
+| trunc 0.05 | 0.2 | 0.1407 | 0.3760 | 0.3759 | 0.3777 | 0.3824 | 0.3869 | 0.3855 |
+
+### AUPRC (all cells)
+
+| null | alpha_B | label rate | NB-c | NB-d | MIX | TWO-P | TWO-PNB | LOG-T |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.001 | 0.0021 | 0.0141 | 0.0135 | 0.0112 | 0.0100 | 0.0153 | 0.0202 |
+| naive | 0.01 | 0.0114 | 0.0531 | 0.0521 | 0.0599 | 0.0528 | 0.0520 | 0.0743 |
+| naive | 0.05 | 0.0329 | 0.1049 | 0.1048 | 0.1141 | 0.1063 | 0.0921 | 0.1250 |
+| naive | 0.1 | 0.0578 | 0.1416 | 0.1418 | 0.1456 | 0.1400 | 0.1175 | 0.1456 |
+| naive | 0.2 | 0.1121 | 0.2124 | 0.2127 | 0.2055 | 0.1950 | 0.1673 | 0.1938 |
+| trunc 0.001 | 0.001 | 0.0021 | 0.0142 | 0.0135 | 0.0114 | 0.0102 | 0.0153 | 0.0202 |
+| trunc 0.001 | 0.01 | 0.0113 | 0.0529 | 0.0519 | 0.0597 | 0.0527 | 0.0517 | 0.0739 |
+| trunc 0.001 | 0.05 | 0.0329 | 0.1048 | 0.1047 | 0.1140 | 0.1062 | 0.0919 | 0.1249 |
+| trunc 0.001 | 0.1 | 0.0577 | 0.1413 | 0.1415 | 0.1454 | 0.1397 | 0.1170 | 0.1454 |
+| trunc 0.001 | 0.2 | 0.1121 | 0.2123 | 0.2125 | 0.2053 | 0.1948 | 0.1672 | 0.1937 |
+| trunc 0.01 | 0.001 | 0.0062 | 0.0503 | 0.0483 | 0.0540 | 0.0468 | 0.0506 | 0.0762 |
+| trunc 0.01 | 0.01 | 0.0188 | 0.0941 | 0.0931 | 0.1015 | 0.0916 | 0.0873 | 0.1203 |
+| trunc 0.01 | 0.05 | 0.0427 | 0.1397 | 0.1398 | 0.1433 | 0.1359 | 0.1234 | 0.1579 |
+| trunc 0.01 | 0.1 | 0.0696 | 0.1726 | 0.1728 | 0.1694 | 0.1649 | 0.1483 | 0.1730 |
+| trunc 0.01 | 0.2 | 0.1249 | 0.2385 | 0.2388 | 0.2268 | 0.2151 | 0.1942 | 0.2200 |
+| trunc 0.05 | 0.001 | 0.0135 | 0.1090 | 0.1069 | 0.1120 | 0.0996 | 0.1035 | 0.1452 |
+| trunc 0.05 | 0.01 | 0.0282 | 0.1441 | 0.1434 | 0.1457 | 0.1349 | 0.1350 | 0.1687 |
+| trunc 0.05 | 0.05 | 0.0549 | 0.1816 | 0.1817 | 0.1734 | 0.1684 | 0.1652 | 0.1925 |
+| trunc 0.05 | 0.1 | 0.0838 | 0.2104 | 0.2107 | 0.1971 | 0.1937 | 0.1898 | 0.2057 |
+| trunc 0.05 | 0.2 | 0.1407 | 0.2731 | 0.2734 | 0.2570 | 0.2485 | 0.2377 | 0.2522 |
+
+### AUROC (all cells)
+
+| null | alpha_B | label rate | NB-c | NB-d | MIX | TWO-P | TWO-PNB | LOG-T |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.001 | 0.0021 | 0.8507 | 0.8486 | 0.7382 | 0.6812 | 0.8176 | 0.8418 |
+| naive | 0.01 | 0.0114 | 0.8157 | 0.8144 | 0.7945 | 0.7613 | 0.7738 | 0.8076 |
+| naive | 0.05 | 0.0329 | 0.7667 | 0.7664 | 0.7641 | 0.7435 | 0.7165 | 0.7563 |
+| naive | 0.1 | 0.0578 | 0.7329 | 0.7330 | 0.7316 | 0.7181 | 0.6812 | 0.7013 |
+| naive | 0.2 | 0.1121 | 0.6926 | 0.6928 | 0.6892 | 0.6751 | 0.6438 | 0.6515 |
+| trunc 0.001 | 0.001 | 0.0021 | 0.8512 | 0.8491 | 0.7398 | 0.6834 | 0.8178 | 0.8416 |
+| trunc 0.001 | 0.01 | 0.0113 | 0.8154 | 0.8141 | 0.7942 | 0.7610 | 0.7733 | 0.8073 |
+| trunc 0.001 | 0.05 | 0.0329 | 0.7665 | 0.7662 | 0.7640 | 0.7434 | 0.7161 | 0.7561 |
+| trunc 0.001 | 0.1 | 0.0577 | 0.7328 | 0.7329 | 0.7315 | 0.7180 | 0.6806 | 0.7012 |
+| trunc 0.001 | 0.2 | 0.1121 | 0.6925 | 0.6927 | 0.6891 | 0.6750 | 0.6436 | 0.6514 |
+| trunc 0.01 | 0.001 | 0.0062 | 0.8774 | 0.8759 | 0.8435 | 0.8170 | 0.8536 | 0.8787 |
+| trunc 0.01 | 0.01 | 0.0188 | 0.8255 | 0.8247 | 0.8164 | 0.7925 | 0.7871 | 0.8190 |
+| trunc 0.01 | 0.05 | 0.0427 | 0.7713 | 0.7711 | 0.7690 | 0.7539 | 0.7292 | 0.7603 |
+| trunc 0.01 | 0.1 | 0.0696 | 0.7347 | 0.7349 | 0.7326 | 0.7218 | 0.6921 | 0.7016 |
+| trunc 0.01 | 0.2 | 0.1249 | 0.6946 | 0.6948 | 0.6897 | 0.6758 | 0.6517 | 0.6542 |
+| trunc 0.05 | 0.001 | 0.0135 | 0.8878 | 0.8868 | 0.8791 | 0.8657 | 0.8685 | 0.8889 |
+| trunc 0.05 | 0.01 | 0.0282 | 0.8317 | 0.8314 | 0.8275 | 0.8113 | 0.8000 | 0.8244 |
+| trunc 0.05 | 0.05 | 0.0549 | 0.7777 | 0.7776 | 0.7739 | 0.7636 | 0.7442 | 0.7661 |
+| trunc 0.05 | 0.1 | 0.0838 | 0.7387 | 0.7388 | 0.7350 | 0.7266 | 0.7053 | 0.7060 |
+| trunc 0.05 | 0.2 | 0.1407 | 0.7002 | 0.7004 | 0.6953 | 0.6848 | 0.6676 | 0.6604 |
+
+### Calibration-in-the-large, mean p / label rate (all cells)
+
+| null | alpha_B | label rate | NB-c | NB-d | MIX | TWO-P | TWO-PNB | LOG-T |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.001 | 0.0021 | 0.517 | 0.565 | 0.474 | 0.560 | 0.971 | 1.001 |
+| naive | 0.01 | 0.0114 | 0.668 | 0.681 | 1.017 | 1.080 | 0.909 | 1.002 |
+| naive | 0.05 | 0.0329 | 0.953 | 0.950 | 1.173 | 1.200 | 1.009 | 1.002 |
+| naive | 0.1 | 0.0578 | 1.060 | 1.054 | 1.081 | 1.100 | 1.030 | 1.001 |
+| naive | 0.2 | 0.1121 | 1.107 | 1.101 | 1.002 | 1.020 | 1.036 | 1.001 |
+| trunc 0.001 | 0.001 | 0.0021 | 0.517 | 0.565 | 0.476 | 0.562 | 0.973 | 1.002 |
+| trunc 0.001 | 0.01 | 0.0113 | 0.669 | 0.683 | 1.019 | 1.083 | 0.911 | 1.002 |
+| trunc 0.001 | 0.05 | 0.0329 | 0.953 | 0.951 | 1.174 | 1.201 | 1.010 | 1.002 |
+| trunc 0.001 | 0.1 | 0.0577 | 1.061 | 1.055 | 1.081 | 1.100 | 1.030 | 1.001 |
+| trunc 0.001 | 0.2 | 0.1121 | 1.107 | 1.101 | 1.002 | 1.020 | 1.036 | 1.001 |
+| trunc 0.01 | 0.001 | 0.0062 | 0.526 | 0.550 | 0.787 | 0.827 | 0.789 | 1.003 |
+| trunc 0.01 | 0.01 | 0.0188 | 0.766 | 0.771 | 1.160 | 1.180 | 0.899 | 1.003 |
+| trunc 0.01 | 0.05 | 0.0427 | 1.029 | 1.024 | 1.121 | 1.135 | 1.011 | 1.002 |
+| trunc 0.01 | 0.1 | 0.0696 | 1.100 | 1.093 | 1.035 | 1.051 | 1.029 | 1.001 |
+| trunc 0.01 | 0.2 | 0.1249 | 1.110 | 1.105 | 0.989 | 1.006 | 1.033 | 1.001 |
+| trunc 0.05 | 0.001 | 0.0135 | 0.617 | 0.627 | 1.048 | 1.034 | 0.744 | 1.004 |
+| trunc 0.05 | 0.01 | 0.0282 | 0.898 | 0.896 | 1.164 | 1.158 | 0.919 | 1.003 |
+| trunc 0.05 | 0.05 | 0.0549 | 1.093 | 1.085 | 1.044 | 1.052 | 1.006 | 1.001 |
+| trunc 0.05 | 0.1 | 0.0838 | 1.128 | 1.121 | 0.993 | 1.008 | 1.026 | 1.001 |
+| trunc 0.05 | 0.2 | 0.1407 | 1.109 | 1.104 | 0.982 | 1.000 | 1.031 | 1.001 |
+
+### Paired differences in log loss (negative: the first arm is better)
+
+| null | alpha_B | MIX - LOG-T | TWO-P - LOG-T | MIX - TWO-P | TWO-PNB - TWO-P |
+| --- | --- | --- | --- | --- | --- |
+| naive | 0.001 | +0.00194* | +0.00216* | -0.00023* | -0.00138* |
+| naive | 0.01 | +0.00147* | +0.00285* | -0.00138* | +0.00120* |
+| naive | 0.05 | +0.00056* | +0.00308* | -0.00251* | +0.00448* |
+| naive | 0.1 | -0.00363* | -0.00050 | -0.00312* | +0.00597* |
+| naive | 0.2 | -0.00736* | -0.00293* | -0.00444* | +0.00571* |
+| trunc 0.001 | 0.001 | +0.00190* | +0.00213* | -0.00023* | -0.00136* |
+| trunc 0.001 | 0.01 | +0.00147* | +0.00284* | -0.00137* | +0.00118* |
+| trunc 0.001 | 0.05 | +0.00056* | +0.00306* | -0.00250* | +0.00446* |
+| trunc 0.001 | 0.1 | -0.00362* | -0.00050 | -0.00312* | +0.00598* |
+| trunc 0.001 | 0.2 | -0.00736* | -0.00293* | -0.00443* | +0.00571* |
+| trunc 0.01 | 0.001 | +0.00219* | +0.00293* | -0.00073* | +0.00012 |
+| trunc 0.01 | 0.01 | +0.00145* | +0.00335* | -0.00190* | +0.00285* |
+| trunc 0.01 | 0.05 | +0.00015 | +0.00305* | -0.00290* | +0.00525* |
+| trunc 0.01 | 0.1 | -0.00450* | -0.00086* | -0.00363* | +0.00593* |
+| trunc 0.01 | 0.2 | -0.00723* | -0.00250* | -0.00472* | +0.00503* |
+| trunc 0.05 | 0.001 | +0.00203* | +0.00339* | -0.00135* | +0.00267* |
+| trunc 0.05 | 0.01 | +0.00116* | +0.00363* | -0.00248* | +0.00413* |
+| trunc 0.05 | 0.05 | -0.00014 | +0.00337* | -0.00351* | +0.00527* |
+| trunc 0.05 | 0.1 | -0.00480* | -0.00063 | -0.00418* | +0.00511* |
+| trunc 0.05 | 0.2 | -0.00776* | -0.00303* | -0.00472* | +0.00446* |
+
+### Paired differences in AUPRC (positive: the first arm is better)
+
+| null | alpha_B | MIX - LOG-T | TWO-P - LOG-T | MIX - TWO-P | TWO-PNB - TWO-P |
+| --- | --- | --- | --- | --- | --- |
+| naive | 0.001 | -0.00902* | -0.01019* | +0.00118* | +0.00530* |
+| naive | 0.01 | -0.01439* | -0.02152* | +0.00713* | -0.00080 |
+| naive | 0.05 | -0.01097* | -0.01872* | +0.00775* | -0.01424* |
+| naive | 0.1 | +0.00001 | -0.00559* | +0.00560* | -0.02245* |
+| naive | 0.2 | +0.01169* | +0.00116 | +0.01053* | -0.02766* |
+| trunc 0.001 | 0.001 | -0.00880* | -0.00998* | +0.00118* | +0.00515* |
+| trunc 0.001 | 0.01 | -0.01419* | -0.02126* | +0.00707* | -0.00093 |
+| trunc 0.001 | 0.05 | -0.01094* | -0.01866* | +0.00772* | -0.01435* |
+| trunc 0.001 | 0.1 | -0.00004 | -0.00568* | +0.00565* | -0.02278* |
+| trunc 0.001 | 0.2 | +0.01167* | +0.00114 | +0.01054* | -0.02757* |
+| trunc 0.01 | 0.001 | -0.02218* | -0.02940* | +0.00721* | +0.00383* |
+| trunc 0.01 | 0.01 | -0.01877* | -0.02872* | +0.00994* | -0.00425* |
+| trunc 0.01 | 0.05 | -0.01460* | -0.02202* | +0.00742* | -0.01249* |
+| trunc 0.01 | 0.1 | -0.00356* | -0.00812* | +0.00456* | -0.01651* |
+| trunc 0.01 | 0.2 | +0.00680* | -0.00491* | +0.01171* | -0.02089* |
+| trunc 0.05 | 0.001 | -0.03322* | -0.04555* | +0.01233* | +0.00389* |
+| trunc 0.05 | 0.01 | -0.02297* | -0.03383* | +0.01086* | +0.00012 |
+| trunc 0.05 | 0.05 | -0.01902* | -0.02402* | +0.00500* | -0.00324* |
+| trunc 0.05 | 0.1 | -0.00857* | -0.01200* | +0.00343* | -0.00385* |
+| trunc 0.05 | 0.2 | +0.00474* | -0.00376* | +0.00850* | -0.01077* |
+
+### Calibration by type at the primary label (LT_a05; * = interval excludes 1)
+
+| stratum | NB-c | NB-d | MIX | TWO-P | TWO-PNB | LOG-T |
+| --- | --- | --- | --- | --- | --- | --- |
+| all | 0.953* | 0.950* | 1.173* | 1.200* | 1.009 | 1.002 |
+| Endothelial | 1.062 | 1.088 | 1.219* | 2.121* | 2.687* | 1.189* |
+| CAFs | 1.052 | 0.919 | 1.269* | 2.753* | 3.626* | 1.197* |
+| PVL | 1.103* | 1.092* | 1.171* | 1.660* | 1.929* | 1.137* |
+| B-cells | 1.234* | 1.216* | 1.187* | 1.341* | 1.335* | 1.032 |
+| T-cells | 1.159* | 1.166* | 1.134* | 1.131* | 1.060* | 0.982 |
+| Myeloid | 1.149* | 1.208* | 1.290* | 2.003* | 2.262* | 1.282* |
+| Normal Epithelial | 1.053 | 0.965 | 1.371* | 1.436* | 1.270* | 1.211* |
+| Plasmablasts | 0.971 | 0.912* | 1.104* | 1.110* | 0.980 | 1.016 |
+| Cancer Epithelial | 0.811* | 0.829* | 1.144* | 0.949* | 0.530* | 0.915* |
+
+### TWO on the primary BASE-O label (LO_td050)
+
+| arm | log loss | Brier | AUROC | AUPRC | mean p / rate |
+| --- | --- | --- | --- | --- | --- |
+| NB-c | 0.4528 [0.4479, 0.4581] | 0.1427 [0.1406, 0.1449] | 0.6535 [0.6506, 0.6561] | 0.2759 [0.2706, 0.2815] | 1.0581 [1.0454, 1.0705] |
+| NB-d | 0.4527 [0.4477, 0.4579] | 0.1426 [0.1406, 0.1449] | 0.6539 [0.6510, 0.6565] | 0.2763 [0.2710, 0.2818] | 1.0557 [1.0430, 1.0680] |
+| MIX | 0.4542 [0.4494, 0.4599] | 0.1430 [0.1409, 0.1453] | 0.6476 [0.6449, 0.6502] | 0.2715 [0.2668, 0.2757] | 1.0106 [0.9959, 1.0239] |
+| LOG-O | 0.4640 [0.4591, 0.4696] | 0.1458 [0.1437, 0.1481] | 0.6055 [0.6017, 0.6096] | 0.2423 [0.2368, 0.2489] | 1.0003 [0.9865, 1.0124] |
+| TWO-P | 0.4588 [0.4537, 0.4647] | 0.1443 [0.1422, 0.1467] | 0.6295 [0.6262, 0.6327] | 0.2609 [0.2563, 0.2648] | 1.0258 [1.0059, 1.0448] |
+| TWO-PNB | 0.4644 [0.4593, 0.4704] | 0.1459 [0.1438, 0.1483] | 0.6032 [0.5984, 0.6076] | 0.2441 [0.2391, 0.2479] | 1.0317 [1.0094, 1.0533] |
+
+Per-type scores for every label and arm, and the Brier and AUROC differences,
+are in `scores_grid.csv`; out-of-fold p for every arm and label in
+`oof_grid.parquet`. The primary alpha_B and null are not chosen here: by the
+section 2.3 rule they come from the A5 simulation. Part 3 of A2 done in
+54 min.
+
+## Addendum stage A3 -- Wu baseline gate for BASE-O-state (2026-10-14 01:02)
+
+`run/division_addendum_a3_wu_gate.py`, addendum section 4.1. Wu et al. 2021,
+100,064 cells and 26 patients, restricted to the 4,917
+genes shared with this panel. y is the Tirosh composite (53 of
+53 genes; the rest are not in Wu), N the panel transcripts
+without the Tirosh and blocklist genes (4,397 genes), as Stage 1 builds
+them; cells with N >= 10. In non-cycling cells, selected two ways, the
+composite per 1,000 panel transcripts per type is 1000 sum(y) / sum(N), and its
+ratio to the pooled value is shown with a 1,000-replicate patient bootstrap
+(patients resampled; ER+ patients resampled among themselves).
+
+Selections: **primary**, Seurat-called G1 (S and G2M scores both below 0);
+**stricter**, both scores below their 25th percentile within the cell's type.
+
+Ratio to pooled [95% patient-bootstrap interval]:
+
+| type | all, primary | all, stricter | ER+, primary | ER+, stricter |
+| --- | --- | --- | --- | --- |
+| Endothelial | 0.84 [0.76, 0.91] | 1.00 [0.87, 1.07] | 0.89 [0.77, 1.00] | 0.98 [0.77, 1.09] |
+| CAFs | 0.64 [0.57, 0.71] | 0.71 [0.60, 0.79] | 0.72 [0.60, 0.80] | 0.69 [0.53, 0.82] |
+| PVL | 0.81 [0.73, 0.89] | 0.92 [0.73, 1.04] | 0.84 [0.75, 0.95] | 0.89 [0.55, 1.10] |
+| B-cells | 1.49 [1.38, 1.63] | 1.02 [0.82, 1.16] | 1.59 [1.42, 1.74] | 1.02 [0.35, 1.31] |
+| T-cells | 1.49 [1.34, 1.66] | 1.20 [1.07, 1.33] | 1.76 [1.35, 2.09] | 1.10 [0.79, 1.34] |
+| Myeloid | 0.84 [0.75, 1.00] | 0.71 [0.65, 0.83] | 1.16 [0.95, 1.37] | 0.81 [0.68, 0.89] |
+| Normal Epithelial | 1.01 [0.92, 1.12] | 1.22 [1.01, 1.39] | 1.06 [0.85, 1.20] | 1.24 [1.10, 1.53] |
+| Plasmablasts | 0.93 [0.85, 1.07] | 0.94 [0.86, 1.24] | 1.12 [0.90, 1.30] | 0.97 [0.85, 1.23] |
+| Cancer Epithelial | 1.09 [0.98, 1.20] | 1.10 [1.02, 1.23] | 1.01 [0.86, 1.16] | 1.03 [0.95, 1.19] |
+
+Cells selected:
+
+| type | ER+, primary | ER+, stricter | all, primary | all, stricter |
+| --- | --- | --- | --- | --- |
+| Endothelial | 5023 | 551 | 7188 | 800 |
+| CAFs | 2506 | 272 | 6340 | 716 |
+| PVL | 3140 | 383 | 5053 | 577 |
+| B-cells | 438 | 37 | 2504 | 269 |
+| T-cells | 6578 | 519 | 24744 | 3067 |
+| Myeloid | 1491 | 83 | 8350 | 903 |
+| Normal Epithelial | 2316 | 266 | 4117 | 401 |
+| Plasmablasts | 575 | 63 | 3219 | 485 |
+| Cancer Epithelial | 11129 | 2206 | 18331 | 2874 |
+
+Summary (max/min across the nine types, with its bootstrap interval):
+
+| scope | selection | pooled per 1,000 | max/min | max/min 95% CI | highest | lowest | types excluding 1 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| all patients | primary (Seurat G1: S < 0 and G2M < 0) | 4.94 | 2.32 | 2.13-2.66 | B-cells | CAFs | 6 |
+| all patients | stricter (S and G2M below the type's 25th percentile) | 2.93 | 1.74 | 1.63-2.16 | Normal Epithelial | CAFs | 5 |
+| ER+ patients | primary (Seurat G1: S < 0 and G2M < 0) | 4.67 | 2.44 | 2.10-2.92 | T-cells | CAFs | 5 |
+| ER+ patients | stricter (S and G2M below the type's 25th percentile) | 3.05 | 1.8 | 1.60-4.07 | Normal Epithelial | CAFs | 3 |
+
+Against the suggested reading (max/min above 1.5 with an interval excluding 1,
+in both selections): all patients **met**;
+ER+ patients **met**.
+These baseline differences support a state-dependent null. Note: MIX's rates also omit state, so this is a specification question for MIX as well, out of scope here.
+
+Every type, selection and scope is in `wu_baseline.csv`. Stage A3 complete in
+0 min. **Stopped for Lachy's decision** on whether
+A4 (BASE-O-state) runs.
+
+### A2 and A3: verdicts and notes (2026-10-14)
+
+- **X12** (BASE-M's rate below BASE-T's at alpha_B 0.05): **does not hold**; BASE-M 0.0543 against 0.0329. MAP labelling under the constant-pi mixture calls more cells than the 5% tail does, in every type.
+- **X14**, first two clauses. Likelihood-ratio statistic 15,333, far into the hundreds: **yes**. Most of the gain in Cancer Epithelial's 15-30+ range: **no**; of Cancer Epithelial's 5,264 log-likelihood units, 1,717 come from y >= 15 and 4,575 from y 5-14 (y 0-4 loses 1,028). V13's ten starts agree: **yes**. Clause by clause, X14 so far **partly holds**; the G3 clause waits for A5. The better fit comes with pi = 0.48 and a cycling rate ratio of 2.6 (against TWO-P's 0.10 and 6.9), so the NB component is absorbing extra-Poisson variance among non-cycling cells -- the first of the known risks above -- rather than describing a cycling class. That bears on reading Poisson + NB as a candidate for MIX: it fits the counts better, but no longer separates a cycling minority.
+- **V12 passes**: generalised EM from TWO-P reaches production MIX's penalised optimum (gap 6e-13 relative, largest coefficient difference 1e-6) with the objective never rising. TWO-P is therefore an early point on the EM path whose end is MIX, as section 3.4 argues.
+- **Real-data scoring.** On log loss LOG-T leads only where it is trained, at the stricter alpha_B (0.001-0.05); from alpha_B 0.1 MIX and the NBs are better on log loss, and from 0.2 MIX is also better on AUPRC. MIX beats TWO-P on every label and metric shown (log loss and AUPRC intervals excluding 0), the real-data face of the joint-estimation gain. TWO-PNB is the worst-calibrated arm by type (CAFs 3.6x, Cancer Epithelial 0.53x at the primary label).
+- **A3 reading.** The max/min ratio is at least 1 by construction, so its interval excluding 1 is a weak test; the per-type intervals are the informative ones (3-6 of 9 types exclude 1 in every scope and selection). The highest and lowest types move between selections (B- and T-cells highest under the primary selection, Normal Epithelial under the stricter; CAFs lowest throughout). Per 1,000 panel transcripts, a type's value also depends on which non-Tirosh panel genes it expresses, so these are differences in the composite relative to this panel's library, which is the quantity the null scales by.
