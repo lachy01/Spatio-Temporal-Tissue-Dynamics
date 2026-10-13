@@ -2,7 +2,7 @@
 
 Two mixtures of the same counts on the same cells, identical except for the technical covariates: **MisTIC** (offset log Nt, the MisTIC-weighted library size, plus theta_m m in every component's mean) and **plain** (offset log N, the raw library size, nothing else). Neither has an area term.
 
-_Fits: MisTIC `outputs/hpc`, plain `outputs/hpc_plain`; assembled 2026-10-13 13:54._
+_Fits: MisTIC `outputs/hpc`, plain `outputs/hpc_plain`; assembled 2026-10-13 15:03._
 
 ## Held-out log-likelihood (cv_production: 5 spatial folds, production penalty)
 
@@ -29,32 +29,59 @@ MisTIC minus plain: data log-likelihood **+3,906.8** with +1 parameters. AIC and
 
 | quantity | MisTIC | plain |
 |---|---|---|
-| e^delta | 1.9020 (1.8831, 1.9251) | 1.7572 |
+| e^delta | 1.9020 (1.8831, 1.9251) | 1.7572 (1.7397, 1.7777) |
 | theta_m | 1.5938 (1.5329, 1.6613) | -- |
 | cycling fraction, mean prior pi | 0.0982 | 0.1011 |
-| cycling fraction, mean posterior w | 0.0982 (0.0934, 0.1029) | 0.1011 |
+| cycling fraction, mean posterior w | 0.0982 (0.0934, 0.1029) | 0.1011 (0.0963, 0.1059) |
 | rate ratio exp(e^delta) | 6.699 | 5.796 |
 
 Odds ratio of cycling per IQR of each neighbourhood component, priority pairs both ways round:
 
 | own archetype | neighbour component | MisTIC | plain |
 |---|---|---|---|
-| CAFs | contact: Myeloid | 0.9545 (0.9029, 1.0021) | 0.9308 |
-| CAFs | regional: Myeloid | 1.1510 (1.0478, 1.2466) | 1.1519 |
-| Cancer Epithelial | contact: CAFs | 0.9474 (0.9145, 0.9768) | 0.9336 |
-| Cancer Epithelial | regional: CAFs | 0.9912 (0.9270, 1.0603) | 0.9919 |
-| Cancer Epithelial | contact: Myeloid | 0.9313 (0.8988, 0.9699) | 0.9294 |
-| Cancer Epithelial | regional: Myeloid | 1.0784 (0.9970, 1.1536) | 1.0839 |
-| Cancer Epithelial | contact: T-cells | 1.3187 (1.2396, 1.3908) | 1.3454 |
-| Cancer Epithelial | regional: T-cells | 1.0788 (0.9813, 1.1896) | 1.0810 |
-| Myeloid | contact: CAFs | 0.9530 (0.9122, 0.9867) | 0.9312 |
-| Myeloid | regional: CAFs | 1.0049 (0.9425, 1.0847) | 1.0058 |
-| CAFs | contact: Cancer Epithelial | 1.8371 (1.6904, 2.0085) | 1.9990 |
-| CAFs | regional: Cancer Epithelial | 1.4425 (1.2132, 1.7386) | 1.5234 |
-| Myeloid | contact: Cancer Epithelial | 2.0516 (1.8934, 2.2485) | 2.1427 |
-| Myeloid | regional: Cancer Epithelial | 1.0199 (0.8484, 1.2684) | 1.1004 |
-| T-cells | contact: Cancer Epithelial | 2.2075 (2.0360, 2.4193) | 2.3739 |
-| T-cells | regional: Cancer Epithelial | 1.2572 (1.0089, 1.4948) | 1.3387 |
+| CAFs | contact: Myeloid | 0.9545 (0.9029, 1.0021) | 0.9308 (0.8832, 0.9742) |
+| CAFs | regional: Myeloid | 1.1510 (1.0478, 1.2466) | 1.1519 (1.0416, 1.2566) |
+| Cancer Epithelial | contact: CAFs | 0.9474 (0.9145, 0.9768) | 0.9336 (0.8993, 0.9641) |
+| Cancer Epithelial | regional: CAFs | 0.9912 (0.9270, 1.0603) | 0.9919 (0.9185, 1.0686) |
+| Cancer Epithelial | contact: Myeloid | 0.9313 (0.8988, 0.9699) | 0.9294 (0.8956, 0.9654) |
+| Cancer Epithelial | regional: Myeloid | 1.0784 (0.9970, 1.1536) | 1.0839 (0.9995, 1.1654) |
+| Cancer Epithelial | contact: T-cells | 1.3187 (1.2396, 1.3908) | 1.3454 (1.2643, 1.4227) |
+| Cancer Epithelial | regional: T-cells | 1.0788 (0.9813, 1.1896) | 1.0810 (0.9697, 1.2100) |
+| Myeloid | contact: CAFs | 0.9530 (0.9122, 0.9867) | 0.9312 (0.8891, 0.9663) |
+| Myeloid | regional: CAFs | 1.0049 (0.9425, 1.0847) | 1.0058 (0.9383, 1.0905) |
+| CAFs | contact: Cancer Epithelial | 1.8371 (1.6904, 2.0085) | 1.9990 (1.8478, 2.1899) |
+| CAFs | regional: Cancer Epithelial | 1.4425 (1.2132, 1.7386) | 1.5234 (1.2547, 1.8952) |
+| Myeloid | contact: Cancer Epithelial | 2.0516 (1.8934, 2.2485) | 2.1427 (1.9836, 2.3550) |
+| Myeloid | regional: Cancer Epithelial | 1.0199 (0.8484, 1.2684) | 1.1004 (0.9013, 1.3704) |
+| T-cells | contact: Cancer Epithelial | 2.2075 (2.0360, 2.4193) | 2.3739 (2.1876, 2.6202) |
+| T-cells | regional: Cancer Epithelial | 1.2572 (1.0089, 1.4948) | 1.3387 (1.0749, 1.6079) |
+
+## MisTIC against plain, paired by bootstrap replicate
+
+300 replicates. Replicate r draws the same spatial blocks in both bootstraps (seeded by r, same cells), so the difference is computed within each replicate; the intervals are its 2.5th and 97.5th percentiles. For the odds ratios the comparison is their ratio.
+
+| quantity | estimate | 95% low | 95% high | interval excludes no difference |
+|---|---|---|---|---|
+| e^delta, MisTIC - plain | 0.1448 | 0.1362 | 0.1536 | yes |
+| cycling fraction (mean w), MisTIC - plain | -0.0028 | -0.0036 | -0.0022 | yes |
+| OR ratio MisTIC / plain: CAFs <- contact: Myeloid | 1.0254 | 1.0156 | 1.0358 | yes |
+| OR ratio MisTIC / plain: CAFs <- regional: Myeloid | 0.9992 | 0.9805 | 1.0184 | no |
+| OR ratio MisTIC / plain: Cancer Epithelial <- contact: CAFs | 1.0148 | 1.0089 | 1.0201 | yes |
+| OR ratio MisTIC / plain: Cancer Epithelial <- regional: CAFs | 0.9993 | 0.9906 | 1.0090 | no |
+| OR ratio MisTIC / plain: Cancer Epithelial <- contact: Myeloid | 1.0020 | 0.9971 | 1.0074 | no |
+| OR ratio MisTIC / plain: Cancer Epithelial <- regional: Myeloid | 0.9949 | 0.9876 | 1.0025 | no |
+| OR ratio MisTIC / plain: Cancer Epithelial <- contact: T-cells | 0.9802 | 0.9720 | 0.9880 | yes |
+| OR ratio MisTIC / plain: Cancer Epithelial <- regional: T-cells | 0.9979 | 0.9806 | 1.0147 | no |
+| OR ratio MisTIC / plain: Myeloid <- contact: CAFs | 1.0233 | 1.0150 | 1.0329 | yes |
+| OR ratio MisTIC / plain: Myeloid <- regional: CAFs | 0.9991 | 0.9857 | 1.0116 | no |
+| OR ratio MisTIC / plain: CAFs <- contact: Cancer Epithelial | 0.9190 | 0.8987 | 0.9393 | yes |
+| OR ratio MisTIC / plain: CAFs <- regional: Cancer Epithelial | 0.9469 | 0.9049 | 0.9831 | yes |
+| OR ratio MisTIC / plain: Myeloid <- contact: Cancer Epithelial | 0.9575 | 0.9415 | 0.9734 | yes |
+| OR ratio MisTIC / plain: Myeloid <- regional: Cancer Epithelial | 0.9268 | 0.8922 | 0.9539 | yes |
+| OR ratio MisTIC / plain: T-cells <- contact: Cancer Epithelial | 0.9299 | 0.9170 | 0.9456 | yes |
+| OR ratio MisTIC / plain: T-cells <- regional: Cancer Epithelial | 0.9391 | 0.9097 | 0.9721 | yes |
+
+12 of 18 intervals exclude no difference.
 
 ## Cycling fraction by cell type (mean prior pi, point estimates)
 

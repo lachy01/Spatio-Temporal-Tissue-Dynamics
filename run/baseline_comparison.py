@@ -187,6 +187,40 @@ def main():
     text += [md(E), "", "Odds ratio of cycling per IQR of each neighbourhood component, "
              "priority pairs both ways round:", "", md(eff) if len(eff) else "_pending_", ""]
 
+    # ---- paired: replicate r resamples the same blocks in both bootstraps --------------
+    text += ["## MisTIC against plain, paired by bootstrap replicate", ""]
+    if all(summ.values()):
+        bm, bp = summ["MisTIC"]["boot"], summ["plain"]["boot"]
+        reps = sorted(set(bm) & set(bp))
+        unpaired = [r for r in reps if bm[r]["n_cells"] != bp[r]["n_cells"]]
+        if unpaired:
+            text += [f"_Not paired: replicates {unpaired[:5]} resampled different cells._", ""]
+        else:
+            def row(lab, pt, per_rep, null):
+                lo, hi = np.percentile(per_rep, [2.5, 97.5])
+                return {"quantity": lab, "estimate": pt, "95% low": lo, "95% high": hi,
+                        "interval excludes no difference": "no" if lo <= null <= hi else "yes"}
+            sm, sp = summ["MisTIC"], summ["plain"]
+            rows = [row("e^delta, MisTIC - plain", sm["e_delta"][0] - sp["e_delta"][0],
+                        [bm[r]["e_delta"] - bp[r]["e_delta"] for r in reps], 0.0),
+                    row("cycling fraction (mean w), MisTIC - plain", sm["mean_w"][0] - sp["mean_w"][0],
+                        [bm[r]["mean_w"] - bp[r]["mean_w"] for r in reps], 0.0)]
+            for k in sm["effects"]:
+                rows.append(row(f"OR ratio MisTIC / plain: {k[0]} <- {k[2]}: {k[1]}",
+                                sm["effects"][k][0] / sp["effects"][k][0],
+                                [bm[r]["effects"][k] / bp[r]["effects"][k] for r in reps], 1.0))
+            Pd = pd.DataFrame(rows)
+            Pd.to_csv(f"{OUT}/paired_differences.csv", index=False)
+            n_diff = int((Pd["interval excludes no difference"] == "yes").sum())
+            text += [f"{len(reps)} replicates. Replicate r draws the same spatial blocks in both "
+                     "bootstraps (seeded by r, same cells), so the difference is computed within "
+                     "each replicate; the intervals are its 2.5th and 97.5th percentiles. For the "
+                     "odds ratios the comparison is their ratio.", "",
+                     md(Pd), "",
+                     f"{n_diff} of {len(Pd)} intervals exclude no difference.", ""]
+    else:
+        text += ["_Pending: both bootstraps._", ""]
+
     # ---- per-type cycling fraction ---------------------------------------------------
     if len(ins) == 2:
         P = pd.DataFrame({"archetype": ["all"] + list(names)})

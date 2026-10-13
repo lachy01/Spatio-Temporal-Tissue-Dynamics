@@ -100,7 +100,13 @@ def mixture_summary(d, df, cfg, technical):
            "mean_pi": (float(np.asarray(pi_hat(P, D, spec)).mean()), (np.nan, np.nan)),
            "mean_w": (float(np.asarray(responsibilities(P, D, spec)).mean()),
                       ci([b["mean_w"] for b in boot])),
-           "effects": {k: (v, ci([e[k] for e in eff_bt])) for k, v in eff_pt.items()}}
+           "effects": {k: (v, ci([e[k] for e in eff_bt])) for k, v in eff_pt.items()},
+           # per replicate, keyed by rep: replicate r resamples the same spatial
+           # blocks in every fit directory (seeded by r), so two models' bootstraps
+           # can be paired
+           "boot": {int(b["rep"]): {"n_cells": b.get("n_cells"), "e_delta": b["e_delta"],
+                                    "mean_w": b["mean_w"], "effects": e}
+                    for b, e in zip([b for b in boot if b.get("B") is not None], eff_bt)}}
     return out
 
 

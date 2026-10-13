@@ -1,0 +1,19 @@
+quantity,estimate,95% low,95% high,interval excludes no difference
+"e^delta, MisTIC - plain",0.14478076313884336,0.13616070485765316,0.15361520317949645,yes
+"cycling fraction (mean w), MisTIC - plain",-0.0028387629097884337,-0.0035854859560411237,-0.0021653940519434176,yes
+OR ratio MisTIC / plain: CAFs <- contact: Myeloid,1.0254473360271867,1.0156445074478664,1.0357948827244414,yes
+OR ratio MisTIC / plain: CAFs <- regional: Myeloid,0.9992453108637825,0.9804781953295726,1.018439872703417,no
+OR ratio MisTIC / plain: Cancer Epithelial <- contact: CAFs,1.0147621262610054,1.008911716801274,1.0201109008577414,yes
+OR ratio MisTIC / plain: Cancer Epithelial <- regional: CAFs,0.9992779974088836,0.9905746117641151,1.0090044142425796,no
+OR ratio MisTIC / plain: Cancer Epithelial <- contact: Myeloid,1.0020163927134698,0.9971152801887814,1.0073555555765572,no
+OR ratio MisTIC / plain: Cancer Epithelial <- regional: Myeloid,0.9949427582612704,0.987550661318041,1.0024519437092398,no
+OR ratio MisTIC / plain: Cancer Epithelial <- contact: T-cells,0.9801577601707465,0.9719855025614644,0.9880398565315447,yes
+OR ratio MisTIC / plain: Cancer Epithelial <- regional: T-cells,0.9978917066858886,0.9805512456976998,1.014653040897139,no
+OR ratio MisTIC / plain: Myeloid <- contact: CAFs,1.0233452209108365,1.0149509835470387,1.0328835257076883,yes
+OR ratio MisTIC / plain: Myeloid <- regional: CAFs,0.9991392879523255,0.9856793067010833,1.0116308524190123,no
+OR ratio MisTIC / plain: CAFs <- contact: Cancer Epithelial,0.9189928964368658,0.8986656536310605,0.9392676342905943,yes
+OR ratio MisTIC / plain: CAFs <- regional: Cancer Epithelial,0.9468920174839601,0.9048701799987698,0.9830678351337476,yes
+OR ratio MisTIC / plain: Myeloid <- contact: Cancer Epithelial,0.9574805718485871,0.9415200236749042,0.9733931986551129,yes
+OR ratio MisTIC / plain: Myeloid <- regional: Cancer Epithelial,0.9268369637690473,0.8922174297169256,0.9538599071033961,yes
+OR ratio MisTIC / plain: T-cells <- contact: Cancer Epithelial,0.9299010398736255,0.9170466506839495,0.9455606910246255,yes
+OR ratio MisTIC / plain: T-cells <- regional: Cancer Epithelial,0.9391092277200453,0.9096872902001103,0.9720900764829451,yes
