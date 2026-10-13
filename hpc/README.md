@@ -21,6 +21,8 @@ is a no-op (the worker skips one whose output already exists).
 | `sim_null_bilinear` | 20 | Test 02 |
 | `sim_single_component` | 20 | Test 03 |
 | `sim_size_confound` | 20 | Test 07 |
+| `division_sim` | 30 | division classifier, Stage 6: G1-G3 x 10 replicates |
+| `division_sim_addendum` | 30 | division addendum 1, stage A5: the same draws plus the extended BASE-T grid, TWO-P/TWO-PNB and the section 6 metrics |
 
 ## One-time setup
 
@@ -99,6 +101,25 @@ python hpc/gather.py bootstrap      # percentile CIs
 `gather.py` reports how many tasks are **missing** and how many failed to
 converge rather than quietly averaging whatever is present — spec 9.13 forbids
 dropping non-converged replicates without recording the rate.
+
+## Division classifier addendum 1, stage A5
+
+```bash
+git pull                                   # simulation.py, twostep.py, tasks.py
+./hpc/submit.sh division_sim_addendum      # 30 tasks, 2 h each by default
+```
+
+Needs, besides the table and `outputs/hpc/point_estimate.json`, the files the
+Stage 6 job used: `outputs/division_classifier/{sim_inputs.npz, folds.parquet,
+nb_params_nbc_full.json}` (`folds.parquet` was written on Spartan by
+`hpc/folds.slurm`, so it is already there). BASE-O-state joins only if
+`division_sim_state: true` in config.yaml, which waits on Lachy's A3 decision.
+Runtime: Stage 6's `division_sim` tasks took 2-5 min on Spartan; locally, at
+n = 20,000, the addendum's extra fits (four nulls, 19 LOG-T fits, TWO-P and
+TWO-PNB) roughly doubled a replicate's time. At n = 100,000, expect about
+10-15 min per task, so the 2 h default is ample. Copy back
+`outputs/hpc/division_sim_addendum/` and run
+`python run/division_addendum_a5_gather.py`.
 
 ## Spartan-specific notes
 

@@ -361,6 +361,11 @@ sim_path_reps: 8
 division_sim_n: 100000
 division_sim_reps: 10
 division_sim_restarts: 4
+# Addendum 1 (job division_sim_addendum) runs the same draws with the extended
+# BASE-T grid, TWO-P/TWO-PNB and the section 6 metrics. BASE-O-state and
+# LOG-O-state join it only when this is true, which needs Lachy's approval
+# after the A3 Wu gate (addendum section 4).
+division_sim_state: false
 # The same at the real sample size (job sim_single_component_path_full).
 sim_full_n: 561897
 # Test 03 (job sim_single_component) runs at the real n: invented structure

@@ -356,6 +356,46 @@ def base_o_scale(r, groups=None):
     return out
 
 
+def gamma_glm_log(y, X, max_iter=200, tol=1e-13):
+    """Gamma GLM with log link by Fisher scoring. For the gamma family with a
+    log link the working weights are constant, so each step is an ordinary
+    least-squares fit of the working response eta + (y - mu) / mu on X.
+    Returns the coefficients. `y` must be positive."""
+    y = np.asarray(y, float)
+    X = np.asarray(X, float)
+    beta = np.linalg.lstsq(X, np.full(len(y), np.log(y.mean())), rcond=None)[0]
+    dev_prev = np.inf
+    for _ in range(max_iter):
+        eta = X @ beta
+        mu = np.exp(eta)
+        beta = np.linalg.lstsq(X, eta + (y - mu) / mu, rcond=None)[0]
+        mu = np.exp(X @ beta)
+        dev = 2 * np.sum((y - mu) / mu - np.log(y / mu))
+        if abs(dev_prev - dev) <= tol * max(abs(dev), 1.0):
+            break
+        dev_prev = dev
+    return beta
+
+
+def base_o_state_scale(r, X):
+    """BASE-O-state's s+(phi) (addendum 1, section 4.2), per cell.
+
+    On the cells with r > 0: a gamma GLM with log link for the mean,
+    E[r | r > 0, phi] = m1(phi), then a second for the squared residuals,
+    E[(r - m1(phi))^2 | r > 0, phi] = v(phi); s+ = sqrt(v(phi)) at every cell.
+    `X` is the design (an intercept plus the projected own state phi; or
+    one-hot type indicators, with which it reduces to OSDR's per-type ddof-0
+    SD of the above-noise values -- V14). Returns (s+, info).
+    """
+    r = np.asarray(r, float)
+    X = np.asarray(X, float)
+    pos = r > 0
+    b1 = gamma_glm_log(r[pos], X[pos])
+    res2 = (r[pos] - np.exp(X[pos] @ b1)) ** 2
+    b2 = gamma_glm_log(res2, X[pos])
+    return np.sqrt(np.exp(X @ b2)), {"beta_mean": b1, "beta_var": b2, "n_pos": int(pos.sum())}
+
+
 def base_o(y, b, sd, s_plus, td):
     """OSDR-faithful label at threshold `td`. Returns (L, c, a).
 

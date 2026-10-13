@@ -38,6 +38,28 @@ State-recovery metrics on the held-out fold (spec 7.3; G1 and G2):
   3. per-type fractions: each arm's mean prediction against the realised mean Z.
 Label-scale scores (log loss, AUPRC, mean p / rate) are recorded for every
 generator.
+
+Addendum 1 (job `division_sim_addendum`, `addendum=True`; sections 2.2, 3.5
+and 6). The same cells, truth and Stage 6 labels and arms -- the draws are
+made in the same order, so a replicate pairs with its Stage 6 namesake --
+plus:
+  * every BASE-T label on the extended grid (alpha_B 0.001-0.2) for the naive
+    null and for the truncated null refitted on the simulated y at each
+    alpha_trim (0.001, 0.01, 0.05), with LOG-T fitted on each, and NB-c, MIX
+    and TWO pushed through each;
+  * TWO-P and TWO-PNB (step 1 on the training folds, step 2 on the weight
+    block; TWO-PNB from three starts, the best kept), as pi and pushed through
+    BASE-T and BASE-O;
+  * B direction recovery: cosine of vec(B-hat) with vec(B_true) for every
+    fitted arm, in the shared whitened coordinates (B_true is the production
+    mixture's U V' under G1 and G2, and the full-data NB-c's under G3, which
+    has no latent classes).
+  * only with `division_sim_state: true` in the config (addendum section 4,
+    which runs only if Lachy approves after the A3 gate): BASE-O-state rebuilt
+    on the simulated y (s+(phi) from the gamma GLMs on the projected own
+    state) and LOG-O-state fitted on it.
+The per-type ratio spread (section 6) and the alpha_B surface (section 2.3)
+are computed from the stored contrasts by run/division_addendum_a5_gather.py.
 """
 from __future__ import annotations
 
@@ -93,7 +115,15 @@ def _scores(p, L):
             "mean p / rate": float(p.mean() / rate) if rate > 0 else np.nan, "rate": rate}
 
 
-def run_replicate(task, cfg, say=None):
+def _cosine(P, Q):
+    """Cosine of vec(U_P V_P') with vec(U_Q V_Q')."""
+    a = (np.asarray(P["U"]) @ np.asarray(P["V"]).T).ravel()
+    b = (np.asarray(Q["U"]) @ np.asarray(Q["V"]).T).ravel()
+    na, nb = np.linalg.norm(a), np.linalg.norm(b)
+    return float(a @ b / (na * nb)) if na > 0 and nb > 0 else float("nan")
+
+
+def run_replicate(task, cfg, say=None, addendum=False):
     import jax
 
     jax.config.update("jax_enable_x64", True)
@@ -197,6 +227,29 @@ def run_replicate(task, cfg, say=None):
     labels = {"BASE-T": LT.astype(float), "BASE-O": LO.astype(float), "SCORE": LS.astype(float)}
     say(f"  {gen} rep {rep}: labels built; rates T {LT.mean():.4f}, O {LO.mean():.4f}, "
         f"S {LS.mean():.4f} ({time.time() - t0:.0f}s)")
+    grid, trunc_fits = {}, {}
+    if addendum:
+        # extended grid: the naive null as above, and the truncated null refitted on
+        # the simulated y at each alpha_trim from the untrimmed fit (as A1 does)
+        for a in L.ALPHA_B_GRID_EXT:
+            Lg, cg, _, _ = L.base_t(y, mu0, a0, a)
+            grid[f"naive|{a:g}"] = (Lg.astype(float), cg)
+        full_null = L.fit_nb_additive_null(y, Xa, off_null, m_null)
+        for at in L.TRUNC_GRID:
+            ft = L.truncated_null(y, Xa, off_null, m_null, at, full_null)
+            trunc_fits[f"{at:g}"] = {"alpha0": float(ft["alpha"]), "theta_m": float(ft["theta_m"]),
+                                     "iterations": len(ft["trace"]), "stopped_on": ft["stopped_on"]}
+            for a in L.ALPHA_B_GRID_EXT:
+                Lg, cg, _, _ = L.base_t(y, ft["mu"], ft["alpha"], a)
+                grid[f"trunc {at:g}|{a:g}"] = (Lg.astype(float), cg)
+        for g, (Lg, _) in grid.items():
+            labels[f"BASE-T [{g}]"] = Lg
+        if cfg.get("division_sim_state", False):
+            Xs = np.column_stack([np.ones(n_sim), np.asarray(Dsub["own"])])
+            s_state, _ = L.base_o_state_scale((y - mu0) / sd0, Xs)
+            LOs, _, _ = L.base_o(y, mu0, sd0, s_state, L.TD_PRIMARY)
+            labels["BASE-O-state"] = LOs.astype(float)
+        say(f"  extended grid: {len(grid)} labels ({time.time() - t0:.0f}s)")
 
     # ---- fits on the training folds --------------------------------------------------
     sub.y = y
@@ -233,6 +286,54 @@ def run_replicate(task, cfg, say=None):
         p_log[arm] = p
         fits[arm] = {"converged": info["converged"], "sd_eta": arms.eta_diagnostics(p, D_tr)["sd_eta"]}
     say(f"  LOG arms fitted ({time.time() - t0:.0f}s)")
+    two = {}
+    if addendum:
+        from . import twostep as T
+        primary_g = f"naive|{L.ALPHA_B_PRIMARY:g}"
+        if "BASE-O-state" in labels:
+            yl = jnp.asarray(labels["BASE-O-state"][tr])
+            f = arms.logistic_objective(D_tr, yl, len(tr), spec.weight_ridge, spec.n_reference,
+                                        spec.ridge_tau, spec.b_penalty)
+            p, info = minimise(f, (arms.init_logistic(D_tr, yl, spec.rank, s_) for s_ in (0, 100, 200)))
+            p_log["LOG-O-state"] = p
+            fits["LOG-O-state"] = {"converged": info["converged"],
+                                   "sd_eta": arms.eta_diagnostics(p, D_tr)["sd_eta"]}
+        for g in grid:
+            if g == primary_g:
+                p_log[f"LOG-T [{g}]"] = p_log["LOG-T"]
+                fits[f"LOG-T [{g}]"] = fits["LOG-T"]
+                continue
+            yl = jnp.asarray(labels[f"BASE-T [{g}]"][tr])
+            f = arms.logistic_objective(D_tr, yl, len(tr), spec.weight_ridge, spec.n_reference,
+                                        spec.ridge_tau, spec.b_penalty)
+            p, info = minimise(f, (arms.init_logistic(D_tr, yl, spec.rank, s_) for s_ in (0, 100, 200)))
+            p_log[f"LOG-T [{g}]"] = p
+            fits[f"LOG-T [{g}]"] = {"converged": info["converged"],
+                                    "sd_eta": arms.eta_diagnostics(p, D_tr)["sd_eta"]}
+        say(f"  LOG-T on the grid fitted ({time.time() - t0:.0f}s)")
+        w0 = {k: best.params[k] for k in ("a0", "a", "c", "U", "V", "h", "K")}
+        srng = np.random.default_rng(SEED + 7000 + 10 * rep + gi)
+        if float(np.abs(np.asarray(w0["U"]) @ np.asarray(w0["V"]).T).max()) < 1e-8:
+            # U = V = 0 is a saddle of the bilinear term; never start step 2 there
+            w0["U"] = jnp.asarray(srng.normal(0, 0.01, np.shape(w0["U"])))
+            w0["V"] = jnp.asarray(srng.normal(0, 0.01, np.shape(w0["V"])))
+        for arm, family in (("TWO-P", "pp"), ("TWO-PNB", "pnb")):
+            starts = [T.start_from_mix(P, family)]
+            if family == "pnb":
+                starts += [T.random_start(P, family, srng) for _ in range(2)]
+            res = [T.fit_step1(D_tr, family, s0) for s0 in starts]
+            ok = [r for r in res if np.isfinite(r[1]["f"])]
+            q1, i1 = min(ok, key=lambda r: r[1]["f"])
+            w = T.posterior(q1, D_tr, family)
+            q2, i2 = T.fit_step2(D_tr, w, len(tr), spec, seed=0, p0=w0)
+            two[arm] = (family, q1, q2)
+            fits[arm] = {"converged": bool(i1["converged"] and i2["converged"]),
+                         "step1_objectives": [float(r[1]["f"]) for r in res],
+                         "pi_const": float(jax.nn.sigmoid(q1["a0"])),
+                         "e_delta": float(jnp.exp(q1["delta"])),
+                         "alpha1": float(jnp.exp(q1["la1"])) if family == "pnb" else None,
+                         "sd_eta": arms.eta_diagnostics(q2, D_tr)["sd_eta"]}
+        say(f"  TWO-P and TWO-PNB fitted ({time.time() - t0:.0f}s)")
 
     # ---- predictions on the held-out fold ----------------------------------------------
     mu_nb = np.exp(np.asarray(arms.nb_log_mu(p_nb, D_te)))
@@ -245,8 +346,32 @@ def run_replicate(task, cfg, say=None):
              "MIX, BASE-T": (mix_p_ge(cT[te], pi_mix, l0m, l1m), "BASE-T"),
              "MIX, BASE-O": (mix_p_ge(cO[te], pi_mix, l0m, l1m), "BASE-O")}
     for arm in p_log:
-        lname = {"LOG-T": "BASE-T", "LOG-O": "BASE-O", "LOG-S": "SCORE"}[arm]
+        lname = {"LOG-T": "BASE-T", "LOG-O": "BASE-O", "LOG-S": "SCORE",
+                 "LOG-O-state": "BASE-O-state"}.get(arm)
+        if lname is None:                                  # LOG-T on a grid label
+            lname = arm.replace("LOG-T", "BASE-T")
         preds[arm] = (np.asarray(jax.nn.sigmoid(arms.logistic_eta(p_log[arm], D_te))), lname)
+    if addendum:
+        from . import twostep as T
+        from .survival import pois_p_ge
+        comp = {}
+        for arm, (family, q1, q2) in two.items():
+            pi2 = np.asarray(T.pi_two(q2, D_te))
+            m0, m1 = (np.asarray(v) for v in T.means(q1, D_te))
+            a1 = float(jnp.exp(q1["la1"])) if family == "pnb" else None
+            push = (lambda c, pi2=pi2, m0=m0, m1=m1, a1=a1, family=family:
+                    pi2 * (pois_p_ge(c, m1) if family == "pp" else nb_p_ge(c, m1, a1))
+                    + (1 - pi2) * pois_p_ge(c, m0))
+            comp[arm] = push
+            preds[f"{arm} pi"] = (pi2, None)
+            preds[f"{arm}, BASE-T"] = (push(cT[te]), "BASE-T")
+            preds[f"{arm}, BASE-O"] = (push(cO[te]), "BASE-O")
+        for g, (_, cg) in grid.items():
+            lname = f"BASE-T [{g}]"
+            preds[f"NB-c, {lname}"] = (nb_p_ge(cg[te], mu_nb, al_nb), lname)
+            preds[f"MIX, {lname}"] = (mix_p_ge(cg[te], pi_mix, l0m, l1m), lname)
+            for arm, push in comp.items():
+                preds[f"{arm}, {lname}"] = (push(cg[te]), lname)
 
     # ---- metrics -----------------------------------------------------------------------------
     ct_te, tum_te = ct[te], tumour_nbr[te]
@@ -257,6 +382,14 @@ def run_replicate(task, cfg, say=None):
            "null_alpha0": float(a0), "score_threshold": float(thr["threshold"]),
            "g2_alpha1": alpha1, "fits": fits, "label_scores": label_scores, "fractions": fractions,
            "rank": int(spec.rank), "weight_ridge": float(spec.weight_ridge), "b_penalty": spec.b_penalty}
+    if addendum:
+        B_true = nbc if gen == "G3" else P
+        models = {"NB-c": p_nb, "MIX": best.params, **p_log,
+                  **{arm: q2 for arm, (_, _, q2) in two.items()}}
+        out["b_cosine"] = {k: _cosine(v, B_true) for k, v in models.items()}
+        out["b_truth"] = "NB-c (full data)" if gen == "G3" else "production MIX"
+        out["trunc_nulls"] = trunc_fits
+        out["addendum"] = True
     if Z is not None:
         z_te, pt_te = Z[te], pi_true[te]
         out["true_fraction"] = {t: float(z_te[ct_te == t].mean()) for t in types}
