@@ -8,6 +8,7 @@ cfg = load_config()
 df = build_table(cfg)
 clean, rep = validate(df, cfg)
 out = cfg["data"]["table_parquet"]
+os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
 clean.to_parquet(out, index=False)
 # Sidecar with the PhiSpace component names. Without it every fit re-reads the
 # 122 MB phi CSV just to recover nine column names, which on a cluster means
@@ -16,7 +17,9 @@ import json
 with open(os.path.splitext(out)[0] + ".phi_names.json", "w") as fh:
     json.dump(list(clean.attrs["phi_names"]), fh)
 os.makedirs("outputs", exist_ok=True)
-with open("outputs/data_report.md", "w") as fh:
+# MIX_DATASET (e.g. ovarian) writes its own report beside the breast one
+rep_path = f"outputs/data_report_{cfg['dataset']}.md" if cfg.get("dataset") else "outputs/data_report.md"
+with open(rep_path, "w") as fh:
     fh.write(rep.to_markdown() + "\n")
 print("\n" + rep.to_markdown())
 print(f"\nwrote {out} ({os.path.getsize(out) / 1e6:.0f} MB)")

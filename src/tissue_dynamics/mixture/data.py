@@ -255,11 +255,12 @@ def build_table(cfg, verbose=True):
     # same field validated in notebook sections 16-20, so results stay comparable.
     oc = cfg["oxygen"]
     if oc.get("source", "minor") == "major":
-        say("oxygen field (Endothelial score from the major table, typed cells only) ...")
-        E = pd.DataFrame({"Endothelial": Phi[:, phi_names.index("Endothelial")]},
+        ecol = oc.get("endothelial_column", "Endothelial")
+        say(f"oxygen field ({ecol} score from the major table, typed cells only) ...")
+        E = pd.DataFrame({ecol: Phi[:, phi_names.index(ecol)]},
                          index=df["cell_id"].to_numpy())
-        E.loc[~typed, "Endothelial"] = np.nan          # untyped cells are not sources
-        blood_cols = ["Endothelial"]
+        E.loc[~typed, ecol] = np.nan                   # untyped cells are not sources
+        blood_cols = [ecol]
     else:
         say("oxygen field (blood-endothelium source from the celltype_minor table) ...")
         E = pd.read_csv(dc["phi_minor_csv"], index_col=0)
@@ -300,10 +301,10 @@ def build_table(cfg, verbose=True):
     df["oxygen_valid"] = ad.obs["oxygen_valid"].to_numpy(bool)
 
     # --- archetype (reporting only; spec 1.1 forbids it in the likelihood) ----
-    # A raw argmax over these scores is dominated by column scale, so each
-    # column is z-scored first -- the same correction notebook section 23 made.
-    Z = (Phi - Phi.mean(0)) / np.where(Phi.std(0) > 0, Phi.std(0), 1.0)
-    df["archetype"] = pd.Categorical(np.asarray(phi_names)[Z.argmax(axis=1)])
+    # By the section's typing rule (`phi_cell_types`): on breast a raw argmax
+    # is dominated by column scale, so each column is z-scored first -- the
+    # same correction notebook section 23 made.
+    df["archetype"] = pd.Categorical(phi_cell_types(Phi, phi_names, dc))
 
     for j, nm in enumerate(phi_names):
         df[f"phi_{j:02d}"] = Phi[:, j]
@@ -459,6 +460,13 @@ def validate(df, cfg, verbose=True):
     return out, rep
 
 
+def _deep_merge(base, over):
+    out = dict(base)
+    for k, v in over.items():
+        out[k] = _deep_merge(base[k], v) if isinstance(v, dict) and isinstance(base.get(k), dict) else v
+    return out
+
+
 def load_config(path=None):
     """Read `config.yaml` (the only place hyperparameters are defined).
 
@@ -466,15 +474,48 @@ def load_config(path=None):
     `model.technical` -- so a Spartan array can fit the plain baseline
     (`MIX_TECHNICAL=plain`) beside the production model without editing the
     file. Every result records the technical covariates it was fitted with.
+
+    MIX_DATASET, if set (e.g. `ovarian`), layers `config_<dataset>.yaml` from
+    the same folder over the production file: that overlay holds only what
+    differs for the other section (paths, PhiSpace columns, typing rule), so
+    every model setting stays shared. Unset is the breast section.
     """
     import os
 
     import yaml
 
+    here = os.path.dirname(os.path.abspath(__file__))
     if path is None:
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
+        path = os.path.join(here, "config.yaml")
     with open(path) as fh:
         cfg = yaml.safe_load(fh)
+    ds = os.environ.get("MIX_DATASET")
+    if ds:
+        with open(os.path.join(here, f"config_{ds}.yaml")) as fh:
+            cfg = _deep_merge(cfg, yaml.safe_load(fh))
+        cfg["dataset"] = ds
     if os.environ.get("MIX_TECHNICAL"):
         cfg["model"]["technical"] = os.environ["MIX_TECHNICAL"]
     return cfg
+
+
+def phi_cell_types(Phi, phi_names, data_cfg):
+    """Cell type per row of the PhiSpace scores `Phi`, by the section's rule.
+
+    `data.type_rule`: "standardised" (default; the breast convention, argmax
+    of column-standardised scores, since its columns differ ~18-fold in
+    scale) or "raw" (argmax of the scores as they are; on the ovarian section
+    standardising inflated Granulosa 15-fold with no marker support).
+    `data.type_fold` maps type names to a merged label (ovarian: Granulosa
+    and Fallopian Tube Epithelium to Other). The fold relabels only: the
+    score columns, and so the state block, are unchanged.
+    """
+    Phi = np.asarray(Phi, float)
+    rule = data_cfg.get("type_rule", "standardised")
+    if rule == "standardised":
+        Phi = (Phi - Phi.mean(0)) / np.where(Phi.std(0) > 0, Phi.std(0), 1.0)
+    elif rule != "raw":
+        raise ValueError(f"unknown data.type_rule {rule!r}")
+    lab = np.asarray(phi_names, dtype=object)[Phi.argmax(1)]
+    fold = data_cfg.get("type_fold") or {}
+    return np.array([fold.get(t, t) for t in lab], dtype=object)

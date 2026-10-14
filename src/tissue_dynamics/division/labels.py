@@ -38,16 +38,20 @@ def td_tag(t):
 # --------------------------------------------------------------------------
 # Cell type
 # --------------------------------------------------------------------------
-def cell_type(df, phi_names):
-    """Argmax of column-standardised PhiSpace scores (spec 4.3).
+def cell_type(df, phi_names, data_cfg=None):
+    """Cell type from the table's PhiSpace scores, by the section's typing rule
+    (`mixture.data.phi_cell_types`; spec 4.3).
 
-    Never the raw argmax: the nine columns differ ~18-fold in scale, and a raw
-    argmax matches the stored label for only 36.6% of cells.
+    On breast that is the argmax of column-standardised scores -- never the raw
+    argmax: the nine columns differ ~18-fold in scale, and a raw argmax matches
+    the stored label for only 36.6% of cells. `data_cfg` defaults to the
+    current configuration's `data` section.
     """
-    cols = sorted(c for c in df.columns if c.startswith("phi_"))
-    P = df[cols].to_numpy(float)
-    Z = (P - P.mean(0)) / np.where(P.std(0) > 0, P.std(0), 1.0)
-    return np.asarray(phi_names)[Z.argmax(1)]
+    from ..mixture.data import load_config, phi_cell_types
+
+    cols = sorted(c for c in df.columns if c.startswith("phi_") and c[4:].isdigit())
+    dc = load_config()["data"] if data_cfg is None else data_cfg
+    return phi_cell_types(df[cols].to_numpy(float), phi_names, dc)
 
 
 # --------------------------------------------------------------------------

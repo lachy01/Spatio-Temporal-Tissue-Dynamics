@@ -7,7 +7,9 @@ Runs in the MisTIC env (hpc/mistic_setup_env.sh). The Xenium parquet files are
 written by Polars, and pyarrow 22 in the main env cannot read some of their
 integer columns; polars reads them cleanly.
 
-Inputs (data/Xenium_Prime_Breast_Cancer_FFPE/): transcripts.parquet,
+    MIX_DATASET=ovarian python run/mistic_prepare.py    # the ovarian section
+
+Inputs (`data.xenium_dir`; breast: data/Xenium_Prime_Breast_Cancer_FFPE/): transcripts.parquet,
 cells.parquet, cell_boundaries.parquet and cell_feature_matrix.h5 from the
 10x bundle, plus the current PhiSpace scores (config `data.phi_csv`).
 
@@ -21,8 +23,9 @@ Writes to `<mistic.dir>/inputs/`:
   tiles.json                      the spatial tiles run/mistic_run.py fits.
   prepare_log.json                every filter and drop count.
 
-`cell_type` is the argmax archetype of the current PhiSpace scores, each column
-z-scored first, exactly as the mixture table's `archetype` (data.build_table).
+`cell_type` is the archetype of the current PhiSpace scores by the section's
+typing rule, exactly as the mixture table's `archetype` (data.phi_cell_types;
+breast: each column z-scored first).
 These labels are cycle-blind: PhiSpace's input excludes the blocklist.
 
 The three tables are made consistent before writing: a cell is kept only if it
@@ -77,15 +80,18 @@ def wkb_points(x, y):
 
 
 def cell_types(cfg, ids):
-    """Standardised-argmax archetype over the PhiSpace cells; NaN-free rows only."""
+    """The table's archetype over the PhiSpace cells (NaN-free rows only), by the
+    section's typing rule (`data.phi_cell_types`: standardised argmax on
+    breast; raw argmax with Granulosa and Fallopian Tube folded into Other on
+    ovarian)."""
+    from tissue_dynamics.mixture.data import phi_cell_types
+
     dc = cfg["data"]
     P = pd.read_csv(dc["phi_csv"], index_col=0)
     P.index = P.index.astype(str)
     P = P[list(dc["phi_columns"])]
     P = P.loc[~P.isna().any(axis=1)]
-    V = P.to_numpy(float)
-    Z = (V - V.mean(0)) / np.where(V.std(0) > 0, V.std(0), 1.0)
-    lab = pd.Series(np.asarray(P.columns)[Z.argmax(1)], index=P.index)
+    lab = pd.Series(phi_cell_types(P.to_numpy(float), list(P.columns), dc), index=P.index)
     return lab.reindex(ids), len(P)
 
 

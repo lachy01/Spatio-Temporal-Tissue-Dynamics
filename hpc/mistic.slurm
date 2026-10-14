@@ -3,6 +3,8 @@
 #
 #   sbatch hpc/mistic.slurm                  # all 36 tiles
 #   sbatch --array=7 hpc/mistic.slurm        # rerun one tile
+#   MIX_DATASET=ovarian sbatch hpc/mistic.slurm   # the ovarian section
+#                                     (config_ovarian.yaml: data/mistic_ovarian/)
 #
 # Needs data/mistic/inputs/ (run/mistic_prepare.py, or copied from a machine
 # that ran it) and the MisTIC env (bash hpc/mistic_setup_env.sh). Each task

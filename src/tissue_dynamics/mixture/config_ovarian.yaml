@@ -1,0 +1,36 @@
+# Overlay for the ovarian section (Xenium Prime 5K, ovarian cancer FFPE; added
+# 2026-10-14). Active when MIX_DATASET=ovarian; layered over config.yaml by
+# data.load_config, so it holds only what differs from the breast section.
+# Every model setting (rank, penalty, technical covariates, theta) is shared.
+
+data:
+  xenium_dir: data/Xenium_Prime_Ovarian_Cancer_FFPE
+  # PhiSpace trained on the Flex ovarian reference with the tumour subclasses
+  # merged BEFORE training (run "B", decided by the user 2026-10-14). The
+  # post-hoc max-collapse of the fine run kept a proliferation sub-axis in the
+  # Tumour score (within tumour: rho -0.37 with the cycling rate, 16% of its
+  # variance beyond depth, against 0.00 and 3.5% here). Its Tumour score tracks
+  # depth within tumour (rho 0.75); the T3 depth-decile check is the formal test.
+  # Raw score columns sum to a constant per cell; `_norm` and `lib_size_G` unused.
+  phi_csv: data/ovarian_flex/phispace_scores_celltype_10x_coarse_ncomp16_full.csv
+  phi_columns: [Tumour, Fibroblasts, Endothelial Cells, Pericytes, Smooth Muscle Cells,
+                Macrophages, T & NK Cells, Fallopian Tube Epithelium, Granulosa Cells]
+  # Types by RAW argmax: the score scales differ ~6-fold here, and standardising
+  # inflated Granulosa 1.9k -> 30k and Fallopian Tube 1.6k -> 42k cells with no
+  # marker support (FOXL2, FOXJ1). Granulosa has zero precision against 10x's own
+  # annotation (cell_groups.csv has none) and Fallopian Tube Epithelium recall
+  # 0.26, so both fold into Other (user, 2026-10-14). Labels only: all nine score
+  # columns stay in the state block.
+  type_rule: raw
+  type_fold:
+    Granulosa Cells: Other
+    Fallopian Tube Epithelium: Other
+  phi_minor_csv: null
+  table_parquet: data/ovarian/mixture_cells_ovarian.parquet
+
+oxygen:
+  source: major
+  endothelial_column: Endothelial Cells
+
+mistic:
+  dir: data/mistic_ovarian
