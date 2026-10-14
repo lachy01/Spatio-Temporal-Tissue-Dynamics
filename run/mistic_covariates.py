@@ -35,13 +35,16 @@ sys.path.insert(0, os.path.join(HERE, "..", "src"))
 from tissue_dynamics import mistic as M                                # noqa: E402
 from tissue_dynamics.mixture.data import load_config                   # noqa: E402
 
-OUT = "outputs/mistic"
+OUT = "outputs/mistic"          # outputs/mistic_<dataset> under MIX_DATASET
 
 
 def main():
     t0 = time.time()
     cfg = load_config()
     P = M.paths(cfg)
+    global OUT
+    if cfg.get("dataset"):
+        OUT = f"outputs/mistic_{cfg['dataset']}"
     os.makedirs(OUT, exist_ok=True)
 
     counts = M.read_counts(cfg)
@@ -60,6 +63,15 @@ def main():
         sys.exit("transcripts_mistic.parquet does not reproduce the raw counts of MisTIC's cells")
     print(f"  {len(p):,} transcripts with p, in {in_mistic.sum():,} cells; reproduce the raw "
           f"counts exactly", flush=True)
+    # cells a tile left out of its fit (mistic.rare_type_policy: exclude) were
+    # given to MisTIC but never evaluated: p = 0 already, and in_mistic False
+    if os.path.exists(P["excluded"]):
+        ex = set(c for c in open(P["excluded"]).read().split("\n") if c)
+        hit = np.isin(counts.cell_ids, list(ex))
+        if int(hit.sum()) != len(ex):
+            sys.exit("excluded_cells.txt names cells not in cell_feature_matrix.h5")
+        in_mistic = in_mistic & ~hit
+        print(f"  {int(hit.sum()):,} cells left out of their tile's MisTIC fit: in_mistic False")
     tol = 1e-6 * np.maximum(N, 1.0)
     if np.any(cov.Nt > N + tol) or np.any(cov.Nt < -tol):
         sys.exit("Nt outside [0, N]")

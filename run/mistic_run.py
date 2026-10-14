@@ -49,6 +49,9 @@ from tissue_dynamics.mixture.data import load_config                  # noqa: E4
 
 PROB_COL = "reassign_probs"
 MIN_TYPE_CELLS = 30      # pydeseq2 builds 3 pseudo-bulk replicates per type
+MIN_TYPES_LEFT = 4       # with 3 types left a local test fit gave NaN loss from the first
+                         # batch (MisTIC looks for up to 3 candidates of OTHER types);
+                         # every ovarian 6x6 tile keeps >= 6
 
 
 def say(*a):
@@ -152,9 +155,26 @@ def main():
     say(f"tile {tag}: {fit_mask.sum():,} cells in the fit, {core_mask.sum():,} in the core; "
         f"types {dict(types)}")
     rare = types[types < MIN_TYPE_CELLS]
+    excluded_core = []
     if len(rare):
-        raise SystemExit(f"tile {tag}: types with fewer than {MIN_TYPE_CELLS} cells "
-                         f"({dict(rare)}); MisTIC's pseudo-bulk DE needs more. Use fewer tiles.")
+        if mc.get("rare_type_policy", "stop") != "exclude":
+            raise SystemExit(f"tile {tag}: types with fewer than {MIN_TYPE_CELLS} cells "
+                             f"({dict(rare)}); MisTIC's pseudo-bulk DE needs more. Use fewer "
+                             f"tiles, or set mistic.rare_type_policy: exclude.")
+        # `exclude` (ovarian; spatially concentrated types leave a few cells of a
+        # type in some tiles): those cells leave THIS tile's fit -- they are neither
+        # evaluated nor candidate sources here -- and their transcripts keep p = 0,
+        # as for any cell MisTIC does not evaluate. Core cells excluded this way are
+        # listed, and run/mistic_gather.py marks them in_mistic = False.
+        drop = fit_mask & meta["cell_type"].isin(list(rare.index)).to_numpy()
+        excluded_core = meta.loc[core_mask & drop, "cell_id"].astype(str).tolist()
+        fit_mask, core_mask = fit_mask & ~drop, core_mask & ~drop
+        if len(types) - len(rare) < MIN_TYPES_LEFT:
+            raise SystemExit(f"tile {tag}: only {len(types) - len(rare)} types would remain "
+                             f"after excluding {dict(rare)}; MisTIC needs at least "
+                             f"{MIN_TYPES_LEFT}. Use fewer tiles.")
+        say(f"tile {tag}: excluding {int(drop.sum())} cells of types with fewer than "
+            f"{MIN_TYPE_CELLS} ({dict(rare)}), {len(excluded_core)} of them in the core")
 
     scratch = tempfile.mkdtemp(prefix=f"mistic_{tag}_", dir=a.scratch)
     try:
@@ -235,6 +255,10 @@ def main():
             "versions": {"txMisTIC": mistic_version, "torch": torch.__version__,
                          "polars": pl.__version__},
         }
+        summ["excluded_rare_types"] = {str(k): int(v) for k, v in rare.items()}
+        summ["excluded_core_cells"] = len(excluded_core)
+        with open(os.path.join(out, "excluded_core_cells.txt"), "w") as fh:
+            fh.write("".join(c + "\n" for c in excluded_core))
         summ["seconds"]["total"] = round(time.time() - t0, 1)
         json.dump(summ, open(os.path.join(out, "summary.json"), "w"), indent=1)
         say(f"tile {tag}: {len(ce)} epochs; {len(res):,} of {n_core_tx:,} core transcripts "

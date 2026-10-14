@@ -67,9 +67,19 @@ def main():
         rows.append({"tile": d, **{k: s.get(k) for k in (
             "cells_fit", "cells_core", "transcripts_core", "evaluated_core",
             "evaluated_core_fraction", "p_core_mean_over_all_core_transcripts",
-            "p_core_above_0.5", "epochs_run", "device", "peak_rss_gb")},
+            "p_core_above_0.5", "epochs_run", "device", "peak_rss_gb", "excluded_core_cells")},
             "seconds": s["seconds"]["total"]})
     pd.DataFrame(rows).to_csv(os.path.join(cfg["mistic"]["dir"], "tiles_summary.csv"), index=False)
+    excluded = []
+    for d in found:
+        f = f"{P['tiles']}/{d}/excluded_core_cells.txt"
+        if os.path.exists(f):
+            excluded += [c for c in open(f).read().split("\n") if c]
+    with open(P["excluded"], "w") as fh:
+        fh.write("".join(c + "\n" for c in excluded))
+    if excluded:
+        print(f"{len(excluded):,} core cells were left out of their tile's fit (types with too "
+              f"few cells there); their transcripts keep p = 0 and in_mistic is False")
     tid = np.concatenate(tid) if tid else np.zeros(0, np.uint64)
     pv = np.concatenate(pv).astype(np.float32) if pv else np.zeros(0, np.float32)
     if len(np.unique(tid)) != len(tid):

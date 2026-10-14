@@ -41,7 +41,9 @@ def paths(cfg):
     return {"inputs": os.path.join(d, "inputs"), "tiles": os.path.join(d, "tiles"),
             "transcripts": os.path.join(d, "transcripts_mistic.parquet"),
             "cells": os.path.join(d, "cell_mistic.parquet"),
-            "weighted_h5": os.path.join(d, "cell_feature_matrix_mistic.h5")}
+            "weighted_h5": os.path.join(d, "cell_feature_matrix_mistic.h5"),
+            # core cells a tile left out of its fit (mistic.rare_type_policy: exclude)
+            "excluded": os.path.join(d, "excluded_cells.txt")}
 
 
 # --------------------------------------------------------------------------
