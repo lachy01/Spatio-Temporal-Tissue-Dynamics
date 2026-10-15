@@ -1,0 +1,14 @@
+archetype,component,n,pearson_dispersion
+Endothelial Cells,non-cycling (w<0.05),20549,0.6784466142731447
+Fibroblasts,non-cycling (w<0.05),82486,0.8027154202622742
+Fibroblasts,cycling (w>0.95),794,1.5606445987411746
+Macrophages,non-cycling (w<0.05),26958,0.6077404682261147
+Macrophages,cycling (w>0.95),773,1.8737673178982477
+Other,non-cycling (w<0.05),3405,0.8621748757279107
+Pericytes,non-cycling (w<0.05),11731,0.6155003803229199
+Smooth Muscle Cells,non-cycling (w<0.05),47351,0.6621602711458009
+T & NK Cells,non-cycling (w<0.05),6041,0.4852400940409991
+Tumour,non-cycling (w<0.05),94302,0.893986515579469
+Tumour,cycling (w>0.95),51132,2.52979825465088
+all,non-cycling (w<0.05),292823,0.7693514320514976
+all,cycling (w>0.95),53070,2.5101384067173806

@@ -1,6 +1,7 @@
 """Head-to-head: the negative binomial division model vs the Poisson mixture.
 
     python run/compare_nb_mixture.py
+    MIX_DATASET=ovarian python run/compare_nb_mixture.py    # the ovarian section
 
 Three models on the SAME 678,885 cells, the SAME response (`y_count`, summed
 Tirosh S+G2M counts) and the SAME frozen bases, so the only things that differ
@@ -49,7 +50,10 @@ from tissue_dynamics.mixture.data import load_config                      # noqa
 from tissue_dynamics.mixture.model import (build_data, loglik_terms,      # noqa: E402
                                            pi_hat, component_means)
 
-OUT = "outputs/comparison"
+# MIX_DATASET=ovarian: outputs/comparison_ovarian, point estimate from outputs/hpc_ovarian
+_DS = os.environ.get("MIX_DATASET")
+OUT = f"outputs/comparison_{_DS}" if _DS else "outputs/comparison"
+HPC = os.environ.get("MIX_OUT", f"outputs/hpc_{_DS}" if _DS else "outputs/hpc")
 KMAX = 30                      # rootogram support; the tail is pooled into "KMAX+"
 
 # Reference palette slots 1-3: the three that validate all-pairs in both modes.
@@ -194,9 +198,10 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
-    df.attrs["phi_names"] = json.load(open("data/mixture_cells_major.phi_names.json"))
+    df.attrs["phi_names"] = json.load(open(os.path.splitext(cfg["data"]["table_parquet"])[0]
+                                           + ".phi_names.json"))
     basis = build_basis(df, cfg, verbose=False)
-    pe = json.load(open("outputs/hpc/point_estimate.json"))
+    pe = json.load(open(f"{HPC}/point_estimate.json"))
     spec = spec_from_basis(basis, cfg, stage="B", weight_ridge=float(pe["weight_ridge"]))
     data = build_data(df, basis, cfg, spec)
     D = data.as_jax()
