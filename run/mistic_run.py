@@ -49,9 +49,8 @@ from tissue_dynamics.mixture.data import load_config                  # noqa: E4
 
 PROB_COL = "reassign_probs"
 MIN_TYPE_CELLS = 30      # pydeseq2 builds 3 pseudo-bulk replicates per type
-MIN_TYPES_LEFT = 4       # with 3 types left a local test fit gave NaN loss from the first
-                         # batch (MisTIC looks for up to 3 candidates of OTHER types);
-                         # every ovarian 6x6 tile keeps >= 6
+MIN_TYPES_LEFT = 2       # one-vs-rest DE and other-type candidates need two types;
+                         # every ovarian 6x6 tile keeps >= 6 after exclusion
 
 
 def say(*a):
@@ -190,6 +189,27 @@ def main():
         m.import_data(cell_metadata=paths["meta"], cell_boundary_polygons=paths["poly"],
                       detected_transcripts=paths["tx"])
         times["import_data"] = time.time() - t1
+        # MisTIC's one-vs-rest DESeq2 runs on random subsamples of cells, so a gene
+        # with a handful of transcripts can drop out of every pseudo-bulk; its log2
+        # fold change is then missing and so are the expression features of its
+        # transcripts (NaN after the join). MisTIC fills missing p-values but not
+        # these, and one NaN feature makes the loss NaN from the first batch (4 of
+        # 36 ovarian tiles: genes with 1-5 transcripts in the tile). Fill them with
+        # 0 -- the logit of the median rank, "no differential evidence". MisTIC's
+        # prior features for the same transcripts are complete. A no-op where
+        # nothing is missing, so tiles fitted before this are unchanged.
+        exp_cols = ["exp_feature", "neighbor_exp_feature"]
+        miss = lambda c: pl.col(c).is_null() | pl.col(c).is_nan()          # noqa: E731
+        n_imputed = int(m.intf_tx.select(pl.any_horizontal([miss(c) for c in exp_cols])).to_series().sum())
+        if n_imputed:
+            m.intf_tx = m.intf_tx.with_columns([pl.when(miss(c)).then(0.0).otherwise(pl.col(c)).alias(c)
+                                                for c in exp_cols])
+            say(f"  {n_imputed:,} transcripts with a missing DE expression feature set to 0 "
+                f"(of {m.intf_tx.height:,})")
+        num = [c for c, t in zip(m.intf_tx.columns, m.intf_tx.dtypes) if t in (pl.Float32, pl.Float64)]
+        left = int(m.intf_tx.select(pl.any_horizontal([miss(c) for c in num])).to_series().sum())
+        if left:
+            raise SystemExit(f"tile {tag}: {left:,} transcripts still have a missing feature")
         t1 = time.time()
         m.patchfy_data()
         m.initialize_parameters()
@@ -255,6 +275,7 @@ def main():
             "versions": {"txMisTIC": mistic_version, "torch": torch.__version__,
                          "polars": pl.__version__},
         }
+        summ["imputed_exp_features"] = n_imputed
         summ["excluded_rare_types"] = {str(k): int(v) for k, v in rare.items()}
         summ["excluded_core_cells"] = len(excluded_core)
         with open(os.path.join(out, "excluded_core_cells.txt"), "w") as fh:
