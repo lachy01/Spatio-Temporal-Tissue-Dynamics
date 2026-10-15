@@ -40,3 +40,8 @@ mistic:
   # cells leave that tile's fit (p = 0, in_mistic False): 244 analysis cells
   # (0.06%; 164 Other, 80 Smooth Muscle). Breast keeps the hard stop.
   rare_type_policy: exclude
+
+# Division classifier comparison: the two types Stage 4 singles out (breast:
+# Cancer Epithelial, Plasmablasts). Tumour holds most cycling cells here; T & NK
+# Cells has the highest cycling fraction outside it.
+division_focus_types: [Tumour, T & NK Cells]

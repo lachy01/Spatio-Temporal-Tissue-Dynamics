@@ -20,6 +20,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
+from tissue_dynamics.division import paths as DP                    # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "..", "tests"))
 import matplotlib                                                     # noqa: E402
 
@@ -30,7 +31,7 @@ from tissue_dynamics.division import labels as L                       # noqa: E
 from tissue_dynamics.mixture.basis import build_basis                  # noqa: E402
 from tissue_dynamics.mixture.data import _tirosh_genes, load_config    # noqa: E402
 
-OUT = "outputs/division_classifier"
+OUT = DP.out_dir()
 REPORT = f"{OUT}/report.md"
 INK, INK2, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 
@@ -129,7 +130,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
-    phi_names = json.load(open("data/mixture_cells_major.phi_names.json"))
+    phi_names = json.load(open(DP.phi_names_path(load_config())))
     df.attrs["phi_names"] = phi_names
     basis = build_basis(df, cfg, verbose=False)
     n = len(df)
@@ -138,7 +139,13 @@ def main():
     A = df["area"].to_numpy(float)
     ctype = L.cell_type(df, phi_names)
     agree = float(np.mean(ctype == df["archetype"].astype(str).to_numpy()))
-    say(f"{n:,} cells; cell type = standardised argmax, agrees with stored label "
+    global TYPE_RULE
+    TYPE_RULE = ("argmax of the raw PhiSpace scores" if cfg["data"].get("type_rule") == "raw" else
+                 "argmax of the column-standardised PhiSpace scores")
+    if cfg["data"].get("type_fold"):
+        TYPE_RULE += (f", with {' and '.join(cfg['data']['type_fold'])} folded into "
+                      f"{', '.join(sorted(set(cfg['data']['type_fold'].values())))}")
+    say(f"{n:,} cells; cell type = {TYPE_RULE}, agrees with stored label "
         f"for {100 * agree:.2f}%")
 
     # ---- the raw matrix: recheck the outcome and library size ---------------
@@ -318,7 +325,7 @@ def main():
             "kappa vs BASE-O": L.cohen_kappa(LS, LO),
             "SCORE rate": float(LS.mean()), "BASE-T rate": float(LT.mean()),
             "BASE-O rate": float(LO.mean())}]
-    for t in phi_names:
+    for t in DP.type_names(cfg):
         m = ctype == t
         kap.append({"stratum": t, "n": int(m.sum()),
                     "kappa vs BASE-T": L.cohen_kappa(LS[m], LT[m]),
@@ -340,7 +347,7 @@ def main():
     meta = dict(n_cells=n, tirosh_genes=tirosh, n_tirosh=len(tirosh), n_blocklist=len(block),
                 alpha0=a0, null_beta=null["beta"].tolist(), null_trace=null["trace"],
                 null_stopped_on=null["stopped_on"], s_plus_global=float(s_glob[0]),
-                s_plus_type={t: float(s_type[ctype == t][0]) for t in phi_names},
+                s_plus_type={t: float(s_type[ctype == t][0]) for t in DP.type_names(cfg)},
                 rho_neg=rho_neg, n_neg_codewords=n_negcw, s_plus_neg=float(s_neg[0]),
                 score=dict(mode=thr["mode"], sigma=thr["sigma"], threshold=thr["threshold"],
                            **sinfo),
@@ -354,7 +361,7 @@ def main():
 
     # ---- report ---------------------------------------------------------------
     rates = []
-    for t in ["all"] + list(phi_names):
+    for t in ["all"] + list(DP.type_names(cfg)):
         m = np.ones(n, bool) if t == "all" else ctype == t
         row = {"cell type": t, "cells": int(m.sum())}
         for ab in L.ALPHA_B_GRID:
@@ -380,8 +387,7 @@ def main():
     report(f"""
 ## Stage 1 -- labels (built and frozen {time.strftime('%Y-%m-%d %H:%M')})
 
-{n:,} analysis cells. Cell type is the argmax of column-standardised PhiSpace
-scores, agreeing with the stored label for {100 * agree:.2f}% of cells.
+{n:,} analysis cells. Cell type is the {TYPE_RULE}, agreeing with the stored label for {100 * agree:.2f}% of cells.
 
 **Outcome and library size.** y recomputed from the count matrix with the
 mixture's {len(tirosh)}-gene Tirosh list equals the table's `y_count` for every
@@ -410,7 +416,7 @@ false-positive rate at that count, always below alpha_B.
 
 Primary BASE-O scales the residual within each cell type, as OSDR's own code
 does (`is_dividing`: one cutoff per type, `Td * sigma_type + Tn`, ddof 0).
-Per-type s+: {', '.join(f'{t} {meta["s_plus_type"][t]:.3f}' for t in phi_names)}.
+Per-type s+: {', '.join(f'{t} {meta["s_plus_type"][t]:.3f}' for t in DP.type_names(cfg))}.
 BASE-O-global uses one s+ = {s_glob[0]:.4f} for all cells.
 Negative-codeword floor (BASE-O-neg, decoding noise only, no spillover):
 rho = {rho_neg:.3e} per um^2 over {n_negcw} negative-control codewords,

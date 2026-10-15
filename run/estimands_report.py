@@ -1,6 +1,7 @@
 """Spec 8.2's archetype-conditional neighbourhood table, plus spatial maps.
 
     python run/estimands_report.py
+    MIX_DATASET=ovarian python run/estimands_report.py     # outputs/estimands_8_2_ovarian.md
 
 Spec 8.2 calls this the headline result and the direct generalisation of the
 discrete interaction matrix: for a reference own-state archetype `a`, the
@@ -34,11 +35,14 @@ from tissue_dynamics.mixture.model import (build_data, marginal_mean,    # noqa:
 
 def main():
     cfg = load_config()
+    ds = cfg.get("dataset")
+    hpc = os.environ.get("MIX_OUT", f"outputs/hpc_{ds}" if ds else "outputs/hpc")
+    sfx = f"_{ds}" if ds else ""
     df = pd.read_parquet(cfg["data"]["table_parquet"])
-    names = json.load(open("data/mixture_cells_major.phi_names.json"))
+    names = json.load(open(os.path.splitext(cfg["data"]["table_parquet"])[0] + ".phi_names.json"))
     df.attrs["phi_names"] = names
     basis = build_basis(df, cfg, verbose=False)
-    pe = json.load(open("outputs/hpc/point_estimate.json"))
+    pe = json.load(open(f"{hpc}/point_estimate.json"))
     spec = spec_from_basis(basis, cfg, stage="B", weight_ridge=float(pe["weight_ridge"]))
     data = build_data(df, basis, cfg, spec)
     p = {k: jnp.asarray(np.asarray(v)) for k, v in pe["params"].items()}
@@ -56,7 +60,7 @@ def main():
     nbr_names = list(basis.nbr_names)
     delta = np.percentile(nbr_raw, 75, axis=0) - np.percentile(nbr_raw, 25, axis=0)
 
-    boot = [json.load(open(f)) for f in sorted(glob.glob("outputs/hpc/bootstrap/*.json"))]
+    boot = [json.load(open(f)) for f in sorted(glob.glob(f"{hpc}/bootstrap/*.json"))]
     arche = df["archetype"].astype(str).to_numpy()
 
     def table(c_vec, B_mat):
@@ -126,10 +130,10 @@ def main():
     a2.set_xlabel("Pearson residual")
     fig.suptitle("Stage B: spatial fit and residuals (100 um tiles)", y=0.99)
     fig.tight_layout()
-    fig.savefig("outputs/figures/spatial_residuals.png", dpi=140)
-    print("wrote outputs/figures/spatial_residuals.png")
+    fig.savefig(f"outputs/figures/spatial_residuals{sfx}.png", dpi=140)
+    print(f"wrote outputs/figures/spatial_residuals{sfx}.png")
 
-    with open("outputs/estimands_8_2.md", "w") as fh:
+    with open(f"outputs/estimands_8_2{sfx}.md", "w") as fh:
         fh.write("# Spec 8.2 — archetype-conditional neighbourhood effects\n\n")
         fh.write("Odds ratio of cycling per IQR of each neighbourhood component, "
                  "for a cell whose own state sits at the given archetype centroid. "
@@ -148,7 +152,7 @@ def main():
             fh.write(f"| {a} | " + " | ".join(cells) + " |\n")
         fh.write(f"\n{int(sig.to_numpy().sum())} of {sig.size} entries have a CI "
                  "excluding 1.\n")
-    print("wrote outputs/estimands_8_2.md")
+    print(f"wrote outputs/estimands_8_2{sfx}.md")
 
 
 if __name__ == "__main__":

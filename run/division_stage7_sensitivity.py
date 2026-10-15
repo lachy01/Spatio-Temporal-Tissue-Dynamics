@@ -41,6 +41,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
+from tissue_dynamics.division import paths as DP                    # noqa: E402
 import jax                                                            # noqa: E402
 
 jax.config.update("jax_enable_x64", True)
@@ -61,7 +62,7 @@ _s = importlib.util.spec_from_file_location("s4", os.path.join(HERE, "division_s
 s4 = importlib.util.module_from_spec(_s)
 _s.loader.exec_module(s4)
 
-OUT = "outputs/division_classifier"
+OUT = DP.out_dir()
 CACHE = f"{OUT}/cache_stage7"
 REPORT = f"{OUT}/report.md"
 N_FOLDS = 5
@@ -89,9 +90,9 @@ def main():
     os.makedirs(CACHE, exist_ok=True)
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
-    types = json.load(open("data/mixture_cells_major.phi_names.json"))
+    types = DP.type_names(load_config())
     df.attrs["phi_names"] = types
-    pe = json.load(open("outputs/hpc/point_estimate.json"))
+    pe = json.load(open(f"{DP.hpc_dir()}/point_estimate.json"))
     lab = pd.read_parquet(f"{OUT}/labels.parquet")
     fm = pd.read_parquet(f"{OUT}/folds.parquet")
     oof = pd.read_parquet(f"{OUT}/oof_predictions.parquet")

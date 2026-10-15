@@ -10,8 +10,8 @@ refitted. For BASE-T and BASE-O separately, at the primary thresholds:
   remainder the binning leaves); AUROC and AUPRC;
 * calibration-in-the-large, as mean p / label rate and mean p - label rate,
   overall and per cell type;
-* reliability curves (20 equal-count bins), overall and for Cancer Epithelial
-  and Plasmablasts;
+* reliability curves (20 equal-count bins), overall and for two focus types
+  (breast: Cancer Epithelial and Plasmablasts; `division_focus_types`);
 * a threshold sweep: calibration-in-the-large of the count arms across the
   alpha_B grid (BASE-T) and the Td grid (BASE-O), overall and per type, and by
   the cell's own threshold c_i (pre-stated expectations X2 and X3).
@@ -46,14 +46,16 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
+from tissue_dynamics.division import paths as DP                    # noqa: E402
 import matplotlib                                                     # noqa: E402
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt                                       # noqa: E402
 
 from tissue_dynamics.division import labels as L                      # noqa: E402
+from tissue_dynamics.mixture.data import load_config                  # noqa: E402
 
-OUT = "outputs/division_classifier"
+OUT = DP.out_dir()
 REPORT = f"{OUT}/report.md"
 N_BOOT, SEED, N_BINS, SIM_REPS = 300, 20261008, 20, 50
 EPS = 1e-12
@@ -202,7 +204,9 @@ def main():
     lab = pd.read_parquet(f"{OUT}/labels.parquet")
     oof = pd.read_parquet(f"{OUT}/oof_predictions.parquet")
     fm = pd.read_parquet(f"{OUT}/folds.parquet")
-    types = json.load(open("data/mixture_cells_major.phi_names.json"))
+    types = DP.type_names(load_config())
+    global FOCUS
+    FOCUS = DP.focus_types(load_config())
     for name, frame in (("oof_predictions", oof), ("folds", fm)):
         if not np.array_equal(frame["cell_id"].astype(str).to_numpy(),
                               lab["cell_id"].astype(str).to_numpy()):
@@ -262,7 +266,7 @@ def main():
              "BASE-O": [("MIX", "NB-c"), ("NB-d", "NB-c"), ("LOG-O", "MIX"), ("LOG-O", "NB-c")]}
     diff_rows = []
     for lname, pl in pairs.items():
-        for s in ("all", "Cancer Epithelial", "Plasmablasts"):
+        for s in ("all", *FOCUS):
             for a, b in pl:
                 for m in ("log loss", "Brier", "AUROC", "AUPRC"):
                     est = (scores.query("label == @lname and threshold == 'primary' and arm == @a "
@@ -332,7 +336,7 @@ def main():
     for lname in ("BASE-T", "BASE-O", "SCORE"):
         arms_here = ([*COUNT_ARMS, LABELS[lname]["log"][0]] if lname != "SCORE" else ["LOG-S"])
         fig, axes = plt.subplots(1, 3, figsize=(16, 5))
-        for ax, s in zip(axes, ("all", "Cancer Epithelial", "Plasmablasts")):
+        for ax, s in zip(axes, ("all", *FOCUS)):
             for arm in arms_here:
                 cv = curves[(lname, "primary", arm, s)]
                 ax.errorbar(cv["mean p"], cv["observed"],
@@ -483,7 +487,7 @@ so a paired difference is taken within each replicate. Per the interpretive
 rule, each LOG arm was trained on the label it is scored against, and a
 label-scale win for it is not evidence that it infers division better.
 Calibration-in-the-large is reported as mean p / label rate (1 = calibrated).
-Cell types are the Stage 1 standardised argmax.
+Cell types are Stage 1's.
 
 ### BASE-T ({LABELS['BASE-T']['col']}, label rate {lab[LABELS['BASE-T']['col']].mean():.4f})
 

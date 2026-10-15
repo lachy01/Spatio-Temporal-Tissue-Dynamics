@@ -260,3 +260,6 @@ outputs/division_classifier/two_step.parquet
 outputs/division_classifier/oof_grid.parquet
 outputs/division_classifier/cache_grid/
 outputs/division_classifier/labels_state.parquet
+# ovarian division comparison: regenerable parquet (MIX_DATASET=ovarian, run/division_stage*.py)
+outputs/division_classifier_ovarian/*.parquet
+data/ovarian/

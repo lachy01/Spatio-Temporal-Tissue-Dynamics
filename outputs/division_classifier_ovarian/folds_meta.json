@@ -1,0 +1,30 @@
+{
+  "sha256": "8ad3a96ff738c24d574954b8ab0a1ce581aad5f96375a0faec5192b39804d7b8",
+  "fold_sizes_train_test": {
+    "0": [
+      315560,
+      79962
+    ],
+    "1": [
+      318459,
+      77063
+    ],
+    "2": [
+      313974,
+      81548
+    ],
+    "3": [
+      315785,
+      79737
+    ],
+    "4": [
+      318310,
+      77212
+    ]
+  },
+  "matches_mixture_cv": null,
+  "sklearn": "1.6.1",
+  "numpy": "2.4.1",
+  "python": "3.12.2",
+  "host": "Lachlans-MacBook-Air-3.local"
+}

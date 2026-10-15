@@ -40,6 +40,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
+from tissue_dynamics.division import paths as DP                    # noqa: E402
 import jax                                                            # noqa: E402
 
 jax.config.update("jax_enable_x64", True)
@@ -54,7 +55,7 @@ from tissue_dynamics.mixture.fit import fit_lbfgs                     # noqa: E4
 from tissue_dynamics.mixture.model import (build_data, loglik_terms,  # noqa: E402
                                            pi_hat, component_means)
 
-OUT = "outputs/division_classifier"
+OUT = DP.out_dir()
 REPORT = f"{OUT}/report.md"
 N_FOLDS = 5
 LOG_ARMS = {"LOG-T": f"LT_{L.ab_tag(L.ALPHA_B_PRIMARY)}",
@@ -123,8 +124,8 @@ def main():
     t0 = time.time()
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
-    df.attrs["phi_names"] = json.load(open("data/mixture_cells_major.phi_names.json"))
-    pe = json.load(open("outputs/hpc/point_estimate.json"))
+    df.attrs["phi_names"] = json.load(open(DP.phi_names_path(load_config())))
+    pe = json.load(open(f"{DP.hpc_dir()}/point_estimate.json"))
     lab = pd.read_parquet(f"{OUT}/labels.parquet")
     fm = pd.read_parquet(f"{OUT}/folds.parquet")
     fmeta = json.load(open(f"{OUT}/folds_meta.json"))
@@ -136,7 +137,7 @@ def main():
     # the stored folds stand in. Held-out log-likelihoods are compared only with
     # CV of the same rank, penalty and technical covariates as this run.
     cvr = [json.load(open(f)) for j in ("cv_rank", "cv_production", "cv_penalty")
-           for f in sorted(glob.glob(f"outputs/hpc/{j}/*.json"))]
+           for f in sorted(glob.glob(f"{DP.hpc_dir()}/{j}/*.json"))]
     if not cvr:
         cvr = [{"fold": int(f), "n_train": int(s[0]), "n_test": int(s[1])}
                for f, s in fmeta["fold_sizes_train_test"].items()]

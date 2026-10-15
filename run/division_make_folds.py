@@ -23,11 +23,12 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
+from tissue_dynamics.division import paths as DP                    # noqa: E402
 
 from tissue_dynamics.mixture.data import load_config                  # noqa: E402
 from tissue_dynamics.mixture.inference import block_folds, spatial_blocks  # noqa: E402
 
-OUT = "outputs/division_classifier"
+OUT = DP.out_dir()
 
 
 def main():
@@ -43,7 +44,7 @@ def main():
 
     match = None
     cvp = [json.load(open(f)) for f in sorted(glob.glob(
-        os.environ.get("MIX_OUT", "outputs/hpc") + "/cv_penalty/*.json"))]
+        DP.hpc_dir() + "/cv_penalty/*.json"))]
     if cvp:
         seen = {}
         for r in cvp:

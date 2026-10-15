@@ -54,6 +54,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
+from tissue_dynamics.division import paths as DP                    # noqa: E402
 import matplotlib                                                     # noqa: E402
 
 matplotlib.use("Agg")
@@ -71,7 +72,7 @@ _s = importlib.util.spec_from_file_location("spatial", os.path.join(HERE, "spati
 spatial = importlib.util.module_from_spec(_s)
 _s.loader.exec_module(spatial)
 
-OUT = "outputs/division_classifier"
+OUT = DP.out_dir()
 REPORT = f"{OUT}/report.md"
 N_BOOT, SEED = 300, 20261008
 RECEPTORS = ("ESR1", "PGR", "ERBB2")
@@ -148,7 +149,7 @@ def main():
     t0 = time.time()
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
-    types = json.load(open("data/mixture_cells_major.phi_names.json"))
+    types = DP.type_names(load_config())
     df.attrs["phi_names"] = types
     lab = pd.read_parquet(f"{OUT}/labels.parquet")
     oof = pd.read_parquet(f"{OUT}/oof_predictions.parquet")

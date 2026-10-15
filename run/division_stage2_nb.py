@@ -22,6 +22,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
+from tissue_dynamics.division import paths as DP                    # noqa: E402
 import jax                                                            # noqa: E402
 
 jax.config.update("jax_enable_x64", True)
@@ -33,7 +34,7 @@ from tissue_dynamics.mixture.data import load_config                  # noqa: E4
 from tissue_dynamics.mixture.inference import block_folds, spatial_blocks  # noqa: E402
 from tissue_dynamics.mixture.model import _logit_pi, build_data, loglik_terms  # noqa: E402
 
-OUT = "outputs/division_classifier"
+OUT = DP.out_dir()
 REPORT = f"{OUT}/report.md"
 ARMS = {"NB-c": "const", "NB-d": "state"}
 
@@ -73,15 +74,15 @@ def main():
     # iCloud-synced Desktop, and an evicted file has already killed one long run.
     cfg = load_config()
     df = pd.read_parquet(cfg["data"]["table_parquet"])
-    df.attrs["phi_names"] = json.load(open("data/mixture_cells_major.phi_names.json"))
-    pe = json.load(open("outputs/hpc/point_estimate.json"))
+    df.attrs["phi_names"] = json.load(open(DP.phi_names_path(load_config())))
+    pe = json.load(open(f"{DP.hpc_dir()}/point_estimate.json"))
     import glob
     # V5 compares fold SIZES with a Spartan CV run of the mixture -- any CV job:
     # sizes depend only on the cells and the spatial partition. Without one (the
     # area-era CV left the repository with cell area, 2026-10-13), the sizes
     # recorded with the stored folds, from the Spartan CV's partition, stand in.
     cvp = [json.load(open(f)) for j in ("cv_penalty", "cv_rank", "cv_production")
-           for f in sorted(glob.glob(f"outputs/hpc/{j}/*.json"))]
+           for f in sorted(glob.glob(f"{DP.hpc_dir()}/{j}/*.json"))]
     if not cvp:
         fmeta = json.load(open(f"{OUT}/folds_meta.json"))
         cvp = [{"fold": int(f), "n_train": int(s[0]), "n_test": int(s[1])}
