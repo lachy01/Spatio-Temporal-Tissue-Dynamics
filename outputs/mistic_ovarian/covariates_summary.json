@@ -1,0 +1,24 @@
+{
+ "cells": 407124,
+ "cells_in_mistic": 405998,
+ "transcripts_with_p": 106448668,
+ "mean_p_all_transcripts": 0.03129702424585696,
+ "mean_p_nonB_transcripts": 0.03187441111124819,
+ "mean_p_cycle_transcripts": 0.022994105093951417,
+ "share_p_gt_0.5": 0.012541171487462859,
+ "Nt_over_N_median_mistic_cells": 0.9753489141604196,
+ "f_quantiles_mistic_cells": {
+  "q10": 0.0,
+  "q50": 0.024127021155746046,
+  "q90": 0.1079988477027167
+ },
+ "m_cyc_mean": 0.09830338312713902,
+ "m_cyc_quantiles": {
+  "q50": 0.0010321091576041522,
+  "q90": 0.27329194273178514,
+  "q99": 1.375668919572118
+ },
+ "Y_cyc_mean": 3.910943594580521,
+ "corr_log1p_m_cyc_vs_log_N": 0.32254731790358193,
+ "seconds": 21.7
+}
