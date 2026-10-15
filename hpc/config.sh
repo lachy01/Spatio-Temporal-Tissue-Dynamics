@@ -30,7 +30,13 @@ export MIX_CPUS="${MIX_CPUS:-4}"
 # rather than $HOME, which was the old default and simply wrong there.
 _MIX_CONFIG_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export MIX_ROOT="${MIX_ROOT:-$(dirname "$_MIX_CONFIG_DIR")}"
-export MIX_OUT="${MIX_OUT:-$MIX_ROOT/outputs/hpc}"
+# A second section (MIX_DATASET=ovarian, config_ovarian.yaml) defaults to its own
+# output folder, so its fits can never land beside the breast section's.
+if [ -n "${MIX_DATASET:-}" ]; then
+  export MIX_OUT="${MIX_OUT:-$MIX_ROOT/outputs/hpc_${MIX_DATASET}}"
+else
+  export MIX_OUT="${MIX_OUT:-$MIX_ROOT/outputs/hpc}"
+fi
 export MIX_VENV="${MIX_VENV:-$MIX_ROOT/../venvs/3.12.3}"
 
 # Spartan uses lmod. `module purge` first is the documented habit; Python/3.10.4

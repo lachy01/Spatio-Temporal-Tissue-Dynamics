@@ -75,7 +75,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--job", required=True)
     ap.add_argument("--index", type=int, required=True)
-    ap.add_argument("--out", default=os.environ.get("MIX_OUT", "outputs/hpc"))
+    ap.add_argument("--out", default=os.environ.get(
+        "MIX_OUT", f"outputs/hpc_{os.environ['MIX_DATASET']}" if os.environ.get("MIX_DATASET")
+        else "outputs/hpc"))
     ap.add_argument("--config", default=None)
     ap.add_argument("--count", action="store_true",
                     help="print the number of tasks and exit (for --array=0-N)")

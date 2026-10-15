@@ -21,7 +21,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from tissue_dynamics.mixture.data import load_config          # noqa: E402
 
-OUT = os.environ.get("MIX_OUT", "outputs/hpc")
+OUT = os.environ.get("MIX_OUT", f"outputs/hpc_{os.environ['MIX_DATASET']}"
+                     if os.environ.get("MIX_DATASET") else "outputs/hpc")
 
 
 def main():

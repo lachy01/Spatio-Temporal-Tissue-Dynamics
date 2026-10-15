@@ -121,6 +121,23 @@ TWO-PNB) roughly doubled a replicate's time. At n = 100,000, expect about
 `outputs/hpc/division_sim_addendum/` and run
 `python run/division_addendum_a5_gather.py`.
 
+## A second section (ovarian, `MIX_DATASET=ovarian`)
+
+`config_ovarian.yaml` layers the ovarian paths over `config.yaml`; every model
+setting (rank 3, lambda 300 scaled to n, MisTIC technical terms, theta = 1) is
+shared. With `MIX_DATASET` set, `MIX_OUT` defaults to `outputs/hpc_ovarian`.
+Copy `data/ovarian/mixture_cells_ovarian.parquet` and its `.phi_names.json`
+first.
+
+```bash
+git pull
+export MIX_DATASET=ovarian MIX_TIME=0-12:00:00
+JID=$(./hpc/submit.sh multistart)
+sbatch --dependency=afterok:$JID --export=ALL --wrap="cd $PWD && source hpc/env.sh && python run/collect_point_estimate.py"
+# once outputs/hpc_ovarian/point_estimate.json exists:
+./hpc/submit.sh bootstrap 50
+```
+
 ## Spartan-specific notes
 
 - **Default wall time is 10 minutes.** `MIX_TIME` defaults to `0-02:00:00` here;
