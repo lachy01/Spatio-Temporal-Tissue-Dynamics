@@ -1,0 +1,112 @@
+{
+ "global": [
+  {
+   "fit": "production",
+   "e^delta": 1.744838114478176,
+   "rate ratio": 5.724974609898123,
+   "theta_m": 1.3990232377603642,
+   "mean w": 0.18100791586340526,
+   "sd logit pi": 2.7382760543865343,
+   "rho(logit pi, log N), all": 0.6563082847927939,
+   "penalised loglik": -741431.8230218607
+  },
+  {
+   "fit": "depth-residualised",
+   "e^delta": 1.742756201977522,
+   "rate ratio": 5.713068112135701,
+   "theta_m": 1.3423779829312934,
+   "mean w": 0.18288489722913892,
+   "sd logit pi": 3.120093896575945,
+   "rho(logit pi, log N), all": 0.6299027359319337,
+   "penalised loglik": -742258.691521489
+  }
+ ],
+ "per_type": [
+  {
+   "type": "Tumour",
+   "cells": 181539,
+   "w prod": 0.3621760767834431,
+   "w resid": 0.3645314871169226,
+   "rho(pi,logN) prod": 0.37540221157904524,
+   "rho(pi,logN) resid": 0.2034340229571821,
+   "nbr contrast prod": 2.6641937220629197,
+   "nbr contrast resid": 2.489476912678117
+  },
+  {
+   "type": "Fibroblasts",
+   "cells": 86585,
+   "w prod": 0.02188315319092697,
+   "w resid": 0.023265680644550705,
+   "rho(pi,logN) prod": 0.34673485526496195,
+   "rho(pi,logN) resid": 0.34858772854754994,
+   "nbr contrast prod": 2.8210009301018153,
+   "nbr contrast resid": 3.745829696443329
+  },
+  {
+   "type": "Smooth Muscle Cells",
+   "cells": 47877,
+   "w prod": 0.0034386404307627945,
+   "w resid": 0.0016612118909280701,
+   "rho(pi,logN) prod": -0.09707107475228112,
+   "rho(pi,logN) resid": -0.08893283512813467,
+   "nbr contrast prod": -1.3388405314644887,
+   "nbr contrast resid": 1.4367113858320284
+  },
+  {
+   "type": "Macrophages",
+   "cells": 32672,
+   "w prod": 0.06673857856137247,
+   "w resid": 0.07465958217044179,
+   "rho(pi,logN) prod": 0.22581399937625354,
+   "rho(pi,logN) resid": 0.1767077004702948,
+   "nbr contrast prod": 2.5243382455249344,
+   "nbr contrast resid": 4.689189963282088
+  },
+  {
+   "type": "Endothelial Cells",
+   "cells": 21595,
+   "w prod": 0.01815133215048858,
+   "w resid": 0.015979904678428854,
+   "rho(pi,logN) prod": -0.013799876205158195,
+   "rho(pi,logN) resid": 0.14697789053876575,
+   "nbr contrast prod": 1.1007465398344163,
+   "nbr contrast resid": 3.557244194676494
+  },
+  {
+   "type": "Pericytes",
+   "cells": 13280,
+   "w prod": 0.03542971328570111,
+   "w resid": 0.03168847264348137,
+   "rho(pi,logN) prod": 0.08025033809742224,
+   "rho(pi,logN) resid": 0.15698723891983507,
+   "nbr contrast prod": 0.44756153157610656,
+   "nbr contrast resid": 4.292761822101714
+  },
+  {
+   "type": "T & NK Cells",
+   "cells": 8421,
+   "w prod": 0.08235938001034172,
+   "w resid": 0.0976034847528209,
+   "rho(pi,logN) prod": 0.14871022717881874,
+   "rho(pi,logN) resid": 0.0647695303490869,
+   "nbr contrast prod": 1.9569223694054139,
+   "nbr contrast resid": 2.876570398748692
+  },
+  {
+   "type": "Other",
+   "cells": 3553,
+   "w prod": 0.013405488305124329,
+   "w resid": 0.010475685286181688,
+   "rho(pi,logN) prod": -0.45963569431127804,
+   "rho(pi,logN) resid": -0.3471065898082612,
+   "nbr contrast prod": 2.384955379468467,
+   "nbr contrast resid": 1.8850288688071055
+  }
+ ],
+ "restart_logliks": [
+  -744790.4373136258,
+  -742258.691521489,
+  -742258.691521489,
+  -742258.691521489
+ ]
+}

@@ -219,6 +219,26 @@ def build_table(cfg, verbose=True):
         say(f"  dropping {int((~ok).sum())} cells with a NaN phi embedding")
         df, ad, Phi = df.loc[ok].reset_index(drop=True), ad[ok].copy(), Phi[ok]
 
+    # Types (and everything else read from the raw scores) use Phi as read.
+    Phi_raw = Phi
+    if dc.get("phi_depth_residualise"):
+        # Sensitivity (ovarian, 2026-10-15): remove each score's within-type
+        # linear dependence on log N, keeping the type means, so the state
+        # carries no within-type depth signal into pi. Types come from the raw
+        # scores. The per-column slopes sum to zero (the rowsum is constant), so
+        # the rowsum is preserved. Neighbour means are built from the result.
+        min_lib0 = int(dc.get("min_library_size", 0))
+        lN = np.log(np.maximum(df["N"].to_numpy(float), 1.0))
+        ty = phi_cell_types(Phi, phi_names, dc)
+        Phi = Phi.copy()
+        for t in np.unique(ty):
+            m = ty == t
+            fit = m & (df["N"].to_numpy() >= max(min_lib0, 1))
+            x = lN[fit] - lN[fit].mean()
+            slope = (x @ (Phi[fit] - Phi[fit].mean(0))) / (x @ x)
+            Phi[m] -= np.outer(lN[m] - lN[fit].mean(), slope)
+        say(f"  scores residualised on log N within type ({len(np.unique(ty))} types)")
+
     # --- neighbourhood mean, density, oxygen ---------------------------------
     say(f"neighbour mean at radius {dc['neighbour_radius_um']} um ...")
     ad.obsm["phi"] = Phi
@@ -257,7 +277,7 @@ def build_table(cfg, verbose=True):
     if oc.get("source", "minor") == "major":
         ecol = oc.get("endothelial_column", "Endothelial")
         say(f"oxygen field ({ecol} score from the major table, typed cells only) ...")
-        E = pd.DataFrame({ecol: Phi[:, phi_names.index(ecol)]},
+        E = pd.DataFrame({ecol: Phi_raw[:, phi_names.index(ecol)]},
                          index=df["cell_id"].to_numpy())
         E.loc[~typed, ecol] = np.nan                   # untyped cells are not sources
         blood_cols = [ecol]
@@ -304,7 +324,7 @@ def build_table(cfg, verbose=True):
     # By the section's typing rule (`phi_cell_types`): on breast a raw argmax
     # is dominated by column scale, so each column is z-scored first -- the
     # same correction notebook section 23 made.
-    df["archetype"] = pd.Categorical(phi_cell_types(Phi, phi_names, dc))
+    df["archetype"] = pd.Categorical(phi_cell_types(Phi_raw, phi_names, dc))
 
     for j, nm in enumerate(phi_names):
         df[f"phi_{j:02d}"] = Phi[:, j]
