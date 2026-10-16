@@ -84,6 +84,12 @@ class ModelSpec:
     # model.technical, for the record ("mistic", "plain" or "area"); the terms
     # themselves follow `mistic` and `df_area`
     technical: str = "area"
+    # Cycling component family. False (production): Poisson, as the null. True:
+    # NB2 with mean rho + lambda_1 and one shared dispersion alpha_1 = exp(la1)
+    # (Var = mu + alpha_1 mu^2), unpenalised -- the Poisson + NB mixture, a
+    # sensitivity (2026-10-16; ovarian rootograms and push-through calibration
+    # showed the Poisson cycling tail too thin at depth).
+    cycling_nb: bool = False
 
     @property
     def has_state(self):
@@ -100,6 +106,8 @@ class ModelSpec:
             bits.append(f"state {self.d_own}x{self.d_nbr}, rank {self.rank}")
         if self.has_background:
             bits.append(f"additive background, df {self.df_bg}")
+        if self.cycling_nb:
+            bits.append("NB cycling component")
         bits.append("MisTIC theta_m m, no area" if self.mistic else
                     f"area spline, df {self.df_area}" if self.df_area > 0 else "no area, no MisTIC")
         return "; ".join(bits)
@@ -189,6 +197,8 @@ def init_params(spec, cfg, data=None, rng=None, poisson_start=None):
         else (lambda *sh: jnp.zeros(sh))
 
     p["delta"] = jnp.asarray(float(ic["delta"])) + (draw() if rng is not None else 0.0)
+    if spec.cycling_nb:
+        p["la1"] = jnp.asarray(float(np.log(ic.get("cycling_alpha", 0.3))))
     frac = float(ic["a0_cycling_fraction"])
     p["a0"] = jnp.asarray(np.log(frac / (1.0 - frac))) + (draw() if rng is not None else 0.0)
 
@@ -289,6 +299,19 @@ def _log_pois(y, log_mu):
     return y * log_mu - jnp.exp(log_mu) - gammaln(y + 1.0)
 
 
+def _log_nb(y, log_mu, log_alpha):
+    """NB2 log pmf, mean exp(log_mu), Var = mu + alpha mu^2."""
+    r = jnp.exp(-log_alpha)
+    lr_mu = jnp.logaddexp(-log_alpha, log_mu)               # log(r + mu)
+    return (gammaln(y + r) - gammaln(r) - gammaln(y + 1.0)
+            + r * (-log_alpha - lr_mu) + y * (log_mu - lr_mu))
+
+
+def _log_cyc(y, log_mu, p, spec):
+    """Log pmf of the cycling component: Poisson, or NB under `cycling_nb`."""
+    return _log_nb(y, log_mu, p["la1"]) if spec.cycling_nb else _log_pois(y, log_mu)
+
+
 # --- likelihood --------------------------------------------------------------
 
 def loglik_terms(p, d, spec):
@@ -299,7 +322,7 @@ def loglik_terms(p, d, spec):
     y = d["y"]
     comp = jnp.stack([
         jax.nn.log_sigmoid(-eta) + _log_pois(y, _log_mu(l0, lr, p, d, spec)),
-        jax.nn.log_sigmoid(eta) + _log_pois(y, _log_mu(l1, lr, p, d, spec)),
+        jax.nn.log_sigmoid(eta) + _log_cyc(y, _log_mu(l1, lr, p, d, spec), p, spec),
     ], axis=0)
     return logsumexp(comp, axis=0)
 
@@ -393,7 +416,7 @@ def responsibilities(p, d, spec):
     eta = _logit_pi(p, d, spec)
     y = d["y"]
     a0 = jax.nn.log_sigmoid(-eta) + _log_pois(y, _log_mu(l0, lr, p, d, spec))
-    a1 = jax.nn.log_sigmoid(eta) + _log_pois(y, _log_mu(l1, lr, p, d, spec))
+    a1 = jax.nn.log_sigmoid(eta) + _log_cyc(y, _log_mu(l1, lr, p, d, spec), p, spec)
     return jnp.exp(a1 - jnp.logaddexp(a0, a1))
 
 
@@ -434,7 +457,10 @@ def marginal_pmf(p, d, spec, kmax):
     m0, m1 = rho + lam0, rho + lam1
     ks = jnp.arange(kmax + 1, dtype=jnp.float64)[:, None]
     lp0 = ks * jnp.log(m0)[None, :] - m0[None, :] - gammaln(ks + 1.0)
-    lp1 = ks * jnp.log(m1)[None, :] - m1[None, :] - gammaln(ks + 1.0)
+    if spec.cycling_nb:
+        lp1 = _log_nb(ks, jnp.log(m1)[None, :], p["la1"])
+    else:
+        lp1 = ks * jnp.log(m1)[None, :] - m1[None, :] - gammaln(ks + 1.0)
     return (1.0 - pi)[None, :] * jnp.exp(lp0) + pi[None, :] * jnp.exp(lp1)
 
 

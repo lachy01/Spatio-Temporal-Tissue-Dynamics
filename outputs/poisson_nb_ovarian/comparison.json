@@ -1,0 +1,204 @@
+{
+ "global": [
+  {
+   "model": "Poisson mixture",
+   "parameters": 145,
+   "log-likelihood (data)": -741977.7450795737,
+   "AIC": 1484245.4901591474,
+   "rootogram misfit": 3060.068461646234,
+   "zeros expected": 0.33949025133520505,
+   "zeros observed": 0.4064325119715212,
+   "PIT max deviation": 0.2896476049372727,
+   "e^delta": 1.744838114478176,
+   "rate ratio": 5.724974609898123,
+   "alpha1": NaN,
+   "theta_m": 1.3990232377603642,
+   "cycling fraction (mean w)": 0.18100791586340526,
+   "mean pi": 0.18814336370130164
+  },
+  {
+   "model": "Poisson + NB mixture",
+   "parameters": 146,
+   "log-likelihood (data)": -702989.950465858,
+   "AIC": 1406271.900931716,
+   "rootogram misfit": 885.8350251446722,
+   "zeros expected": 0.38631029314390597,
+   "zeros observed": 0.4064325119715212,
+   "PIT max deviation": 0.07238029742972585,
+   "e^delta": 1.7412106234837739,
+   "rate ratio": 5.704244937139436,
+   "alpha1": 0.35436402197983286,
+   "theta_m": 1.4873721748880446,
+   "cycling fraction (mean w)": 0.3212380727561026,
+   "mean pi": 0.32123807275857585
+  },
+  {
+   "model": "NB-c (matched NB)",
+   "parameters": 144,
+   "log-likelihood (data)": -704418.4777298226,
+   "AIC": 1409124.9554596453,
+   "rootogram misfit": 1285.9697272876601,
+   "zeros expected": 0.413189584945665,
+   "zeros observed": 0.4064325119715212,
+   "PIT max deviation": 0.0990286254620476
+  }
+ ],
+ "by_type": [
+  {
+   "type": "Tumour",
+   "cells": 181539,
+   "misfit P": 817.029230127791,
+   "w P": 0.3621760767834431,
+   "nbr contrast P": 2.6641937220629197,
+   "misfit PNB": 987.3530786714327,
+   "w PNB": 0.6253682712192643,
+   "nbr contrast PNB": 3.133750393011212,
+   "misfit NB": 1353.1955807181475
+  },
+  {
+   "type": "Fibroblasts",
+   "cells": 86585,
+   "misfit P": 2141.7340887187293,
+   "w P": 0.02188315319092697,
+   "nbr contrast P": 2.8210009301018153,
+   "misfit PNB": 503.37615410046595,
+   "w PNB": 0.05719672526430891,
+   "nbr contrast PNB": 3.2935532927103432,
+   "misfit NB": 104.52031177533864
+  },
+  {
+   "type": "Endothelial Cells",
+   "cells": 21595,
+   "misfit P": 586.3295551808982,
+   "w P": 0.01815133215048858,
+   "nbr contrast P": 1.1007465398344163,
+   "misfit PNB": 112.22589347930435,
+   "w PNB": 0.04065546746298964,
+   "nbr contrast PNB": 2.8549303656620215,
+   "misfit NB": 44.753082642875434
+  },
+  {
+   "type": "Pericytes",
+   "cells": 13280,
+   "misfit P": 284.5350289984887,
+   "w P": 0.03542971328570111,
+   "nbr contrast P": 0.44756153157610656,
+   "misfit PNB": 51.38746342478844,
+   "w PNB": 0.06690914187663553,
+   "nbr contrast PNB": 3.3538792911070874,
+   "misfit NB": 42.25656309835297
+  },
+  {
+   "type": "Smooth Muscle Cells",
+   "cells": 47877,
+   "misfit P": 1130.2371372982604,
+   "w P": 0.0034386404307627945,
+   "nbr contrast P": -1.3388405314644887,
+   "misfit PNB": 133.61201126745746,
+   "w PNB": 0.004611742587798329,
+   "nbr contrast PNB": 0.9663338284205221,
+   "misfit NB": 40.92753522787027
+  },
+  {
+   "type": "Macrophages",
+   "cells": 32672,
+   "misfit P": 371.57184184357726,
+   "w P": 0.06673857856137247,
+   "nbr contrast P": 2.5243382455249344,
+   "misfit PNB": 67.10189180176596,
+   "w PNB": 0.1480209622493954,
+   "nbr contrast PNB": 4.209978456725798,
+   "misfit NB": 61.229166142735345
+  },
+  {
+   "type": "T & NK Cells",
+   "cells": 8421,
+   "misfit P": 33.295491411020045,
+   "w P": 0.08235938001034172,
+   "nbr contrast P": 1.9569223694054139,
+   "misfit PNB": 24.942523265612397,
+   "w PNB": 0.19437360278110907,
+   "nbr contrast PNB": 2.341338636689867,
+   "misfit NB": 36.92522546272316
+  },
+  {
+   "type": "Other",
+   "cells": 3553,
+   "misfit P": 66.65809929857478,
+   "w P": 0.013405488305124329,
+   "nbr contrast P": 2.384955379468467,
+   "misfit PNB": 5.422288103841242,
+   "w PNB": 0.03246562208331563,
+   "nbr contrast PNB": 2.557795021785866,
+   "misfit NB": 33.70508872503114
+  }
+ ],
+ "calibration": [
+  {
+   "label": "BASE-T alpha_B 0.05",
+   "label rate": 0.05370118476342656,
+   "P p / rate": 0.974186784218855,
+   "PNB p / rate": 0.8947624029472031,
+   "NB p / rate": 0.7897973935121059
+  },
+  {
+   "label": "BASE-T alpha_B 0.01",
+   "label rate": 0.008330762890559817,
+   "P p / rate": 0.19382718489405043,
+   "PNB p / rate": 1.2056186329343679,
+   "NB p / rate": 1.3190826213308955
+  },
+  {
+   "label": "BASE-T alpha_B 0.001",
+   "label rate": 0.00046520800360030543,
+   "P p / rate": 0.029309517576517886,
+   "PNB p / rate": 1.8589337006421847,
+   "NB p / rate": 3.9061325742690935
+  },
+  {
+   "label": "BASE-T alpha_B 0.0001",
+   "label rate": 3.286795677610854e-05,
+   "P p / rate": 0.009554274747920283,
+   "PNB p / rate": 1.9700225689375628,
+   "NB p / rate": 10.307014240262346
+  },
+  {
+   "label": "BASE-O Td 0",
+   "label rate": 0.29557647867880926,
+   "P p / rate": 1.074272680353419,
+   "PNB p / rate": 1.0514928564709938,
+   "NB p / rate": 1.0886271511145753
+  },
+  {
+   "label": "BASE-O Td 0.25",
+   "label rate": 0.23768589357861256,
+   "P p / rate": 1.1299673631095586,
+   "PNB p / rate": 1.0709904551713476,
+   "NB p / rate": 1.0759627628155553
+  },
+  {
+   "label": "BASE-O Td 0.5",
+   "label rate": 0.19507890837930633,
+   "P p / rate": 1.2072240733173616,
+   "PNB p / rate": 1.0640742104400411,
+   "NB p / rate": 1.0337530323295843
+  },
+  {
+   "label": "BASE-O Td 0.75",
+   "label rate": 0.16218819686389127,
+   "P p / rate": 1.277270145139002,
+   "PNB p / rate": 1.0355998373853317,
+   "NB p / rate": 0.9769695751564853
+  },
+  {
+   "label": "BASE-O Td 1",
+   "label rate": 0.13443247151865131,
+   "P p / rate": 1.3216643013174654,
+   "PNB p / rate": 1.0018762510963202,
+   "NB p / rate": 0.9239057314679795
+  }
+ ],
+ "lr": 77743.55706802895,
+ "best_start": "warm, alpha1 start 1",
+ "agreement": 0.8333333333333334
+}
