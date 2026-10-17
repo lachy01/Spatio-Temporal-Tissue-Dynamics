@@ -2267,3 +2267,96 @@ Notes:
 - **X11 does not hold**: under G2, every null's LOG-T slope peaks at the strictest alpha_B (0.001), not at 0.05-0.1, and the truncated nulls' peaks reach 1.0.
 
 Stage A5 complete. **Review point.** The addendum's stages are all run.
+
+## BASE-T-trunc calibrated against simulated truth (2026-10-17 14:44)
+
+`run/division_trunc_calibration.py`. Requested by the user (2026-10-17): choose BASE-T-trunc's
+settings by how well the label recovers simulated truth, with about 10% of real cells
+labelled. alpha_trim grid 0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3 plus the naive Stage 1 null; each
+null's alpha_B* puts the real label rate at 10%. 3 replicates per generator of
+200,000 cells; the truncated nulls stop when the parameters settle (`param_tol` 0.001).
+The production mixture's mean pi is 0.0982, so the target rate is close to its cycling
+fraction.
+
+**Generators.** G1 is the production Poisson mixture; G2 makes its cycling component NB
+(alpha_1 0.326); G4 makes both components NB, with dispersions fitted to the real counts by
+maximum likelihood with pi and the component means held fixed (non-cycling 0.198, cycling
+0.131; log-likelihood +6,936 over the Poisson mixture).
+
+### Fidelity: do the simulated sections reproduce the real nulls?
+
+Mean over replicates. Only G4 reproduces the real alpha0 across alpha_trim: G1 and G2 have Poisson
+non-cycling cells, so their truncated nulls collapse towards Poisson and their labels behave
+differently. G4 is the primary generator.
+
+| null | real alpha0 | real rate 0.05 | real rate 0.1 | G1 alpha0 | G1 rate 0.1 | G2 alpha0 | G2 rate 0.1 | G4 alpha0 | G4 rate 0.1 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.7889 | 0.03293 | 0.0578 | 0.7089 | 0.06068 | 0.5627 | 0.06033 | 0.8521 | 0.05934 |
+| trunc 0.001 | 0.7904 | 0.03285 | 0.05771 | 0.7237 | 0.0602 | 0.5419 | 0.06098 | 0.8556 | 0.05923 |
+| trunc 0.005 | 0.6341 | 0.03831 | 0.06422 | 0.5903 | 0.06517 | 0.2014 | 0.07512 | 0.6541 | 0.06702 |
+| trunc 0.01 | 0.5254 | 0.04264 | 0.06954 | 0.1758 | 0.08422 | 0.1193 | 0.08003 | 0.4925 | 0.07446 |
+| trunc 0.02 | 0.4203 | 0.04759 | 0.07534 | 0.08292 | 0.08998 | 0.07714 | 0.08311 | 0.3653 | 0.0816 |
+| trunc 0.05 | 0.2961 | 0.05487 | 0.08385 | 0.04793 | 0.09323 | 0.05109 | 0.0854 | 0.2947 | 0.08662 |
+| trunc 0.1 | 0.2329 | 0.05932 | 0.08953 | 0.03875 | 0.09461 | 0.04244 | 0.08654 | 0.2711 | 0.08883 |
+| trunc 0.2 | 0.1832 | 0.06369 | 0.09515 | 0.0351 | 0.0954 | 0.03679 | 0.08751 | 0.2506 | 0.0912 |
+| trunc 0.3 | 0.09664 | 0.07405 | 0.1074 | 0.02002 | 0.09767 | 0.03315 | 0.08797 | 0.229 | 0.09389 |
+
+### Recovery of Z at alpha_B* (real rate 10%)
+
+MCC mean ± sd over replicates for each generator; the remaining columns are G4 means. Type error:
+mean over types of |log(label rate / true fraction)|. Contrast bias: label minus true logit
+neighbourhood contrast (top against bottom decile of neighbourhood Cancer Epithelial score), averaged over
+types with at least 2,000 cells (0 = unbiased). Depth bias: sensitivity in the deepest third of
+cells over the shallowest third (1 = unbiased).
+
+| null | alpha_B* | G1 MCC | G2 MCC | G4 MCC | G4 rate | G4 sensitivity | G4 precision | G4 type error | G4 contrast bias | G4 depth bias |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.1784 | 0.575 ± 0.005 | 0.499 ± 0.001 | 0.522 ± 0.002 | 0.1001 | 0.5758 | 0.5633 | 0.2857 | -0.6183 | 2.2253 |
+| trunc 0.001 | 0.1786 | 0.576 ± 0.005 | 0.498 ± 0.001 | 0.522 ± 0.003 | 0.1001 | 0.5756 | 0.5633 | 0.2857 | -0.6208 | 2.2238 |
+| trunc 0.005 | 0.1658 | 0.575 ± 0.007 | 0.488 ± 0.001 | 0.521 ± 0.004 | 0.1018 | 0.5797 | 0.5578 | 0.2897 | -0.6155 | 2.3041 |
+| trunc 0.01 | 0.1556 | 0.552 ± 0.005 | 0.488 ± 0.000 | 0.518 ± 0.003 | 0.1047 | 0.5864 | 0.5485 | 0.2974 | -0.5936 | 2.3712 |
+| trunc 0.02 | 0.1444 | 0.549 ± 0.005 | 0.491 ± 0.001 | 0.516 ± 0.002 | 0.1065 | 0.5897 | 0.5421 | 0.3013 | -0.5546 | 2.4593 |
+| trunc 0.05 | 0.1285 | 0.555 ± 0.004 | 0.499 ± 0.001 | 0.521 ± 0.002 | 0.1028 | 0.5827 | 0.5549 | 0.2910 | -0.5126 | 2.6341 |
+| trunc 0.1 | 0.1183 | 0.560 ± 0.003 | 0.505 ± 0.001 | 0.523 ± 0.003 | 0.0994 | 0.5749 | 0.5662 | 0.2787 | -0.4897 | 2.7857 |
+| trunc 0.2 | 0.1085 | 0.566 ± 0.004 | 0.511 ± 0.002 | 0.527 ± 0.005 | 0.0963 | 0.5683 | 0.5784 | 0.2688 | -0.4604 | 2.9229 |
+| trunc 0.3 | 0.0882 | 0.576 ± 0.004 | 0.526 ± 0.003 | 0.538 ± 0.003 | 0.0868 | 0.5462 | 0.6162 | 0.2692 | -0.3896 | 3.3443 |
+
+**Choice by the rule.** Best G4 MCC: trunc 0.3. Tied within two Monte Carlo SE (band
+0.0069): trunc 0.3. Chosen (smallest alpha_trim of the tied): **trunc 0.3, alpha_B
+0.0882**, real rate 0.1000, G4 MCC 0.538.
+
+Unconstrained G4 optimum, for comparison: trunc 0.3 at alpha_B 0.0389, MCC
+0.563, simulated rate 0.0573, real rate 0.0669.
+
+![MCC against real rate](trunc_calibration/mcc_vs_rate.png)
+
+### Real label rate by type at alpha_B*
+
+| null | Endothelial | CAFs | PVL | B-cells | T-cells | Myeloid | Normal Epithelial | Plasmablasts | Cancer Epithelial |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.05801 | 0.04654 | 0.06824 | 0.09063 | 0.09925 | 0.06128 | 0.09395 | 0.1039 | 0.1917 |
+| trunc 0.001 | 0.05793 | 0.0466 | 0.06824 | 0.09073 | 0.09929 | 0.06128 | 0.09386 | 0.1037 | 0.1918 |
+| trunc 0.005 | 0.05687 | 0.04635 | 0.06668 | 0.08836 | 0.09757 | 0.06056 | 0.09395 | 0.1032 | 0.1964 |
+| trunc 0.01 | 0.05584 | 0.04524 | 0.06581 | 0.08613 | 0.09563 | 0.05971 | 0.09523 | 0.104 | 0.2002 |
+| trunc 0.02 | 0.05459 | 0.04436 | 0.06493 | 0.08386 | 0.09342 | 0.05872 | 0.0963 | 0.1046 | 0.2045 |
+| trunc 0.05 | 0.05227 | 0.04269 | 0.06383 | 0.07982 | 0.09006 | 0.05708 | 0.09879 | 0.1064 | 0.211 |
+| trunc 0.1 | 0.05102 | 0.04211 | 0.06254 | 0.0773 | 0.08803 | 0.05599 | 0.1006 | 0.1072 | 0.2149 |
+| trunc 0.2 | 0.04983 | 0.04134 | 0.06124 | 0.07522 | 0.08628 | 0.05522 | 0.1019 | 0.1081 | 0.2185 |
+| trunc 0.3 | 0.04654 | 0.03977 | 0.05869 | 0.07028 | 0.08282 | 0.05331 | 0.104 | 0.1087 | 0.2273 |
+
+Done in 47 min. Not yet propagated to Stages 3-7; the user decides.
+
+**Caveats on the pick (written after reading the results).**
+- *The pick is at the edge of the grid, and the generator stops matching there.* G4 reproduces the
+  real alpha0 to within about 0.07 up to alpha_trim 0.2. At 0.3 the real null drops to 0.097 while G4's
+  stays at 0.229, so the pick sits where the simulation is least trustworthy. G4's own rate at that
+  alpha_B* is 8.7%, not 10%. Extending the grid past 0.3 would leave the region the generator
+  reproduces.
+- *The null hardly matters at a fixed rate.* G4 MCC is 0.516-0.538 across every null; trunc 0.3
+  beats the naive null by 0.016. The rate matters far more. Every curve peaks at a real rate of
+  about 5-7% (best MCC 0.563 at 6.7%), so the 10% target costs about 0.025 MCC against the
+  unconstrained optimum.
+- *Truncation trades depth bias for contrast.* Sensitivity in the deepest third of cells is 2.2x that
+  in the shallowest under the naive null, and 3.3x at trunc 0.3. The neighbourhood contrast is
+  attenuated less (bias -0.62 to -0.39). Any single-tail label is depth-biased, because a deeper cell's
+  cycling excess is easier to see.

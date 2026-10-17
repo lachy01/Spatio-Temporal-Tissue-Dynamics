@@ -283,7 +283,7 @@ def fit_nb_truncated(y, X, offset, m, c, keep, x0, maxiter=2000):
                 n_iter=int(res.nit), mu=mu, k_max=k_max, x=x)
 
 
-def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None):
+def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None, param_tol=None):
     """Addendum 1, section 1.2: the iteratively truncated technical null.
 
     From `start` (a null fit: beta, eta, alpha), repeat: c_i = smallest count
@@ -291,6 +291,12 @@ def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None):
     right-truncated likelihood over the retained cells with c fixed. Stop when
     no c_i changes, or after `max_iter` iterations. Returns the final fit,
     its `c`, and the trace.
+
+    `param_tol` given: also stop once no parameter (b, log theta_m, log alpha)
+    moves by more than `param_tol` between iterations. At large alpha_trim a
+    few dozen boundary cells can flip back and forth indefinitely after the
+    parameters have settled (A1: alpha_trim 0.05 ran to the cap). The default
+    (None) keeps the A1 rule.
     """
     say = say or (lambda *a: None)
     y = np.asarray(y, float)
@@ -300,6 +306,7 @@ def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None):
     mu = np.exp(np.clip(X @ x[:kx] + offset, -30, 30)) + np.exp(x[kx]) * m
     alpha = float(np.exp(x[kx + 1]))
     c_prev, trace, fit, stopped = None, [], None, "max_iter"
+    x_prev = x.copy()
     for it in range(1, max_iter + 1):
         c = smallest_c_below(mu, alpha, alpha_trim, family="nb")
         if c_prev is not None and np.array_equal(c, c_prev):
@@ -318,6 +325,10 @@ def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None):
             f"({100 * (1 - keep.mean()):.2f}% trimmed), alpha0 {fit['alpha']:.4f}, "
             f"theta_m {fit['theta_m']:.4f}, b0 {fit['beta'][0]:+.4f}, c changed {changed:,}")
         c_prev = c
+        if param_tol is not None and len(trace) > 1 and np.max(np.abs(x - x_prev)) < param_tol:
+            stopped = "parameters settled"
+            break
+        x_prev = x.copy()
     fit["c_trim"] = c_prev
     fit["trace"] = trace
     fit["stopped_on"] = stopped

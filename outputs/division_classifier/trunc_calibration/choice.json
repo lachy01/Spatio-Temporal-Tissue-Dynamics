@@ -1,0 +1,28 @@
+{
+ "target real rate": 0.1,
+ "null": "trunc 0.3",
+ "alpha_trim": 0.3,
+ "alpha_B": 0.08823314835539403,
+ "real rate": 0.09999875422007948,
+ "G4 MCC": 0.5375988409791,
+ "best by MCC": "trunc 0.3",
+ "tied within 2 MC SE": [
+  "trunc 0.3"
+ ],
+ "tie band": 0.006918784054521883,
+ "unconstrained G4 optimum": {
+  "null": "trunc 0.3",
+  "alpha_B": 0.038898,
+  "MCC": 0.5625473178086705,
+  "sim rate": 0.05728833333333333,
+  "real rate": 0.0668538895918647
+ },
+ "generators": {
+  "G4 alpha_0": 0.19830504723723802,
+  "G4 alpha_1": 0.13105637311398655,
+  "G4 loglik gain": 6936.325359091978,
+  "G2 alpha_1": 0.3256126533863807
+ },
+ "reps": 3,
+ "n": 200000
+}
