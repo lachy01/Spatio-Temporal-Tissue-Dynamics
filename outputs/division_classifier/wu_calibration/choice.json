@@ -1,0 +1,549 @@
+{
+ "primary": {
+  "truth": "primary (pos > 0.1, neg <= 0, >= 3k UMI)",
+  "scope": "ER+",
+  "weights": "weighted",
+  "null": "trunc 0.2",
+  "alpha_B": 0.003242,
+  "MCC": 0.7715562391458161,
+  "MCC sd": 0.018914892245287085,
+  "Wu sensitivity": 0.6848636748439202,
+  "Wu precision": 0.882114231656303,
+  "Wu depth bias": 3.3149056445017586,
+  "truth positive rate": 0.01376468963969716,
+  "scored cells": 22789.333333333332,
+  "alpha_B band": [
+   0.00246,
+   0.003242
+  ],
+  "section rate (MisTIC null)": 0.02550645402983109,
+  "section rate band (MisTIC)": [
+   0.02370007314507819,
+   0.02550645402983109
+  ],
+  "section rate (plain-N null)": 0.028131490290925206,
+  "Youden pick": {
+   "null": "trunc 0.005",
+   "alpha_B": 0.144356,
+   "J": 0.8046622446349642,
+   "section rate": 0.0882243542855719,
+   "RG section fraction": 0.02854602807989239
+  },
+  "section-fraction MCC pick": {
+   "null": "trunc 0.3",
+   "alpha_B": 0.006927,
+   "MCC": 0.799844845920424,
+   "fraction used": 0.061235675890560504,
+   "section rate": 0.03847502300243639
+  },
+  "best MCC by null": {
+   "naive": 0.7664249014760002,
+   "trunc 0.001": 0.7646473701586375,
+   "trunc 0.005": 0.7676336207806719,
+   "trunc 0.01": 0.7671323258725988,
+   "trunc 0.02": 0.7666589525046046,
+   "trunc 0.05": 0.7665701125340288,
+   "trunc 0.1": 0.7701543499456124,
+   "trunc 0.2": 0.7715562391458161,
+   "trunc 0.3": 0.7676362383982679
+  },
+  "best alpha_B by null": {
+   "naive": 0.004578,
+   "trunc 0.001": 0.004273,
+   "trunc 0.005": 0.003474,
+   "trunc 0.01": 0.002824,
+   "trunc 0.02": 0.00246,
+   "trunc 0.05": 0.003988,
+   "trunc 0.1": 0.003988,
+   "trunc 0.2": 0.003242,
+   "trunc 0.3": 0.002143
+  }
+ },
+ "sensitivities": [
+  {
+   "truth": "pos > 0.05",
+   "scope": "ER+",
+   "weights": "weighted",
+   "null": "trunc 0.2",
+   "alpha_B": 0.003242,
+   "MCC": 0.6325760792127514,
+   "MCC sd": 0.014361259289402763,
+   "Wu sensitivity": 0.4648719697964212,
+   "Wu precision": 0.88915180730644,
+   "Wu depth bias": 8.68556179249777,
+   "truth positive rate": 0.019243575908047206,
+   "scored cells": 22992.333333333332,
+   "alpha_B band": [
+    0.00246,
+    0.006034
+   ],
+   "section rate (MisTIC null)": 0.02550645402983109,
+   "section rate band (MisTIC)": [
+    0.02370007314507819,
+    0.03012295847815525
+   ],
+   "section rate (plain-N null)": 0.028131490290925206,
+   "Youden pick": {
+    "null": "naive",
+    "alpha_B": 0.177565,
+    "J": 0.6499630212045259,
+    "section rate": 0.09959298590311036,
+    "RG section fraction": 0.03423013401390558
+   },
+   "section-fraction MCC pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.015858,
+    "MCC": 0.6610815819906499,
+    "fraction used": 0.08494436202450005,
+    "section rate": 0.04904813515644326
+   },
+   "best MCC by null": {
+    "naive": 0.6288985498926395,
+    "trunc 0.001": 0.6290151343713362,
+    "trunc 0.005": 0.6285941680702015,
+    "trunc 0.01": 0.62856092112363,
+    "trunc 0.02": 0.6288530172433371,
+    "trunc 0.05": 0.6280477825409851,
+    "trunc 0.1": 0.631205638756473,
+    "trunc 0.2": 0.6325760792127514,
+    "trunc 0.3": 0.630573718493408
+   },
+   "best alpha_B by null": {
+    "naive": 0.00913,
+    "trunc 0.001": 0.00913,
+    "trunc 0.005": 0.006927,
+    "trunc 0.01": 0.006465,
+    "trunc 0.02": 0.006034,
+    "trunc 0.05": 0.006927,
+    "trunc 0.1": 0.003988,
+    "trunc 0.2": 0.003242,
+    "trunc 0.3": 0.002636
+   }
+  },
+  {
+   "truth": "pos > 0.15",
+   "scope": "ER+",
+   "weights": "weighted",
+   "null": "trunc 0.2",
+   "alpha_B": 0.003242,
+   "MCC": 0.821736017364894,
+   "MCC sd": 0.020287269726828122,
+   "Wu sensitivity": 0.7752098205882197,
+   "Wu precision": 0.8803516477262838,
+   "Wu depth bias": 2.3227699573121576,
+   "truth positive rate": 0.01203735603785281,
+   "scored cells": 22725.333333333332,
+   "alpha_B band": [
+    0.002296,
+    0.003242
+   ],
+   "section rate (MisTIC null)": 0.02550645402983109,
+   "section rate band (MisTIC)": [
+    0.023264050172896455,
+    0.02550645402983109
+   ],
+   "section rate (plain-N null)": 0.028131490290925206,
+   "Youden pick": {
+    "null": "trunc 0.05",
+    "alpha_B": 0.072392,
+    "J": 0.8756559734505702,
+    "section rate": 0.06745720301051616,
+    "RG section fraction": 0.03772894037179972
+   },
+   "section-fraction MCC pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.003988,
+    "MCC": 0.8444260026849344,
+    "fraction used": 0.04749753618068448,
+    "section rate": 0.0332694426202667
+   },
+   "best MCC by null": {
+    "naive": 0.818564493756571,
+    "trunc 0.001": 0.8166016763989017,
+    "trunc 0.005": 0.8196988319671692,
+    "trunc 0.01": 0.8188193583620577,
+    "trunc 0.02": 0.8181197831905025,
+    "trunc 0.05": 0.8177360414268812,
+    "trunc 0.1": 0.8213303047039225,
+    "trunc 0.2": 0.821736017364894,
+    "trunc 0.3": 0.8173045881332864
+   },
+   "best alpha_B by null": {
+    "naive": 0.004578,
+    "trunc 0.001": 0.004273,
+    "trunc 0.005": 0.003474,
+    "trunc 0.01": 0.002824,
+    "trunc 0.02": 0.00246,
+    "trunc 0.05": 0.003988,
+    "trunc 0.1": 0.003988,
+    "trunc 0.2": 0.003242,
+    "trunc 0.3": 0.002143
+   }
+  },
+  {
+   "truth": "Seurat call (cut 0)",
+   "scope": "ER+",
+   "weights": "weighted",
+   "null": "trunc 0.3",
+   "alpha_B": 0.015858,
+   "MCC": 0.40692763767627943,
+   "MCC sd": 0.0047734024578050815,
+   "Wu sensitivity": 0.26431918686553413,
+   "Wu precision": 0.7341932618166681,
+   "Wu depth bias": 5.964465814525389,
+   "truth positive rate": 0.04016950576590641,
+   "scored cells": 23767.666666666668,
+   "alpha_B band": [
+    0.015858,
+    0.019507
+   ],
+   "section rate (MisTIC null)": 0.04904813515644326,
+   "section rate band (MisTIC)": [
+    0.04904813515644326,
+    0.05250784396428527
+   ],
+   "section rate (plain-N null)": 0.05314319172375008,
+   "Youden pick": {
+    "null": "naive",
+    "alpha_B": 0.406488,
+    "J": 0.4125475125591228,
+    "section rate": 0.2355307111445692,
+    "RG section fraction": -0.014980666214251271
+   },
+   "section-fraction MCC pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.002296,
+    "MCC": 0.3542493521870394,
+    "fraction used": 0.03720792479300187,
+    "section rate": 0.029323879643422195
+   },
+   "best MCC by null": {
+    "naive": 0.4010849976627957,
+    "trunc 0.001": 0.4013999190931968,
+    "trunc 0.005": 0.4029654581323238,
+    "trunc 0.01": 0.40323545003512645,
+    "trunc 0.02": 0.4030558283351359,
+    "trunc 0.05": 0.40219711053721047,
+    "trunc 0.1": 0.4054190851740113,
+    "trunc 0.2": 0.4059719697133273,
+    "trunc 0.3": 0.40692763767627943
+   },
+   "best alpha_B by null": {
+    "naive": 0.033882,
+    "trunc 0.001": 0.033882,
+    "trunc 0.005": 0.025709,
+    "trunc 0.01": 0.023994,
+    "trunc 0.02": 0.022394,
+    "trunc 0.05": 0.031623,
+    "trunc 0.1": 0.022394,
+    "trunc 0.2": 0.018206,
+    "trunc 0.3": 0.015858
+   }
+  },
+  {
+   "truth": "per-type tail",
+   "scope": "ER+",
+   "weights": "weighted",
+   "null": "trunc 0.2",
+   "alpha_B": 0.003242,
+   "MCC": 0.5802923927912903,
+   "MCC sd": 0.016728322655626057,
+   "Wu sensitivity": 0.3956656644658101,
+   "Wu precision": 0.8863859648817867,
+   "Wu depth bias": 12.71832251082251,
+   "truth positive rate": 0.02526225392697361,
+   "scored cells": 21824.333333333332,
+   "alpha_B band": [
+    0.00246,
+    0.006927
+   ],
+   "section rate (MisTIC null)": 0.02550645402983109,
+   "section rate band (MisTIC)": [
+    0.02370007314507819,
+    0.03131000877385001
+   ],
+   "section rate (plain-N null)": 0.028131490290925206,
+   "Youden pick": {
+    "null": "trunc 0.005",
+    "alpha_B": 0.268659,
+    "J": 0.5704627623847439,
+    "section rate": 0.15994212462426388,
+    "RG section fraction": 0.0342734057482724
+   },
+   "section-fraction MCC pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.007953,
+    "MCC": 0.6039949079329344,
+    "fraction used": 0.09680356326327384,
+    "section rate": 0.04002156978948099
+   },
+   "best MCC by null": {
+    "naive": 0.5755132313150418,
+    "trunc 0.001": 0.575750397545011,
+    "trunc 0.005": 0.5761149656215371,
+    "trunc 0.01": 0.5764665902944672,
+    "trunc 0.02": 0.5766307691293445,
+    "trunc 0.05": 0.5762916062873792,
+    "trunc 0.1": 0.578990134139159,
+    "trunc 0.2": 0.5802923927912903,
+    "trunc 0.3": 0.5792931743615121
+   },
+   "best alpha_B by null": {
+    "naive": 0.00913,
+    "trunc 0.001": 0.00913,
+    "trunc 0.005": 0.006927,
+    "trunc 0.01": 0.006034,
+    "trunc 0.02": 0.006034,
+    "trunc 0.05": 0.006927,
+    "trunc 0.1": 0.003988,
+    "trunc 0.2": 0.003242,
+    "trunc 0.3": 0.002296
+   }
+  },
+  {
+   "truth": "no depth floor",
+   "scope": "ER+",
+   "weights": "weighted",
+   "null": "trunc 0.3",
+   "alpha_B": 0.002143,
+   "MCC": 0.605747716792305,
+   "MCC sd": 0.0128012692252511,
+   "Wu sensitivity": 0.45336850100339765,
+   "Wu precision": 0.8251852462215918,
+   "Wu depth bias": 7.10838671447776,
+   "truth positive rate": 0.021645639730629617,
+   "scored cells": 33171.333333333336,
+   "alpha_B band": [
+    0.002,
+    0.002636
+   ],
+   "section rate (MisTIC null)": 0.028886076985639716,
+   "section rate band (MisTIC)": [
+    0.028428697786249083,
+    0.030238638042203465
+   ],
+   "section rate (plain-N null)": 0.03207883295337046,
+   "Youden pick": {
+    "null": "naive",
+    "alpha_B": 0.190253,
+    "J": 0.6517773857738911,
+    "section rate": 0.10672062673408116,
+    "RG section fraction": 0.024695053281124257
+   },
+   "section-fraction MCC pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.007953,
+    "MCC": 0.6553804956412916,
+    "fraction used": 0.07766292004556238,
+    "section rate": 0.04002156978948099
+   },
+   "best MCC by null": {
+    "naive": 0.6003883145752481,
+    "trunc 0.001": 0.6000160745054083,
+    "trunc 0.005": 0.6031973595442431,
+    "trunc 0.01": 0.603724714405401,
+    "trunc 0.02": 0.6051435413734043,
+    "trunc 0.05": 0.6030742420081335,
+    "trunc 0.1": 0.6041196409523684,
+    "trunc 0.2": 0.6055512444648764,
+    "trunc 0.3": 0.605747716792305
+   },
+   "best alpha_B by null": {
+    "naive": 0.003722,
+    "trunc 0.001": 0.003722,
+    "trunc 0.005": 0.003474,
+    "trunc 0.01": 0.002636,
+    "trunc 0.02": 0.00246,
+    "trunc 0.05": 0.003242,
+    "trunc 0.1": 0.003474,
+    "trunc 0.2": 0.002824,
+    "trunc 0.3": 0.002143
+   }
+  },
+  {
+   "truth": "full-panel BASE-T",
+   "scope": "ER+",
+   "weights": "weighted",
+   "null": "trunc 0.005",
+   "alpha_B": 0.038898,
+   "MCC": 0.42427497500037387,
+   "MCC sd": 0.0189750374259561,
+   "Wu sensitivity": 0.2839685773904728,
+   "Wu precision": 0.7174236644674541,
+   "Wu depth bias": 3.890917496282169,
+   "truth positive rate": 0.08298398164215458,
+   "scored cells": 37051.333333333336,
+   "alpha_B band": [
+    0.029514,
+    0.047846
+   ],
+   "section rate (MisTIC null)": 0.032890369587308704,
+   "section rate band (MisTIC)": [
+    0.028110134063716305,
+    0.03728085396433866
+   ],
+   "section rate (plain-N null)": 0.03479285349450166,
+   "Youden pick": {
+    "null": "trunc 0.005",
+    "alpha_B": 0.268659,
+    "J": 0.4794472645129738,
+    "section rate": 0.15994212462426388,
+    "RG section fraction": 0.06536088545867802
+   },
+   "section-fraction MCC pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.022394,
+    "MCC": 0.4383831935655689,
+    "fraction used": 0.1309359813678695,
+    "section rate": 0.05501542097573043
+   },
+   "best MCC by null": {
+    "naive": 0.4223175137034287,
+    "trunc 0.001": 0.4231439300508102,
+    "trunc 0.005": 0.42427497500037387,
+    "trunc 0.01": 0.42324021962342906,
+    "trunc 0.02": 0.42404436694471226,
+    "trunc 0.05": 0.4229693093073812,
+    "trunc 0.1": 0.42318089318798763,
+    "trunc 0.2": 0.4214686563190119,
+    "trunc 0.3": 0.4213370967571462
+   },
+   "best alpha_B by null": {
+    "naive": 0.047846,
+    "trunc 0.001": 0.044655,
+    "trunc 0.005": 0.038898,
+    "trunc 0.01": 0.038898,
+    "trunc 0.02": 0.036304,
+    "trunc 0.05": 0.038898,
+    "trunc 0.1": 0.036304,
+    "trunc 0.2": 0.023994,
+    "trunc 0.3": 0.022394
+   }
+  },
+  {
+   "truth": "primary (pos > 0.1, neg <= 0, >= 3k UMI)",
+   "scope": "all patients",
+   "weights": "weighted",
+   "null": "trunc 0.3",
+   "alpha_B": 0.01123,
+   "MCC": 0.8224177815458837,
+   "MCC sd": 0.003251578277180191,
+   "Wu sensitivity": 0.757767436493026,
+   "Wu precision": 0.9172051315128803,
+   "Wu depth bias": 2.2902289649347547,
+   "truth positive rate": 0.05250570577386629,
+   "scored cells": 52683.0,
+   "alpha_B band": [
+    0.005632,
+    0.0209
+   ],
+   "section rate (MisTIC null)": 0.04407569358797075,
+   "section rate band (MisTIC)": [
+    0.03624863631590843,
+    0.053739386399998576
+   ],
+   "section rate (plain-N null)": 0.04786286454634924,
+   "Youden pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.134728,
+    "J": 0.8359965031713216,
+    "section rate": 0.1289239842889355,
+    "RG section fraction": 0.0803209554683093
+   },
+   "section-fraction MCC pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.01123,
+    "MCC": 0.8254901208710416,
+    "fraction used": 0.0803209554683093,
+    "section rate": 0.04407569358797075
+   },
+   "best MCC by null": {
+    "naive": 0.7823016201145512,
+    "trunc 0.001": 0.7819539560762933,
+    "trunc 0.005": 0.801242518786565,
+    "trunc 0.01": 0.8075209056321239,
+    "trunc 0.02": 0.811820157763843,
+    "trunc 0.05": 0.8154499202952746,
+    "trunc 0.1": 0.8161197213126626,
+    "trunc 0.2": 0.8177482004055298,
+    "trunc 0.3": 0.8224177815458837
+   },
+   "best alpha_B by null": {
+    "naive": 0.089046,
+    "trunc 0.001": 0.083107,
+    "trunc 0.005": 0.051265,
+    "trunc 0.01": 0.044655,
+    "trunc 0.02": 0.038898,
+    "trunc 0.05": 0.033882,
+    "trunc 0.1": 0.031623,
+    "trunc 0.2": 0.023994,
+    "trunc 0.3": 0.01123
+   }
+  },
+  {
+   "truth": "primary (pos > 0.1, neg <= 0, >= 3k UMI)",
+   "scope": "ER+",
+   "weights": "unweighted",
+   "null": "trunc 0.005",
+   "alpha_B": 0.006927,
+   "MCC": 0.8082653762524066,
+   "MCC sd": 0.003259451443335952,
+   "Wu sensitivity": 0.7398692810457517,
+   "Wu precision": 0.8914232028423507,
+   "Wu depth bias": 3.0084977370784336,
+   "truth positive rate": 0.01376468963969716,
+   "scored cells": 22789.333333333332,
+   "alpha_B band": [
+    0.005256,
+    0.007422
+   ],
+   "section rate (MisTIC null)": 0.012470257004397602,
+   "section rate band (MisTIC)": [
+    0.010722605744469182,
+    0.012966789287004558
+   ],
+   "section rate (plain-N null)": 0.013347642005563298,
+   "Youden pick": {
+    "null": "trunc 0.005",
+    "alpha_B": 0.144356,
+    "J": 0.8440681889776058,
+    "section rate": 0.0882243542855719,
+    "RG section fraction": 0.039806893855767356
+   },
+   "section-fraction MCC pick": {
+    "null": "trunc 0.3",
+    "alpha_B": 0.003722,
+    "MCC": 0.8389344160598948,
+    "fraction used": 0.06040074328513051,
+    "section rate": 0.032739096311245657
+   },
+   "best MCC by null": {
+    "naive": 0.8065672724642908,
+    "trunc 0.001": 0.8063303329066499,
+    "trunc 0.005": 0.8082653762524066,
+    "trunc 0.01": 0.8072299927283034,
+    "trunc 0.02": 0.8064947816660847,
+    "trunc 0.05": 0.8069054088315012,
+    "trunc 0.1": 0.8062170835099919,
+    "trunc 0.2": 0.8067337519534449,
+    "trunc 0.3": 0.804476833793531
+   },
+   "best alpha_B by null": {
+    "naive": 0.007953,
+    "trunc 0.001": 0.008521,
+    "trunc 0.005": 0.006927,
+    "trunc 0.01": 0.004906,
+    "trunc 0.02": 0.003988,
+    "trunc 0.05": 0.004578,
+    "trunc 0.1": 0.003988,
+    "trunc 0.2": 0.003242,
+    "trunc 0.3": 0.002143
+   }
+  }
+ ],
+ "g4_choice": {
+  "null": "trunc 0.3",
+  "alpha_B": 0.08823314835539403,
+  "real rate": 0.09999875422007948
+ }
+}

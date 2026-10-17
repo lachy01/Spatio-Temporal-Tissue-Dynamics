@@ -264,3 +264,5 @@ outputs/division_classifier/labels_state.parquet
 outputs/division_classifier_ovarian/*.parquet
 data/ovarian/
 outputs/division_classifier*/trunc_calibration/real_nulls.npz
+outputs/division_classifier*/wu_calibration/*.npz
+data/wu2021/wu_counts_panel_csr*

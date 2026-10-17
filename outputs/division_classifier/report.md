@@ -2360,3 +2360,131 @@ Done in 47 min. Not yet propagated to Stages 3-7; the user decides.
   in the shallowest under the naive null, and 3.3x at trunc 0.3. The neighbourhood contrast is
   attenuated less (bias -0.62 to -0.39). Any single-tail label is depth-biased, because a deeper cell's
   cycling excess is easier to see.
+
+## BASE-T-trunc calibrated on Wu thinned to this section's depth (2026-10-17 17:25)
+
+`run/division_wu_calibration.py`. Requested by the user (2026-10-17) as a less circular check on
+the G4 calibration: the truth is Wu's whole-transcriptome Seurat score, and the label rate on this
+section is an output. Wu restricted to the 4,917 shared panel genes and thinned within type
+to this section's depth (A6's thinning; V15, V16 passed); 3 thinning seeds. Every null is the
+plain log N null V16 checked (thinned scRNA-seq has no MisTIC term), refitted on the thinned counts.
+
+**Truth.** Seurat's own call (max(S, G2M) > 0) cuts through the non-cycling bulk in some types:
+33% of ER+ T-cells are called S/G2M (bulk centred near -0.03) against 6% of Cancer Epithelial. The
+primary truth therefore uses margins on the score: positive above 0.1, negative at or below 0,
+the band between not scored, and only cells with at least 3,000 UMIs scored. Primary scope
+ER+ patients, cells weighted to this section's type mix; metric weighted MCC.
+
+### Fidelity: alpha0 of the plain-N null as alpha_trim grows
+
+Mean over seeds. Rate 0.1 = label rate at alpha_B 0.1.
+
+| null | section, plain-N alpha0 | section, plain-N rate 0.1 | section, MisTIC rate 0.1 | Wu ER+ alpha0 | Wu ER+ rate 0.1 | Wu all patients alpha0 | Wu all patients rate 0.1 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.8641 | 0.05814 | 0.0578 | 0.322 | 0.07035 | 1.254 | 0.06429 |
+| trunc 0.001 | 0.8673 | 0.05809 | 0.05771 | 0.3155 | 0.07043 | 1.248 | 0.06453 |
+| trunc 0.005 | 0.6906 | 0.06538 | 0.06422 | 0.2521 | 0.07267 | 0.6695 | 0.08434 |
+| trunc 0.01 | 0.5513 | 0.07193 | 0.06954 | 0.2161 | 0.07607 | 0.4999 | 0.09177 |
+| trunc 0.02 | 0.4245 | 0.07914 | 0.07534 | 0.1963 | 0.07699 | 0.4006 | 0.09718 |
+| trunc 0.05 | 0.3059 | 0.08705 | 0.08385 | 0.209 | 0.07668 | 0.3322 | 0.1005 |
+| trunc 0.1 | 0.238 | 0.09195 | 0.08953 | 0.2041 | 0.07852 | 0.313 | 0.1036 |
+| trunc 0.2 | 0.1777 | 0.09882 | 0.09515 | 0.1535 | 0.08421 | 0.2877 | 0.1057 |
+| trunc 0.3 | 0.08125 | 0.1123 | 0.1074 | 0.1039 | 0.09044 | 0.1788 | 0.1179 |
+
+### Best setting per null (primary truth)
+
+| null | best MCC | at alpha_B | section rate there |
+| --- | --- | --- | --- |
+| naive | 0.7664 | 0.004578 | 0.006444 |
+| trunc 0.001 | 0.7646 | 0.004273 | 0.006113 |
+| trunc 0.005 | 0.7676 | 0.003474 | 0.008389 |
+| trunc 0.01 | 0.7671 | 0.002824 | 0.01023 |
+| trunc 0.02 | 0.7667 | 0.00246 | 0.01273 |
+| trunc 0.05 | 0.7666 | 0.003988 | 0.02069 |
+| trunc 0.1 | 0.7702 | 0.003988 | 0.0239 |
+| trunc 0.2 | 0.7716 | 0.003242 | 0.02551 |
+| trunc 0.3 | 0.7676 | 0.002143 | 0.02889 |
+
+### Choice by the rule, and how it moves with the truth
+
+The primary row is the rule's pick. The section rate band covers the alpha_B values whose MCC is
+within 0.005 of the best, for that null.
+
+| truth / scope / weights | truth pos. rate | null | alpha_B | MCC | section rate (MisTIC) | section rate band | Youden pick | Youden section rate | RG section fraction | MCC-at-fraction pick | its section rate |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| primary (pos > 0.1, neg <= 0, >= 3k UMI) / ER+ / weighted | 0.01376 | trunc 0.2 | 0.003242 | 0.7716 | 0.02551 | 0.024-0.026 | trunc 0.005 @ 0.144 | 0.08822 | 0.02855 | trunc 0.3 @ 0.00693 | 0.03848 |
+| pos > 0.05 / ER+ / weighted | 0.01924 | trunc 0.2 | 0.003242 | 0.6326 | 0.02551 | 0.024-0.030 | naive @ 0.178 | 0.09959 | 0.03423 | trunc 0.3 @ 0.0159 | 0.04905 |
+| pos > 0.15 / ER+ / weighted | 0.01204 | trunc 0.2 | 0.003242 | 0.8217 | 0.02551 | 0.023-0.026 | trunc 0.05 @ 0.0724 | 0.06746 | 0.03773 | trunc 0.3 @ 0.00399 | 0.03327 |
+| Seurat call (cut 0) / ER+ / weighted | 0.04017 | trunc 0.3 | 0.01586 | 0.4069 | 0.04905 | 0.049-0.053 | naive @ 0.406 | 0.2355 | -0.01498 | trunc 0.3 @ 0.0023 | 0.02932 |
+| per-type tail / ER+ / weighted | 0.02526 | trunc 0.2 | 0.003242 | 0.5803 | 0.02551 | 0.024-0.031 | trunc 0.005 @ 0.269 | 0.1599 | 0.03427 | trunc 0.3 @ 0.00795 | 0.04002 |
+| no depth floor / ER+ / weighted | 0.02165 | trunc 0.3 | 0.002143 | 0.6057 | 0.02889 | 0.028-0.030 | naive @ 0.19 | 0.1067 | 0.0247 | trunc 0.3 @ 0.00795 | 0.04002 |
+| full-panel BASE-T / ER+ / weighted | 0.08298 | trunc 0.005 | 0.0389 | 0.4243 | 0.03289 | 0.028-0.037 | trunc 0.005 @ 0.269 | 0.1599 | 0.06536 | trunc 0.3 @ 0.0224 | 0.05502 |
+| primary (pos > 0.1, neg <= 0, >= 3k UMI) / all patients / weighted | 0.05251 | trunc 0.3 | 0.01123 | 0.8224 | 0.04408 | 0.036-0.054 | trunc 0.3 @ 0.135 | 0.1289 | 0.08032 | trunc 0.3 @ 0.0112 | 0.04408 |
+| primary (pos > 0.1, neg <= 0, >= 3k UMI) / ER+ / unweighted | 0.01376 | trunc 0.005 | 0.006927 | 0.8083 | 0.01247 | 0.011-0.013 | trunc 0.005 @ 0.144 | 0.08822 | 0.03981 | trunc 0.3 @ 0.00372 | 0.03274 |
+
+**Pick: trunc 0.2, alpha_B 0.003242** (band 0.00246-0.003242).
+Weighted MCC 0.772; on Wu, sensitivity 0.685, precision
+0.882, depth bias 3.31. On this section it labels
+**2.6%** of cells under the production MisTIC null (band
+2.4%-2.6%) and
+2.8% under the plain-N null. The G4 calibration chose
+trunc 0.3, alpha_B 0.08823 at a fixed 10% rate.
+
+**Prevalence-free readings (added after the smoke run showed the MCC pick tracks Wu's
+prevalence).** The MCC-optimal operating point depends on how common the positives are, and
+confident positives are rare in ER+ Wu (1.4% of scored cells), so the
+rule's pick partly encodes Wu's biology. Sensitivity and false-positive rate do not depend on
+prevalence. Youden's J (sensitivity minus false-positive rate) picks
+trunc 0.005 at alpha_B 0.144, labelling
+8.8% of this section. MCC re-evaluated at this section's own
+estimated fraction picks trunc 0.3 at alpha_B
+0.00693 (3.8%
+of this section).
+
+Rogan-Gladen estimate of this section's cycling fraction, (section label rate - Wu FPR) / (Wu
+sensitivity - Wu FPR), primary truth. If Wu's error rates transferred, each row would be flat
+across alpha_B:
+
+| null | alpha_B 0.002 | alpha_B 0.01 | alpha_B 0.05 | alpha_B 0.1 | alpha_B 0.2 |
+| --- | --- | --- | --- | --- | --- |
+| naive | 0.004 | 0.011 | 0.016 | 0.017 | 0.030 |
+| trunc 0.001 | 0.004 | 0.011 | 0.016 | 0.017 | 0.030 |
+| trunc 0.005 | 0.008 | 0.015 | 0.020 | 0.021 | 0.034 |
+| trunc 0.01 | 0.012 | 0.019 | 0.024 | 0.025 | 0.037 |
+| trunc 0.02 | 0.016 | 0.024 | 0.029 | 0.030 | 0.043 |
+| trunc 0.05 | 0.024 | 0.031 | 0.038 | 0.041 | 0.056 |
+| trunc 0.1 | 0.029 | 0.036 | 0.043 | 0.047 | 0.060 |
+| trunc 0.2 | 0.031 | 0.038 | 0.044 | 0.048 | 0.059 |
+| trunc 0.3 | 0.038 | 0.046 | 0.051 | 0.058 | 0.069 |
+
+![MCC against section rate](wu_calibration/mcc_vs_rate.png)
+
+Done in 22 min. Not propagated to Stages 3-7; the user decides.
+
+**Reading the two calibrations together (written after the results).**
+- *Truncation level: the two agree on heavy truncation.* Thinned Wu lacks Xenium spill-over, so its
+  lightly truncated nulls are far less over-dispersed than this section's (naive alpha0 0.32 on ER+
+  Wu against 0.86 here). At alpha_trim 0.2-0.3 the nulls converge (Wu 0.15 / 0.10, section 0.18 /
+  0.08), so that is the only range where an alpha_B transfers from Wu to here. The Wu rule picks
+  trunc 0.2, and G4 picks 0.3 at the edge of the grid it reproduces. Both point to alpha_trim
+  around 0.2.
+- *alpha_B: they disagree, because they define cycling differently.* G4's truth is the mixture's
+  class (9.8% of cells). Wu's primary truth is a confident Seurat tail (score > 0.1; 1.4% of scored
+  ER+ cells). The Wu pick, alpha_B ~0.003, labels 2.6% of this section. The pick is stable across
+  positive cuts of 0.05, 0.1 and 0.15 and under the tail truth. MCC re-evaluated at this section's
+  own estimated fraction gives 3.8%.
+- *Rogan-Gladen.* The estimated fraction of strongly cycling cells here is 3-7% for alpha_trim
+  0.1-0.3. It is not flat in alpha_B: it rises at lenient alpha_B, where Wu's false-positive rate
+  understates this section's.
+- *Trunc 0.2 on Wu (ER+, weighted).* Along this one null the trade-off is explicit:
+
+  | alpha_B | sensitivity | FPR | precision (Wu prevalence) | MCC | depth bias |
+  | --- | --- | --- | --- | --- | --- |
+  | 0.003 | 0.685 | 0.003 | 0.88 | 0.77 | 3.3 |
+  | 0.01 | 0.747 | 0.007 | 0.75 | 0.74 | 2.1 |
+  | 0.03 | 0.795 | 0.018 | 0.56 | 0.65 | 1.9 |
+  | 0.11 (10% here) | 0.86 | 0.06 | 0.28 | 0.47 | 1.9 |
+
+  A 10% label catches 86% of Wu's confidently cycling cells, but most of what it calls are not
+  confidently cycling there. On a continuum, that is the difference between "cycling" and "strongly
+  cycling", not an error in either calibration.
