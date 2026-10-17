@@ -57,7 +57,9 @@ from tissue_dynamics.division import labels as L                      # noqa: E4
 from tissue_dynamics.division.simulation import sim_dm                # noqa: E402
 from tissue_dynamics.mixture.data import _tirosh_genes, load_config   # noqa: E402
 
-OUT = "outputs/division_classifier"
+from tissue_dynamics.division import paths as DP                    # noqa: E402
+
+OUT = DP.out_dir()          # DIV_VARIANT=<v>: outputs/division_classifier_<v>
 REPORT = f"{OUT}/report.md"
 MIN_DETECT, V9_TOL, SEED, N_DRAWS = 0.01, 0.10, 20261008, 10
 # Type-gene pairs the user accepted beyond the 10% tolerance, with the bound each

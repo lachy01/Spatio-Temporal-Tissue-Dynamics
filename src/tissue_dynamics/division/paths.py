@@ -2,7 +2,8 @@
 
 Unset MIX_DATASET is the breast section (outputs/division_classifier,
 outputs/hpc). MIX_DATASET=ovarian writes outputs/division_classifier_ovarian and
-reads the ovarian mixture's outputs/hpc_ovarian (or MIX_OUT).
+reads the ovarian mixture's outputs/hpc_ovarian (or MIX_OUT). DIV_VARIANT=<v>
+(a label variant) appends _<v> to the output folder.
 """
 from __future__ import annotations
 
@@ -13,9 +14,16 @@ def dataset():
     return os.environ.get("MIX_DATASET") or None
 
 
+def variant():
+    """Label variant (DIV_VARIANT; division/labels.py VARIANTS), or None."""
+    return os.environ.get("DIV_VARIANT") or None
+
+
 def out_dir():
     ds = dataset()
-    return f"outputs/division_classifier_{ds}" if ds else "outputs/division_classifier"
+    base = f"outputs/division_classifier_{ds}" if ds else "outputs/division_classifier"
+    v = variant()
+    return f"{base}_{v}" if v else base
 
 
 def hpc_dir():

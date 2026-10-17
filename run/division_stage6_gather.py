@@ -41,7 +41,9 @@ import matplotlib                                                     # noqa: E4
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt                                       # noqa: E402
 
-OUT = "outputs/division_classifier"
+from tissue_dynamics.division import paths as DP                    # noqa: E402
+
+OUT = DP.out_dir()          # DIV_VARIANT=<v>: outputs/division_classifier_<v>
 REPORT = f"{OUT}/report.md"
 PREDS = ["MIX pi", "MIX, BASE-T", "MIX, BASE-O", "NB-c, BASE-T", "NB-c, BASE-O",
          "LOG-T", "LOG-O", "LOG-S"]
@@ -74,7 +76,8 @@ def med_rng(v):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", default="outputs/hpc/division_sim")
+    ap.add_argument("--dir", default=f"{DP.hpc_dir()}/division_sim"
+                    + (f"_{DP.variant()}" if DP.variant() else ""))
     ap.add_argument("--no-report", action="store_true")
     a = ap.parse_args()
     res = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(a.dir, "0*.json")))]

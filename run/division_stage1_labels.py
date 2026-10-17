@@ -196,8 +196,21 @@ def main():
         out["m"] = m_null
 
     # ---- 2.2 BASE-T -----------------------------------------------------------
+    # BASE-T's null: the robust null above, or under a label variant (DIV_VARIANT) the
+    # truncated-likelihood null at alpha_trim L.BASE_T_TRUNC, refitted from the
+    # untrimmed fit exactly as the calibration fitted it. BASE-O keeps mu0, alpha0.
+    muT, aT, trunc_fit = mu0, a0, None
+    if L.BASE_T_TRUNC is not None:
+        say(f"BASE-T null: truncated likelihood at alpha_trim {L.BASE_T_TRUNC:g} (variant {L.VARIANT}) ...")
+        full_fit = L.fit_nb_additive_null(y, Xa, off, m_null if mistic else np.zeros(n))
+        trunc_fit = L.truncated_null(y, Xa, off, m_null if mistic else np.zeros(n), L.BASE_T_TRUNC,
+                                     full_fit, say=say, param_tol=L.TRUNC_PARAM_TOL)
+        muT, aT = trunc_fit["mu"], float(trunc_fit["alpha"])
+        out["mu0_T"], out["alpha0_T"] = muT, aT
+        say(f"  alpha0_T = {aT:.4f}, theta_m {trunc_fit['theta_m']:.4f}, stopped on "
+            f"{trunc_fit['stopped_on']} after {len(trunc_fit['trace'])} iterations")
     for ab in L.ALPHA_B_GRID:
-        Lt, c, ai, p = L.base_t(y, mu0, a0, ab)
+        Lt, c, ai, p = L.base_t(y, muT, aT, ab)
         tg = L.ab_tag(ab)
         out[f"cT_{tg}"] = c
         out[f"alphai_{tg}"] = ai
@@ -213,7 +226,7 @@ def main():
     for d in np.unique(dec):
         m = dec == d
         row = {"N decile": int(d) + 1, "N median": float(np.median(N[m])),
-               "mu0 median": float(np.median(mu0[m]))}
+               "mu0 median": float(np.median(muT[m]))}
         for ab in L.ALPHA_B_GRID:
             tg = L.ab_tag(ab)
             row[f"c^T median @{ab:g}"] = float(np.median(out.loc[m, f"cT_{tg}"]))
@@ -291,10 +304,18 @@ def main():
     mu_s, a_s = null_s["mu"], null_s["alpha"]
     sd_s = np.sqrt(mu_s + a_s * mu_s ** 2)
     v2_rows, v2_fail = [], []
+    ysT, muT_s, aT_s = ys, mu_s, a_s
+    if L.BASE_T_TRUNC is not None:
+        # A1's V2-trunc: simulate from the truncated null, refit it the same way
+        mm = m_null if mistic else np.zeros(n)
+        ysT = L.sim_nb(muT, aT, np.random.default_rng(2027))
+        ft_s = L.truncated_null(ysT, Xa, off, mm, L.BASE_T_TRUNC, L.fit_nb_additive_null(ysT, Xa, off, mm),
+                                param_tol=L.TRUNC_PARAM_TOL)
+        muT_s, aT_s = ft_s["mu"], float(ft_s["alpha"])
     for ab in L.ALPHA_B_GRID:
-        Lt_s, _c, ai_s, _p = L.base_t(ys, mu_s, a_s, ab)
+        Lt_s, _c, ai_s, _p = L.base_t(ysT, muT_s, aT_s, ab)
         # the frozen labels applied to null data, for comparison
-        Lt_f = ys >= out[f"cT_{L.ab_tag(ab)}"].to_numpy()
+        Lt_f = ysT >= out[f"cT_{L.ab_tag(ab)}"].to_numpy()
         rate, target = float(Lt_s.mean()), float(ai_s.mean())
         rel = rate / target - 1.0
         ok = abs(rel) <= 0.30
@@ -353,7 +374,12 @@ def main():
                            **sinfo),
                 v3=v3, cell_type_agreement=agree,
                 logN_residualised_in_basis=basis.logN_ortho_coef is not None,
-                technical=basis.technical,
+                technical=basis.technical, variant=L.VARIANT,
+                base_t_null=(None if trunc_fit is None else
+                             {"alpha_trim": L.BASE_T_TRUNC, "alpha0": aT, "theta_m": trunc_fit["theta_m"],
+                              "beta": np.asarray(trunc_fit["beta"]).tolist(),
+                              "iterations": len(trunc_fit["trace"]), "stopped_on": trunc_fit["stopped_on"]}),
+                alpha_b_primary=L.ALPHA_B_PRIMARY,
                 **({"null_theta_m": null["theta_m"], "null_eta": null["eta"],
                     "null_se": null["se"]} if mistic else {}))
     json.dump(meta, open(f"{OUT}/labels_meta.json", "w"), indent=2, default=float)
@@ -375,6 +401,15 @@ def main():
     tr = pd.DataFrame(null["trace"])[["iteration", "n_fit", "alpha0", "flagged",
                                       "flagged_frac", "changed", "converged"]]
     v2_ok = not v2_fail
+    variant_text = "" if trunc_fit is None else (
+        f"### BASE-T null (label variant `{L.VARIANT}`)\n\n"
+        f"BASE-T uses the truncated-likelihood null at alpha_trim {L.BASE_T_TRUNC:g} (addendum section 1.2, "
+        f"from the untrimmed fit, stopping when the parameters settle to {L.TRUNC_PARAM_TOL:g}): "
+        f"alpha0 **{aT:.4f}**, theta_m {trunc_fit['theta_m']:.4f}, {len(trunc_fit['trace'])} iterations "
+        f"({trunc_fit['stopped_on']}). Primary alpha_B **{L.ALPHA_B_PRIMARY:g}**, the level at which "
+        f"this null labels 10% of cells (user, 2026-10-17, after the G4 and Wu calibrations in "
+        f"outputs/division_classifier/report.md). BASE-O and SCORE use the robust null above, "
+        f"unchanged. V2 below simulates from the truncated null and refits it the same way.\n\n")
     null_text = (
         "mu0 = Nt e^b0 + theta_m m (MisTIC; `model.technical: mistic`): Nt the "
         f"MisTIC-weighted N ({basis.logN_column}) as a fixed offset, m the expected count of "
@@ -401,7 +436,7 @@ table's `N` for every cell.
 
 {md_table(tr)}
 
-### Label rates
+{variant_text}### Label rates
 
 {md_table(rates)}
 

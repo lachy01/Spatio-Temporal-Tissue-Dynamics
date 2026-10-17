@@ -23,6 +23,7 @@ is a no-op (the worker skips one whose output already exists).
 | `sim_size_confound` | 20 | Test 07 |
 | `division_sim` | 30 | division classifier, Stage 6: G1-G3 x 10 replicates |
 | `division_sim_addendum` | 30 | division addendum 1, stage A5: the same draws plus the extended BASE-T grid, TWO-P/TWO-PNB and the section 6 metrics |
+| `division_sim_t10` | 30 | Stage 6 rerun on the t10 label variant (BASE-T from the alpha_trim 0.2 truncated null at alpha_B 0.1085) |
 
 ## One-time setup
 
@@ -120,6 +121,21 @@ TWO-PNB) roughly doubled a replicate's time. At n = 100,000, expect about
 10-15 min per task, so the 2 h default is ample. Copy back
 `outputs/hpc/division_sim_addendum/` and run
 `python run/division_addendum_a5_gather.py`.
+
+## Stage 6 on the t10 label variant (2026-10-17)
+
+```bash
+git pull                                   # simulation.py, tasks.py (job division_sim_t10)
+./hpc/submit.sh division_sim_t10           # 30 tasks; the same draws as division_sim
+```
+
+Its inputs, `outputs/division_classifier_t10/{sim_inputs.npz, folds.parquet,
+nb_params_nbc_full.json}`, are committed, so `git pull` brings them (the folds, NB fits
+and allocation model are identical to the original folder's). Each replicate also refits the
+truncated null on its simulated counts (about a minute at n = 100,000), so tasks run
+a little longer than `division_sim`'s 2-5 min. Copy back
+`outputs/hpc/division_sim_t10/` and run
+`DIV_VARIANT=t10 python run/division_stage6_gather.py`.
 
 ## A second section (ovarian, `MIX_DATASET=ovarian`)
 

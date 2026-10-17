@@ -60,6 +60,13 @@ plus:
     state) and LOG-O-state fitted on it.
 The per-type ratio spread (section 6) and the alpha_B surface (section 2.3)
 are computed from the stored contrasts by run/division_addendum_a5_gather.py.
+
+Label variant (job `division_sim_t10`, `variant="t10"`; labels.VARIANTS):
+BASE-T is rebuilt from the truncated-likelihood null at the variant's
+alpha_trim, refitted on the simulated y from the untrimmed fit as Stage 1
+fits it, at the variant's primary alpha_B; inputs are read from, and
+compared with, outputs/division_classifier_<variant>. BASE-O and SCORE as
+above.
 """
 from __future__ import annotations
 
@@ -123,7 +130,7 @@ def _cosine(P, Q):
     return float(a @ b / (na * nb)) if na > 0 and nb > 0 else float("nan")
 
 
-def run_replicate(task, cfg, say=None, addendum=False):
+def run_replicate(task, cfg, say=None, addendum=False, variant=None):
     import jax
 
     jax.config.update("jax_enable_x64", True)
@@ -140,6 +147,11 @@ def run_replicate(task, cfg, say=None, addendum=False):
 
     say = say or (lambda *a: None)
     t0 = time.time()
+    out_dir = f"{OUT}_{variant}" if variant else OUT
+    vset = L.VARIANTS[variant] if variant else None
+    ab_primary = vset["alpha_b"] if vset else L.ALPHA_B_PRIMARY
+    if variant and addendum:
+        raise ValueError("the addendum job runs on the original labels only")
     gen, rep = task["generator"], int(task["rep"])
     gi = GENERATORS.index(gen)
     n_sim = int(task.get("n", cfg.get("division_sim_n", 100_000)))
@@ -155,14 +167,14 @@ def run_replicate(task, cfg, say=None, addendum=False):
     if int(pe["rank"]) != spec.rank:
         raise RuntimeError(f"point estimate rank {pe['rank']}, config rank {spec.rank}")
     data = build_data(df, basis, cfg, spec)
-    inp = np.load(f"{OUT}/sim_inputs.npz")
+    inp = np.load(f"{out_dir}/sim_inputs.npz")
     if str(inp["cell_id_sha256"]) != hashlib.sha256("\n".join(ids).encode()).hexdigest():
         raise RuntimeError("sim_inputs.npz was built on a different cell list")
-    fm = pd.read_parquet(f"{OUT}/folds.parquet")
+    fm = pd.read_parquet(f"{out_dir}/folds.parquet")
     if not np.array_equal(fm["cell_id"].astype(str).to_numpy(), ids):
         raise RuntimeError("folds.parquet lists cells in a different order from the table")
     nbc = {k: jnp.asarray(np.asarray(v))
-           for k, v in json.load(open(f"{OUT}/nb_params_nbc_full.json")).items()}
+           for k, v in json.load(open(f"{out_dir}/nb_params_nbc_full.json")).items()}
     P = {k: jnp.asarray(np.asarray(v)) for k, v in pe["params"].items()}
     ctype_all = L.cell_type(df, types)
     tix = {t: i for i, t in enumerate(types)}
@@ -206,7 +218,15 @@ def run_replicate(task, cfg, say=None, addendum=False):
     null = L.robust_null(y, Xa, off_null, m=m_null)
     mu0, a0 = null["mu"], null["alpha"]
     sd0 = np.sqrt(mu0 + a0 * mu0 ** 2)
-    LT, cT, _, _ = L.base_t(y, mu0, a0, L.ALPHA_B_PRIMARY)
+    if vset:
+        mz = m_null if m_null is not None else np.zeros(n_sim)
+        ft = L.truncated_null(y, Xa, off_null, mz, vset["trunc"],
+                              L.fit_nb_additive_null(y, Xa, off_null, mz), param_tol=L.TRUNC_PARAM_TOL)
+        LT, cT, _, _ = L.base_t(y, ft["mu"], ft["alpha"], ab_primary)
+        baset_alpha0 = float(ft["alpha"])
+    else:
+        baset_alpha0 = float(a0)
+        LT, cT, _, _ = L.base_t(y, mu0, a0, ab_primary)
     s_plus = L.base_o_scale((y - mu0) / sd0, ct)
     LO, cO, _ = L.base_o(y, mu0, sd0, s_plus, L.TD_PRIMARY)
     if Z is None:
@@ -379,7 +399,8 @@ def run_replicate(task, cfg, say=None, addendum=False):
     fractions = {k: {t: float(p[ct_te == t].mean()) for t in types} for k, (p, _) in preds.items()}
     out = {"generator": gen, "rep": rep, "fold": hold, "n_train": int(len(tr)), "n_test": int(len(te)),
            "label_rates": {k: float(v.mean()) for k, v in labels.items()},
-           "null_alpha0": float(a0), "score_threshold": float(thr["threshold"]),
+           "null_alpha0": float(a0), "baset_null_alpha0": baset_alpha0, "variant": variant,
+           "score_threshold": float(thr["threshold"]),
            "g2_alpha1": alpha1, "fits": fits, "label_scores": label_scores, "fractions": fractions,
            "rank": int(spec.rank), "weight_ridge": float(spec.weight_ridge), "b_penalty": spec.b_penalty}
     if addendum:

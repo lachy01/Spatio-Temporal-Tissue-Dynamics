@@ -6,6 +6,8 @@ frozen before any model is fitted (spec 2.1); nothing here sees a model.
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 
 from .survival import nb_p_ge, smallest_c_below
@@ -15,6 +17,28 @@ ALPHA_B_PRIMARY = 0.05     # decided by the user after Stage 1 (spec default 0.0
 # addendum 1, section 2.1: the grid every BASE-T null is built on from now on
 ALPHA_B_GRID_EXT = (0.001, 0.01, 0.05, 0.1, 0.2)
 TRUNC_GRID = (0.001, 0.01, 0.05)                  # addendum 1, section 1.3: alpha_trim
+
+# Label variants (DIV_VARIANT; outputs in outputs/division_classifier_<variant>, see
+# paths.out_dir). Unset = the labels above, as Stages 1-7 were first run.
+#   t10  user, 2026-10-17: BASE-T from the alpha_trim 0.2 truncated null
+#        (truncated_null from the untrimmed fit, param_tol 1e-3, as the calibration
+#        fitted it) at the alpha_B that labels 10% of the breast section's cells.
+#        Both calibrations support alpha_trim ~0.2; 0.1085 is the 10% level (report.md,
+#        "BASE-T-trunc calibrated ..."). BASE-O and SCORE are unchanged.
+VARIANTS = {"t10": dict(trunc=0.2, alpha_b=0.1085, grid=(0.1085, 0.05, 0.01, 0.001),
+                        dataset=None)}
+VARIANT = os.environ.get("DIV_VARIANT") or None
+BASE_T_TRUNC = None            # alpha_trim of BASE-T's null; None = Stage 1's naive null
+TRUNC_PARAM_TOL = 1e-3
+if VARIANT is not None:
+    if VARIANT not in VARIANTS:
+        raise ValueError(f"unknown DIV_VARIANT {VARIANT!r}; known: {sorted(VARIANTS)}")
+    if (os.environ.get("MIX_DATASET") or None) != VARIANTS[VARIANT]["dataset"]:
+        raise ValueError(f"DIV_VARIANT {VARIANT} is calibrated on the "
+                         f"{VARIANTS[VARIANT]['dataset'] or 'breast'} section only")
+    ALPHA_B_PRIMARY = VARIANTS[VARIANT]["alpha_b"]
+    ALPHA_B_GRID = VARIANTS[VARIANT]["grid"]
+    BASE_T_TRUNC = VARIANTS[VARIANT]["trunc"]
 TD_GRID = (0.0, 0.25, 0.5, 0.75, 1.0)
 TD_PRIMARY = 0.5
 TRIM_P = 0.001
@@ -22,7 +46,7 @@ SCORE_P = 0.001
 
 
 def ab_tag(a):
-    return {0.2: "a2", 0.1: "a1", 0.05: "a05", 0.01: "a01", 0.001: "a001",
+    return {0.2: "a2", 0.1085: "a1085", 0.1: "a1", 0.05: "a05", 0.01: "a01", 0.001: "a001",
             1e-4: "a0001"}[float(a)]
 
 

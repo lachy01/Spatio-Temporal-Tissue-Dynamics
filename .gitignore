@@ -237,6 +237,11 @@ outputs/division_classifier/**/oof_nb.parquet
 outputs/division_classifier/**/oof_predictions.parquet
 outputs/division_classifier/cache_stage7/
 outputs/division_classifier/**/cache_stage7/
+# label variants (DIV_VARIANT) and other sections: the same regenerable files
+outputs/division_classifier_*/labels.parquet
+outputs/division_classifier_*/oof_nb.parquet
+outputs/division_classifier_*/oof_predictions.parquet
+outputs/division_classifier_*/cache_stage7/
 outputs/hpc_spanorm/
 
 # Notebook caches for nb_baseline.ipynb (fits, fields, ring sums; rebuilt by re-running it)

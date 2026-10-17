@@ -103,12 +103,13 @@ def enumerate_tasks(job, cfg):
         extra = ({"n": int(cfg["sim_test03_n"])}
                  if job == "sim_single_component" and cfg.get("sim_test03_n") else {})
         return [{"job": job, "rep": r, **extra} for r in range(int(cfg.get("sim_reps", 20)))]
-    if job in ("division_sim", "division_sim_addendum"):
+    if job in ("division_sim", "division_sim_addendum", "division_sim_t10"):
         # Division classifier comparison, spec 7: the known-truth simulation.
         # One task per generator and replicate; the replicate's cells are
         # shared by its three generators (division/simulation.py). The
         # addendum job (addendum 1, sections 2.2, 3.5, 6) reruns the same
-        # draws with the extended grid, TWO and the B-direction metric.
+        # draws with the extended grid, TWO and the B-direction metric. The
+        # _t10 job reruns Stage 6 on the t10 label variant (division/labels.py).
         return [{"job": job, "generator": g, "rep": r}
                 for g in ("G1", "G2", "G3")
                 for r in range(int(cfg.get("division_sim_reps", 10)))]
@@ -161,11 +162,12 @@ def run_task(task, cfg, verbose=False, out_dir=None):
     missing rather than as the finding it is.
     """
     job = task["job"]
-    if job in ("division_sim", "division_sim_addendum"):
+    if job in ("division_sim", "division_sim_addendum", "division_sim_t10"):
         from ..division.simulation import run_replicate
         return {**task, **run_replicate(task, cfg,
                                         say=(lambda *a: print(*a, flush=True)) if verbose else None,
-                                        addendum=job == "division_sim_addendum")}
+                                        addendum=job == "division_sim_addendum",
+                                        variant="t10" if job == "division_sim_t10" else None)}
     try:
         return _run_sim(task, cfg) if job.startswith("sim_") else _run_real(
             task, cfg, verbose=verbose, out_dir=out_dir)
