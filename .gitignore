@@ -263,3 +263,4 @@ outputs/division_classifier/labels_state.parquet
 # ovarian division comparison: regenerable parquet (MIX_DATASET=ovarian, run/division_stage*.py)
 outputs/division_classifier_ovarian/*.parquet
 data/ovarian/
+outputs/division_classifier*/trunc_calibration/real_nulls.npz
