@@ -36,7 +36,7 @@ Almost everything below is one of these, or is compared against one.
 
 | Path | What it is | Model(s) | Written by | Current? |
 | --- | --- | --- | --- | --- |
-| `figures/model_fit/` | Rootogram, PIT, quantile residuals, fitted-mean and residual maps, metrics CSV | Best NB (NB-d), production mixture, NB + NB mixture (ovarian only) | `run/plot_model_fit.py` | 2026-10-18 |
+| `figures/model_fit/` | Rootogram, PIT, quantile residuals, fitted-mean and residual maps, metrics CSV; `isolated/` holds the same figures one model per file | Best NB (NB-d), production Poisson mixture, Poisson + NB mixture, NB + NB mixture (both sections) | `run/plot_model_fit.py` | 2026-10-18 |
 | `figures/` (other) | Tissue and cell-type maps; prior pi and posterior w maps (`cycling_*`); density response; Stage B diagnostics; spatial residual maps | Production mixture, each section | `plot_tissue_maps.py`, `plot_density_response.py`, `diagnostics_report.py`, `estimands_report.py` | 2026-10-13 to 10-16 |
 | `hpc/` | Spartan per-task JSON (breast): `multistart` (production), `bootstrap` (300), `cv_production` (5 spatial folds), `cv_penalty`, `cv_rank`, `theta_bracket`, `sim_single_component` (Test 03), `sim_single_component_path_full` (lambda path), `division_sim` (Stage 6), `division_sim_addendum` (A5), `division_sim_t10` | Production mixture and variants; division simulations | `hpc/worker.py` + `mixture/tasks.py` | All MisTIC, 2026-10-12 to 10-18 |
 | `hpc_plain/` | `multistart`, `bootstrap`, `cv_production`, `sim_single_component` | Plain technical model: raw N offset, no m (the pre-MisTIC comparison) | same | 2026-10-13 |
@@ -47,11 +47,11 @@ Almost everything below is one of these, or is compared against one.
 | `interaction/` | Data support for each own x neighbour entry against the fitted bilinear term | Production mixture (+ `cv_rank`, bootstrap) | `run/interaction_support.py` | 2026-10-13 |
 | `comparison/` | NB against mixture on breast: metrics, rootograms, PIT, dispersion by type | `nb_prev` (earlier NB division model), `nb_matched` (unpenalised, rank 2), production mixture | `run/compare_nb_mixture.py` | 2026-10-13. **`run.log` is stale** (678,885-cell SpaNorm era); the CSVs and PNGs are current |
 | `comparison_ovarian/` | The same on ovarian | same, ovarian production mixture | same, `MIX_DATASET=ovarian` | 2026-10-15 |
-| `poisson_nb_ovarian/` | Poisson + NB mixture (cycling component NB) | Production spec + `cycling_nb` | `run/mixture_poisson_nb.py` | 2026-10-16; not adopted |
-| `nb_nb_ovarian/` | NB + NB mixture (`params.json` is its fit) | Production spec + `cycling_nb` + `noncycling_nb` | `run/mixture_poisson_nb.py --family nbnb` | 2026-10-16; not adopted |
+| `poisson_nb/`, `poisson_nb_ovarian/` | Poisson + NB mixture (cycling component NB); `params.json` is its fit | Production spec + `cycling_nb` | `run/mixture_poisson_nb.py` | breast 2026-10-18, ovarian 2026-10-16; not adopted |
+| `nb_nb/`, `nb_nb_ovarian/` | NB + NB mixture; `params.json` is its fit | Production spec + `cycling_nb` + `noncycling_nb` | `run/mixture_poisson_nb.py --family nbnb` | breast 2026-10-18, ovarian 2026-10-16; not adopted |
 | `ovarian_depthres/` | State block residualised on depth within type, refitted | Ovarian production spec, residualised table | `run/ovarian_depth_residual_check.py` | 2026-10-15; sensitivity only |
 | `spatial/` | PhiSpace and residual correlograms, LISA maps, spatial blocks | `nb_prev`, `nb_matched` (refitted, saved in `nb_fits.npz`), production mixture | `run/spatial_analysis.py` | 2026-10-13 |
-| `nb_baseline/` | NB baseline development: neighbourhood models, depth offset tests, oxygen field and sweeps, tuning | Single-NB division models (the NB baseline spec) | `notebooks/nb_baseline.ipynb`, `src/tissue_dynamics/nb_baseline.py` | Rerun on MisTIC 2026-10-13 |
+| `nb_baseline/` | NB baseline development: plain against MisTIC (§1), depth offset tests and NB-c against NB-d (§2), oxygen, annulus, neighbourhood models. `cache/` holds the fits (gitignored) | Single-NB regressions with the mixture's covariates and penalty | `notebooks/nb_baseline.ipynb`, `src/tissue_dynamics/nb_baseline.py` | 2026-10-18 (§1 and the NB-c/NB-d comparison added) |
 | `mistic/` | MisTIC pipeline and tests T1-T6 (breast); README on the probability column | MisTIC per-transcript probabilities; T6 compares old and new mixtures | `run/mistic_*.py` | 2026-10-13 |
 | `mistic_ovarian/` | Covariate summary only | MisTIC on ovarian | `run/mistic_covariates.py` | 2026-10-15 |
 | `portrait/` | Phase portrait: archetype interaction matrix, velocities, fixed points, bifurcation; `osdr_p*` = OSDR density-correction variants (power 2, 4, 8, 16) | Production mixture (breast) | `run/portrait_*.py` | `FINDINGS.md` and figures rewritten 2026-10-13 for production. **`run.log` is stale** (678,885-cell fit) |
@@ -59,6 +59,14 @@ Almost everything below is one of these, or is compared against one.
 | `division_classifier/` | Division classifier comparison, Stages 1-7 and addendum 1 (A1-A6); `trunc_calibration/` (G4 calibration), `wu_calibration/` (Wu calibration); `report.md` is the run log | Labels: naive BASE-T (alpha_B 0.05, rate 3.3%), BASE-O (per type, Td 0.5), SCORE. Arms: NB-c, NB-d, MIX (production), LOG-T/O/S, TWO-P/PNB | `run/division_*.py` | 2026-10-13 to 10-17 |
 | `division_classifier_t10/` | The same Stages 1-7 on the t10 label variant | BASE-T from the alpha_trim 0.2 truncated null at alpha_B 0.1085 (rate 10%); everything else as above | `DIV_VARIANT=t10 run/division_*.py` | 2026-10-18 |
 | `division_classifier_ovarian/` | Stages 1-4 on ovarian | Ovarian labels and arms | `MIX_DATASET=ovarian run/division_*.py` | 2026-10-16 |
+
+## Notebooks
+
+- `notebooks/mixture_model.ipynb` (rebuilt 2026-10-18): the mixture from plain depth to MisTIC, then
+  Poisson + NB and NB + NB, each read as a count model, and the production fit's intervals. Loads the
+  fits above; refits nothing.
+- `notebooks/nb_baseline.ipynb`: the NB regressions (see `nb_baseline/`).
+- `notebooks/exploration.ipynb`: the original exploration, on the superseded SpaNorm table.
 
 ## Top-level files
 

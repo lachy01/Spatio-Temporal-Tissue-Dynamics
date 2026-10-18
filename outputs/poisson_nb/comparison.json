@@ -1,0 +1,217 @@
+{
+ "global": [
+  {
+   "model": "Poisson mixture",
+   "parameters": 145,
+   "log-likelihood (data)": -600031.61346824,
+   "AIC": 1200353.22693648,
+   "rootogram misfit": 597.7752571467657,
+   "zeros expected": 0.60239225262026,
+   "zeros observed": 0.6218702004103955,
+   "PIT max deviation": 0.06938460251611944,
+   "e^delta": 1.9020147495571704,
+   "rate ratio": 6.699378424008049,
+   "alpha0": NaN,
+   "alpha1": NaN,
+   "theta_m": 1.593825806288184,
+   "cycling fraction (mean w)": 0.09824845428523758,
+   "mean pi": 0.09824845428689633
+  },
+  {
+   "model": "Poisson + NB mixture",
+   "parameters": 146,
+   "log-likelihood (data)": -591094.8823005315,
+   "AIC": 1182481.764601063,
+   "rootogram misfit": 340.4780694485793,
+   "zeros expected": 0.6170129043574664,
+   "zeros observed": 0.6218702004103955,
+   "PIT max deviation": 0.018343219486845364,
+   "e^delta": 1.424881693320122,
+   "rate ratio": 4.157365969495746,
+   "alpha0": NaN,
+   "alpha1": 0.5621765794369433,
+   "theta_m": 1.6533472280965134,
+   "cycling fraction (mean w)": 0.30711560977531127,
+   "mean pi": 0.30711560979084074
+  },
+  {
+   "model": "NB-c (matched NB)",
+   "parameters": 144,
+   "log-likelihood (data)": -593607.9760275623,
+   "AIC": 1187503.9520551246,
+   "rootogram misfit": 1096.8746497633917,
+   "zeros expected": 0.6284934054293677,
+   "zeros observed": 0.6218702004103955,
+   "PIT max deviation": 0.04952331121184128
+  }
+ ],
+ "by_type": [
+  {
+   "type": "Endothelial",
+   "cells": 48729,
+   "misfit P": 246.1557703417927,
+   "w P": 0.03815368439594448,
+   "nbr contrast P": 1.5548679278949864,
+   "misfit PNB": 72.86092712743391,
+   "w PNB": 0.13416951769940907,
+   "nbr contrast PNB": 1.358453104898824,
+   "misfit NB": 59.150997168239485
+  },
+  {
+   "type": "CAFs",
+   "cells": 52079,
+   "misfit P": 333.71407439521664,
+   "w P": 0.021857016878461425,
+   "nbr contrast P": 1.404978474456759,
+   "misfit PNB": 88.10438880389712,
+   "w PNB": 0.08630258760014313,
+   "nbr contrast PNB": 1.2665622011777025,
+   "misfit NB": 60.55705136180952
+  },
+  {
+   "type": "PVL",
+   "cells": 42834,
+   "misfit P": 95.52947525646474,
+   "w P": 0.05858004714027507,
+   "nbr contrast P": 3.1918712227396964,
+   "misfit PNB": 29.68765158501155,
+   "w PNB": 0.19846337426039246,
+   "nbr contrast PNB": 3.2273356829569333,
+   "misfit NB": 37.667311201344035
+  },
+  {
+   "type": "B-cells",
+   "cells": 59119,
+   "misfit P": 78.0153535427211,
+   "w P": 0.0901670012051671,
+   "nbr contrast P": 0.9131827829595547,
+   "misfit PNB": 98.36961652852767,
+   "w PNB": 0.3198916184962927,
+   "nbr contrast PNB": 1.083492612198575,
+   "misfit NB": 108.21210228247239
+  },
+  {
+   "type": "T-cells",
+   "cells": 87004,
+   "misfit P": 224.9876925116093,
+   "w P": 0.11043554017895292,
+   "nbr contrast P": 0.928862931731768,
+   "misfit PNB": 233.1002463224842,
+   "w PNB": 0.37878880978232315,
+   "nbr contrast PNB": 1.4909196004483536,
+   "misfit NB": 245.5477369898035
+  },
+  {
+   "type": "Myeloid",
+   "cells": 69669,
+   "misfit P": 193.30920659013935,
+   "w P": 0.043059999527691746,
+   "nbr contrast P": 1.7387399360976774,
+   "misfit PNB": 58.948481136377346,
+   "w PNB": 0.16109599218509346,
+   "nbr contrast PNB": 1.9553717941407607,
+   "misfit NB": 81.15200767112171
+  },
+  {
+   "type": "Normal Epithelial",
+   "cells": 54508,
+   "misfit P": 47.06759324709063,
+   "w P": 0.09340424331236226,
+   "nbr contrast P": 1.0089962751060924,
+   "misfit PNB": 28.47837029098776,
+   "w PNB": 0.30198615116708094,
+   "nbr contrast PNB": 0.8636468497882289,
+   "misfit NB": 160.09416646046324
+  },
+  {
+   "type": "Plasmablasts",
+   "cells": 42523,
+   "misfit P": 28.25203524317619,
+   "w P": 0.11591818993519545,
+   "nbr contrast P": 0.9508474634020099,
+   "misfit PNB": 19.36640512348023,
+   "w PNB": 0.3620611441842909,
+   "nbr contrast PNB": 0.8743876968661567,
+   "misfit NB": 66.35080141867817
+  },
+  {
+   "type": "Cancer Epithelial",
+   "cells": 105432,
+   "misfit P": 308.8083713151841,
+   "w P": 0.20619432463772872,
+   "nbr contrast P": 0.12188671679728014,
+   "misfit PNB": 298.62627752226075,
+   "w PNB": 0.5509338975221503,
+   "nbr contrast PNB": 0.11710751131918222,
+   "misfit NB": 822.2383517077355
+  }
+ ],
+ "calibration": [
+  {
+   "label": "BASE-T alpha_B 0.05",
+   "label rate": 0.03292596329932354,
+   "P p / rate": 1.1710697558719334,
+   "PNB p / rate": 1.052003025166257,
+   "NB p / rate": 0.9515171657192267
+  },
+  {
+   "label": "BASE-T alpha_B 0.01",
+   "label rate": 0.011384648787945121,
+   "P p / rate": 1.0149445456690112,
+   "PNB p / rate": 0.9659759710300847,
+   "NB p / rate": 0.6665903501754777
+  },
+  {
+   "label": "BASE-T alpha_B 0.001",
+   "label rate": 0.002130283664087902,
+   "P p / rate": 0.4737771296966196,
+   "PNB p / rate": 1.0061313823014375,
+   "NB p / rate": 0.5150120680510026
+  },
+  {
+   "label": "BASE-T alpha_B 0.0001",
+   "label rate": 0.0003950902033646736,
+   "P p / rate": 0.16546377544624732,
+   "PNB p / rate": 1.0697886168730177,
+   "NB p / rate": 0.47022250265353804
+  },
+  {
+   "label": "BASE-O Td 0",
+   "label rate": 0.2778818893854212,
+   "P p / rate": 1.0158968941238085,
+   "PNB p / rate": 0.9988875529222434,
+   "NB p / rate": 1.029359823491573
+  },
+  {
+   "label": "BASE-O Td 0.25",
+   "label rate": 0.22691525315137828,
+   "P p / rate": 1.0060748124946326,
+   "PNB p / rate": 1.003346389371042,
+   "NB p / rate": 1.0511723971399136
+  },
+  {
+   "label": "BASE-O Td 0.5",
+   "label rate": 0.18183937625579066,
+   "P p / rate": 1.009918721834892,
+   "PNB p / rate": 1.0065635695957202,
+   "NB p / rate": 1.0575416983698698
+  },
+  {
+   "label": "BASE-O Td 0.75",
+   "label rate": 0.14231255906331589,
+   "P p / rate": 1.0306924088418847,
+   "PNB p / rate": 1.0145703252129357,
+   "NB p / rate": 1.0592587459469438
+  },
+  {
+   "label": "BASE-O Td 1",
+   "label rate": 0.11074449587735831,
+   "P p / rate": 1.0563962228217725,
+   "PNB p / rate": 1.0203254564142257,
+   "NB p / rate": 1.0512996065619917
+  }
+ ],
+ "lr": 17578.29075258784,
+ "best_start": "multistart 1",
+ "agreement": 0.8333333333333334
+}
