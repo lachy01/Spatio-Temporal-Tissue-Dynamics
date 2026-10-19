@@ -23,6 +23,8 @@ is a no-op (the worker skips one whose output already exists).
 | `sim_size_confound` | 20 | Test 07 |
 | `division_sim` | 30 | division classifier, Stage 6: G1-G3 x 10 replicates |
 | `division_sim_addendum` | 30 | division addendum 1, stage A5: the same draws plus the extended BASE-T grid, TWO-P/TWO-PNB and the section 6 metrics |
+| `portrait_param_boot` | 50 | phase portrait spec 8.1: 50 x 10 draws from the mixture's block-cluster sandwich covariance, each portrait summarised |
+| `portrait_block_boot` | 50 | phase portrait spec 8.2: spatial block bootstrap refits (full parameters kept), each portrait summarised |
 | `division_sim_t10` | 30 | Stage 6 rerun on the t10 label variant (BASE-T from the alpha_trim 0.2 truncated null at alpha_B 0.1085) |
 
 ## One-time setup
@@ -136,6 +138,32 @@ truncated null on its simulated counts (about a minute at n = 100,000), so tasks
 a little longer than `division_sim`'s 2-5 min. Copy back
 `outputs/hpc/division_sim_t10/` and run
 `DIV_VARIANT=t10 python run/division_stage6_gather.py`.
+
+## Phase portrait uncertainty and the radius sensitivity (2026-10-20)
+
+Prepared locally (committed, so `git pull` brings it): `outputs/portrait/uncertainty/param_cov.npz`
+(`run/portrait_uncertainty_prepare.py`). Copy to Spartan first: `data/radius/mixture_cells_r60.parquet`
+and `data/radius/mixture_cells_r100.parquet` with their `.phi_names.json` sidecars
+(`run/portrait_radius_tables.py` builds them; same cells as production, neighbourhood and density at
+60 and 100 um).
+
+```bash
+git pull
+MIX_TIME=0-03:00:00 ./hpc/submit.sh portrait_param_boot  # 50 tasks x 10 draws; a 1-draw local test took 9 min
+MIX_TIME=0-04:00:00 ./hpc/submit.sh portrait_block_boot  # 50 tasks: a refit (~4 min on Spartan) + two portrait summaries
+MIX_DATASET=r60  ./hpc/submit.sh multistart              # 10 restarts (config_r60.yaml)
+MIX_DATASET=r100 ./hpc/submit.sh multistart              # 10 restarts (config_r100.yaml)
+```
+
+Copy back `outputs/hpc/portrait_param_boot/`, `outputs/hpc/portrait_block_boot/`,
+`outputs/hpc_r60/multistart/` and `outputs/hpc_r100/multistart/`. Then locally:
+
+```bash
+MIX_DATASET=r60  python run/collect_point_estimate.py
+MIX_DATASET=r100 python run/collect_point_estimate.py
+python run/portrait_uncertainty_gather.py     # outputs/portrait/uncertainty/report.md
+python run/portrait_sensitivity.py            # outputs/portrait/sensitivity/grid.csv (radius rows fill in)
+```
 
 ## A second section (ovarian, `MIX_DATASET=ovarian`)
 

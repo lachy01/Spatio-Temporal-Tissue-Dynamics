@@ -103,6 +103,13 @@ def enumerate_tasks(job, cfg):
         extra = ({"n": int(cfg["sim_test03_n"])}
                  if job == "sim_single_component" and cfg.get("sim_test03_n") else {})
         return [{"job": job, "rep": r, **extra} for r in range(int(cfg.get("sim_reps", 20)))]
+    if job == "portrait_param_boot":
+        # Phase portrait spec 8.1: 50 tasks x 10 draws from MVN(theta_hat, V),
+        # V the block-cluster sandwich (portrait/uncertainty.py).
+        return [{"job": job, "chunk": c} for c in range(int(cfg.get("portrait_param_chunks", 50)))]
+    if job == "portrait_block_boot":
+        # Phase portrait spec 8.2: spatial block bootstrap with refits.
+        return [{"job": job, "rep": r} for r in range(int(cfg.get("portrait_block_reps", 50)))]
     if job in ("division_sim", "division_sim_addendum", "division_sim_t10"):
         # Division classifier comparison, spec 7: the known-truth simulation.
         # One task per generator and replicate; the replicate's cells are
@@ -162,6 +169,11 @@ def run_task(task, cfg, verbose=False, out_dir=None):
     missing rather than as the finding it is.
     """
     job = task["job"]
+    if job in ("portrait_param_boot", "portrait_block_boot"):
+        from ..portrait.uncertainty import run_block_rep, run_param_chunk
+        say = (lambda *a: print(*a, flush=True)) if verbose else None
+        fn = run_param_chunk if job == "portrait_param_boot" else run_block_rep
+        return {**task, **fn(task, cfg, say=say)}
     if job in ("division_sim", "division_sim_addendum", "division_sim_t10"):
         from ..division.simulation import run_replicate
         return {**task, **run_replicate(task, cfg,

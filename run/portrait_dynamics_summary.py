@@ -40,8 +40,7 @@ from tissue_dynamics.mixture.basis import build_basis, spec_from_basis    # noqa
 from tissue_dynamics.mixture.data import load_config                      # noqa: E402
 from tissue_dynamics.mixture.model import build_data, responsibilities    # noqa: E402
 from tissue_dynamics.portrait.core import (PortraitModel, build_archetypes,  # noqa: E402
-                                           fit_osdr_bound, interaction_matrix, net_rate,
-                                           simplex_loadings)
+                                           fit_osdr_bound, interaction_matrix, net_rate)
 
 OUT = "outputs/portrait"
 PAIRS = [("CAFs", "Myeloid"), ("Cancer Epithelial", "CAFs"),
@@ -52,13 +51,17 @@ def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--bound", choices=("none", "osdr"), default="none")
+    ap.add_argument("--anchor", choices=("own_type", "nbhd_loading"), default="own_type",
+                    help="death anchor: mean pi over the type's own cells (OSDR; default) or the "
+                         "earlier neighbourhood-loading mean, written to <out>/anchor_nbhd/")
     ap.add_argument("--state", choices=("barycentric", "counts"), default="barycentric",
                     help="counts: X_k = density x the disc's type-k fraction (a literal density, "
                          "OSDR's state), written to outputs/portrait/counts/")
     ap.add_argument("--power", type=int, default=8)
     ap.add_argument("--target-at-max", action="store_true")
     a = ap.parse_args()
-    base = "outputs/portrait" + ("/counts" if a.state == "counts" else "")
+    base = ("outputs/portrait" + ("/counts" if a.state == "counts" else "")
+            + ("/anchor_nbhd" if a.anchor == "nbhd_loading" else ""))
     OUT = base
     if a.bound == "osdr":
         OUT = f"{base}/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
@@ -74,7 +77,8 @@ def main():
     pi_hat = np.asarray(responsibilities(P0, data.as_jax(), spec))
     model = PortraitModel.from_fit(pe["params"], basis)
     arch, W = build_archetypes(df, basis, pi_hat=pi_hat, state=a.state,
-                                 radius_um=float(cfg["data"]["neighbour_radius_um"]))
+                                 radius_um=float(cfg["data"]["neighbour_radius_um"]),
+                                 anchor=a.anchor)
     nm, Xo = arch.names, arch.X_obs
     ox = float(np.median(df["oxygen"]))
     dens = df["density"].to_numpy(float)
@@ -88,7 +92,7 @@ def main():
 
     say(f"PORTRAIT DYNAMICS SUMMARY  ({len(df):,} cells; technical: "
         f"{cfg['model'].get('technical', 'area')}, lambda {pe['weight_ridge']:g}, rank "
-        f"{cfg['model']['rank']}; spec 3.2 signed anchor)"
+        f"{cfg['model']['rank']}; anchor: {a.anchor}, state: {a.state})"
         + ("" if bound is None else
            f"\nSENSITIVITY VARIANT: OSDR maximal-density correction, power {bound.power}"
            f"{', target held at its max' if bound.target_at_max else ''}") + "\n")
@@ -105,7 +109,9 @@ def main():
                           np.repeat(pb[None], len(grid), 0), grid, ox)
             f = 1 / (1 + np.exp(-e)) - arch.pi_bar[k]
         else:      # the correction acts on the type's own density, X_k = n w_k
-            w = simplex_loadings(pb[None], arch.A)[0]
+            # mean loadings in the portrait's state (barycentric: exactly the
+            # simplex loadings of pb; counts: the mean type fractions)
+            w = W[arche == x].mean(0)
             f = net_rate(grid[:, None] * w[None, :], model, arch, ox, bound)[0][:, k]
         s = np.where(np.diff(np.sign(f)))[0]
         if not len(s):

@@ -20,8 +20,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import root
-from scipy.spatial import Delaunay
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 import matplotlib                                                    # noqa: E402
@@ -33,95 +31,22 @@ from tissue_dynamics.mixture.basis import build_basis, spec_from_basis    # noqa
 from tissue_dynamics.mixture.data import load_config                      # noqa: E402
 from tissue_dynamics.mixture.model import build_data, responsibilities    # noqa: E402
 from tissue_dynamics.portrait.core import (PortraitModel, build_archetypes,  # noqa: E402
-                                           covariates_from_state, fit_osdr_bound,
-                                           interaction_matrix, jacobian, net_rate)
+                                           fit_osdr_bound, interaction_matrix, net_rate)
+from tissue_dynamics.portrait.summary import (MIN_CELLS, NSUPP, PAIRS, classify,  # noqa: E402
+                                              find_fixed_points, support_mask)
 
-PAIRS = [("CAFs", "Myeloid"), ("Cancer Epithelial", "CAFs"),
-         ("Cancer Epithelial", "Myeloid"), ("Cancer Epithelial", "T-cells")]
-NGRID, MIN_CELLS, NSUPP = 150, 20, 30
+NGRID = 150
 OUT = "outputs/portrait"
 OUT_F = OUT
-
-
-def support_mask(GA, GB, obs_ab, held_ok, ka, kb, Xo):
-    """Spec 5: per-axis q95 cap, >=20 locally supported cells, convex hull."""
-    pts = np.column_stack([GA.ravel(), GB.ravel()])
-    cap = (pts[:, 0] <= np.percentile(Xo[:, ka], 95)) & \
-          (pts[:, 1] <= np.percentile(Xo[:, kb], 95))
-    hull = Delaunay(obs_ab).find_simplex(pts) >= 0
-    # "min_cells within the grid cell" has to be counted on a support-sized bin,
-    # not the plotting resolution: 150x150 cells would need 450k conditioned
-    # observations to average 20 per bin. Count on a coarse NSUPP x NSUPP grid in
-    # log space and map each fine point to its coarse bin.
-    ea = np.linspace(np.log(GA[0, 0]), np.log(GA[0, -1]), NSUPP + 1)
-    eb = np.linspace(np.log(GB[0, 0]), np.log(GB[-1, 0]), NSUPP + 1)
-    sel = np.log(obs_ab[held_ok])
-    cnt = np.histogram2d(sel[:, 0], sel[:, 1], bins=[ea, eb])[0] >= MIN_CELLS
-    ia = np.clip(np.digitize(np.log(pts[:, 0]), ea) - 1, 0, NSUPP - 1)
-    ib = np.clip(np.digitize(np.log(pts[:, 1]), eb) - 1, 0, NSUPP - 1)
-    local = cnt[ia, ib]
-    return (cap & hull & local).reshape(GA.shape), int(held_ok.sum())
-
-
-def find_fixed_points(ref, ka, kb, model, arch, ox, lo, hi, F_red, GA, GB, mask, bound=None):
-    """Spec 6.1 grid-seeded multistart + 6.2 faces, in log X with a finite guard."""
-    lb, ub = np.log([lo[0], lo[1]]) - 2.0, np.log([hi[0], hi[1]]) + 2.0
-
-    def resid(u, free=(True, True)):
-        u = np.clip(u, lb[:len(u)] if len(u) == 2 else lb[:1], ub[:len(u)])
-        Z = ref.copy()
-        vals = np.exp(u)
-        idx = [i for i, f in zip((ka, kb), free) if f]
-        for i, v in zip(idx, vals):
-            Z[i] = v
-        for i, f in zip((ka, kb), free):
-            if not f:
-                Z[i] = 0.0
-        rate, _p = net_rate(Z[None], model, arch, ox, bound)
-        r = [rate[0, i] for i in idx]
-        return np.where(np.isfinite(r), r, 1e3)
-
-    seeds = []
-    nrm = np.linalg.norm(F_red, axis=0)
-    thr = np.percentile(nrm[np.isfinite(nrm)], 5)
-    sy, sx = np.where((nrm <= thr))
-    for i, j in list(zip(sy, sx))[::max(1, len(sy) // 60)]:
-        seeds.append(np.log([GA[i, j], GB[i, j]]))
-    found = []
-    for s in seeds:
-        r = root(resid, s, method="hybr")
-        if not r.success:
-            continue
-        xf = np.exp(np.clip(r.x, lb, ub))
-        if not np.all(np.isfinite(xf)) or np.max(np.abs(resid(r.x))) > 1e-8:
-            continue
-        if any(np.allclose(xf, s2, rtol=1e-3) for s2 in found):
-            continue
-        found.append(xf)
-    faces = []
-    for free in ((True, False), (False, True)):
-        idx = ka if free[0] else kb
-        s0 = np.log([np.median(GA if free[0] else GB)])
-        r = root(lambda u: resid(u, free), s0, method="hybr")
-        if r.success and np.max(np.abs(resid(r.x, free))) < 1e-8:
-            v = float(np.exp(np.clip(r.x, lb[:1], ub[:1])[0]))
-            faces.append((idx, v, free))
-    return found, faces
-
-
-def classify(Z, model, arch, ox, ka, kb, bound=None):
-    J = jacobian(Z, model, arch, ox, bound=bound)
-    ev_f = np.linalg.eigvals(J)
-    ev_r = np.linalg.eigvals(J[np.ix_([ka, kb], [ka, kb])])
-    cls = ("stable" if np.all(ev_r.real < 0) else
-           "unstable" if np.all(ev_r.real > 0) else "saddle")
-    return cls, ev_r, ev_f
 
 
 def main():
     global OUT, OUT_F
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--bound", choices=("none", "osdr"), default="none")
+    ap.add_argument("--anchor", choices=("own_type", "nbhd_loading"), default="own_type",
+                    help="death anchor: mean pi over the type's own cells (OSDR; default) or the "
+                         "earlier neighbourhood-loading mean, written to <out>/anchor_nbhd/")
     ap.add_argument("--state", choices=("barycentric", "counts"), default="barycentric",
                     help="counts: X_k = density x the disc's type-k fraction (a literal density, "
                          "OSDR's state), written to outputs/portrait/counts/")
@@ -130,7 +55,8 @@ def main():
                     help="hold the target type at its maximal density when setting c_k "
                          "(OSDR's docstring) instead of sampling it (OSDR's code)")
     a = ap.parse_args()
-    base = "outputs/portrait" + ("/counts" if a.state == "counts" else "")
+    base = ("outputs/portrait" + ("/counts" if a.state == "counts" else "")
+            + ("/anchor_nbhd" if a.anchor == "nbhd_loading" else ""))
     OUT = OUT_F = base
     if a.bound == "osdr":
         OUT = OUT_F = f"{base}/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
@@ -149,7 +75,8 @@ def main():
 
     model = PortraitModel.from_fit(pe["params"], basis)
     arch, W = build_archetypes(df, basis, pi_hat=pi_hat, state=a.state,
-                                 radius_um=float(cfg["data"]["neighbour_radius_um"]))
+                                 radius_um=float(cfg["data"]["neighbour_radius_um"]),
+                                 anchor=a.anchor)
     names, K, Xo = arch.names, arch.K, arch.X_obs
     ox = float(np.median(df["oxygen"]))
     os.makedirs(OUT, exist_ok=True)
@@ -157,7 +84,7 @@ def main():
     if a.bound == "osdr":
         bound = fit_osdr_bound(model, arch, ox, cell_archetype=df["archetype"].astype(str).to_numpy(),
                                power=a.power, target_at_max=a.target_at_max)
-    man = {"n_cells": int(len(df)), "K": K, "r2_recon": arch.r2_recon, "state": a.state,
+    man = {"n_cells": int(len(df)), "K": K, "r2_recon": arch.r2_recon, "state": a.state, "anchor": a.anchor,
            "oxygen_held_at": ox, "bounded": bound is not None, "n_grid": NGRID,
            "min_cells": MIN_CELLS, "support_bins": NSUPP,
            "weight_ridge": float(pe["weight_ridge"]),
@@ -177,15 +104,15 @@ def main():
                "technical covariates are held at reference and are not on the causal "
                "path of the dynamics",
                "own_state_mode = 'vertex': pi_k is evaluated at phi = A[k]",
-               "pi_bar uses the spec 3.2 signed-loading formula; the clipped variant "
-               "differs by at most 0.017 and is recorded as pi_bar_clipped",
+               "pi_bar: the mean fitted pi over each archetype's own cells (OSDR's anchor; "
+               "--anchor nbhd_loading reproduces the earlier spec-3.2 neighbourhood-loading mean)",
            ]}
 
     print(f"{len(df):,} cells | {K} archetypes | state: {a.state} | reconstruction R2 = {arch.r2_recon:.6f}")
     print(f"loadings outside [0,1]: {100*np.mean((W < 0) | (W > 1)):.1f}% of entries; "
           f"only {100*np.mean(np.all(Xo > 0, axis=1)):.1f}% of cells have every X_k > 0")
     man["frac_cells_all_positive"] = float(np.mean(np.all(Xo > 0, axis=1)))
-    print("\ndeath anchor pi_bar (loading-weighted mean of fitted pi):")
+    print(f"\ndeath anchor pi_bar ({a.anchor}):")
     for k, nm in enumerate(names):
         print(f"  {nm:<20} {arch.pi_bar[k]:.4f}")
     man["pi_bar"] = {n: float(v) for n, v in zip(names, arch.pi_bar)}

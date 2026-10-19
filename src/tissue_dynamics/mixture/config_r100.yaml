@@ -1,0 +1,11 @@
+# Phase portrait sensitivity (portrait spec 9, "neighbourhood radius"; 2026-10-20):
+# the breast section with the neighbourhood disc and the density radius at 100 um
+# instead of 80. Contact stays 0-15 um, so regional becomes 15-100 um. Same cells,
+# same MisTIC columns (run/portrait_radius_tables.py builds the table); every model
+# setting is production's. Active when MIX_DATASET=r100; fits go to outputs/hpc_r100.
+data:
+  neighbour_radius_um: 100.0
+  density_radius_um: 100.0
+  table_parquet: data/radius/mixture_cells_r100.parquet
+init:
+  n_restarts: 10

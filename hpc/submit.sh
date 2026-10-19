@@ -34,6 +34,16 @@ error: $MIX_OUT/point_estimate.json not found.
 MSG
   exit 1
 fi
+case "$JOB" in
+  portrait_param_boot|portrait_block_boot)
+    for f in "$MIX_OUT/point_estimate.json" outputs/portrait/uncertainty/param_cov.npz; do
+      if [ ! -f "$f" ]; then
+        echo "error: $f not found (the portrait jobs need the production point estimate" >&2
+        echo "       and the committed sandwich covariance; see hpc/README.md). Nothing submitted." >&2
+        exit 1
+      fi
+    done ;;
+esac
 if [ ! -f "$(python - <<'PY'
 import sys; sys.path.insert(0,"src")
 from tissue_dynamics.mixture.data import load_config

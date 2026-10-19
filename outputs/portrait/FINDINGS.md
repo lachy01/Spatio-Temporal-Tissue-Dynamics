@@ -1,5 +1,12 @@
 # Phase portrait — preliminary findings
 
+> **Read §12 first (2026-10-20).** The death anchor `π̄_k` is now each type's own mean
+> cycling probability (OSDR's definition), not spec §3.2's neighbourhood-loading average.
+> The anchor sets where every type grows or shrinks, so the numbers in §3–§6, §10 and §11
+> are superseded: §12 gives the current ones. §1, §1a, §2 and §7 do not involve the anchor
+> and stand. The output files in this directory hold the corrected runs; the spec-anchor
+> runs are in git at `80dac2c` and can be regenerated with `--anchor nbhd_loading`.
+
 **Status: preliminary, and deliberately UNBOUNDED.** OSDR's `p_correction = c_k · d_k^n`
 is not applied. Spec §5 says to check confinement first and add the correction only as a
 flagged sensitivity variant; the check (§2 below) fails for one of nine archetypes. The
@@ -208,6 +215,8 @@ only weakly, so the OSDR bound would still change the high-density branch for th
 
 ## 3. Density thresholds at each archetype's own neighbourhood
 
+*Computed with spec §3.2's neighbourhood-loading anchor; superseded by §12.*
+
 Total density swept at each archetype's own mean neighbourhood composition, with each
 crossing of `π_k = π̄_k`:
 
@@ -235,6 +244,8 @@ much as about the fit.
 
 ## 4. The tumour's ceiling holds at every composition, at the edge of the data
 
+*Computed with spec §3.2's neighbourhood-loading anchor; superseded by §12.*
+
 Blending the neighbourhood from the q50 reference (tumour fraction w̄_CE = 0.139) to a
 purely tumour neighbourhood, and sweeping total density at each blend:
 
@@ -258,6 +269,8 @@ result most exposed to the missing bound and to the absent uncertainty (§9).
 
 ## 5. Nullclines in the priority slices: mostly outside the window
 
+*Computed with spec §3.2's neighbourhood-loading anchor; superseded by §12.*
+
 At the q50 reference, almost no nullcline crosses the plotted window:
 
 | slice | first archetype | second archetype |
@@ -277,6 +290,8 @@ nullclines coincide.
 ---
 
 ## 6. Fixed points
+
+*Computed with spec §3.2's neighbourhood-loading anchor; superseded by §12.*
 
 Across the 12 masked panels (4 priority pairs × q25/q50/q75), **no fixed point lies inside
 the support mask**. The interior points found are stable within their slice but unstable in
@@ -373,24 +388,33 @@ on synthetic systems, so the model change does not touch them:
   asserts instead that `π̄_k` lies strictly inside the observed range of `π_k`, so each
   nullcline passes through the data cloud.
 
-`π̄` uses spec §3.2's signed-loading formula. Clipping the negative loadings moves every
-anchor by at most 0.010 (`pi_bar_clipped` in the manifest); its effect on the dynamics has
-not been recomputed under this fit.
+Until 2026-10-20 `π̄` used spec §3.2's signed-loading formula; clipping the negative
+loadings moved every anchor by at most 0.010. The anchor is now each type's own mean
+cycling (§12), which uses no loadings, so the clipped variant no longer applies.
 
 ---
 
 ## 9. Not yet done
 
-- **Spec §8, uncertainty: none of it.** No parametric or spatial block bootstrap, no
-  topology-preservation fraction. Every number above is a point estimate, and the §4 ceiling
-  at the 98th percentile of density is exactly the kind of claim that needs an interval.
-- **Spec §9, sensitivity grid: none of it** (the `π̄` multiplier, calibration and `δ`
-  perturbations, radius/`L0`, `K`, `own_state_mode`, `τ`, and the clipped anchor).
-- ~~The OSDR maximal-density bound~~: run as a sensitivity variant (§10). Its fixed points and
-  nullclines are not reported as findings.
-- Spec §7's q25/q50/q75 robustness check is only partly possible (§6).
+- **Spec §8, uncertainty: written, not yet run** (§12, last part). The parametric bootstrap
+  (`portrait_param_boot`, MVN draws from the block-cluster sandwich, which checks against the
+  block bootstrap) and the spatial block bootstrap with refits (`portrait_block_boot`) are
+  Spartan jobs; `run/portrait_uncertainty_gather.py` gives the topology-preservation fraction.
+  Not implemented: the per-grid-cell circular SD of arrow direction and the overlaid bootstrap
+  arrows (spec §8.3's figures).
+- **Spec §9, sensitivity grid: written, not yet run** (`run/portrait_sensitivity.py`): the
+  anchor multiplier, `δ`, `τ`, `K` and radius 60/100 µm (the radius rows need the Spartan
+  refits). Not applicable to the production model: the calibration α/β and oxygen axes, `L0`,
+  `own_state_mode` (equal to the vertex for centroid archetypes) and the clipped anchor
+  (the own-type anchor uses no loadings).
+- ~~The OSDR maximal-density bound~~: run as a sensitivity variant (§10, §12). Its fixed
+  points and nullclines are not reported as findings.
+- Spec §7's q25/q50/q75 robustness check is only partly possible (§6): q75's mask is still
+  empty in every priority slice.
 
 ## 10. Sensitivity: OSDR's maximal-density correction
+
+*Computed with spec §3.2's neighbourhood-loading anchor; superseded by §12.*
 
 **A sensitivity variant only, never the default (spec §5).** `portrait.core.fit_osdr_bound`
 transcribes OSDR's `CellTypeSpecificDensityEnforcer` (`tdm.model.maximal_density_enforcer`,
@@ -465,6 +489,8 @@ caveat about sparse data, is the result.
 
 ## 11. Variant: the state from cell-type counts (no negative densities)
 
+*Computed with spec §3.2's neighbourhood-loading anchor; superseded by §12.*
+
 **A sensitivity variant (user, 2026-10-20).** Asked whether one-hot archetypes would remove
 the signed pseudo-densities of §1a. PhiSpace's pure vertices (+1 for the type, −1
 elsewhere) would: only 0.2% of loadings fall outside [0, 1]. But each archetype's growth rate
@@ -511,6 +537,238 @@ pseudo-densities were cosmetic for these conclusions.
 One visual difference: at low density the count-based state sits on a lattice
 (`portrait_q50.png`), because type counts are integers.
 
+## 12. The death anchor corrected: each type's own mean cycling (2026-10-20)
+
+### What changed and why
+
+Each archetype's net rate is `π_k(X) − π̄_k`: its cycling probability in a given
+neighbourhood minus a constant death rate. OSDR's anchor, and the intent spec §3.2 states,
+is a population steady state: in aggregate each type divides as often as it dies, so `π̄_k`
+is the type's **own mean cycling probability**. The formula spec §3.2 writes is a different
+quantity:
+
+```
+spec §3.2:   π̄_k = Σ_i W_ik π_i / Σ_i W_ik        W_ik: cell i's neighbourhood loading on k
+OSDR:        π̄_k = mean of π_i over the cells i whose type is k
+```
+
+The spec version averages the cycling of every cell, of any type, by how much of archetype
+*k* surrounds it. A CAF-rich neighbourhood also holds tumour and immune cells, so the CAF
+anchor picked up their cycling: 0.066, three times the CAFs' own 0.022. This pulled every
+anchor toward the section mean (0.10). Stromal and myeloid anchors were too high, so those
+types appeared to shrink at every density (§3). Lymphocyte and tumour anchors were too low,
+so those types appeared to grow almost to the edge of the data (§3, §4).
+
+The own-type anchor is now the default (`--anchor own_type`, `portrait.core.build_archetypes`).
+The spec formula remains as `--anchor nbhd_loading`. The new anchor does not use the
+loadings, so it is the same in both states:
+
+| archetype | spec §3.2 | own type |
+|---|---|---|
+| Endothelial | 0.057 | **0.037** |
+| CAFs | 0.066 | **0.022** |
+| PVL | 0.078 | **0.056** |
+| B-cells | 0.074 | **0.090** |
+| T-cells | 0.088 | **0.110** |
+| Myeloid | 0.079 | **0.042** |
+| Normal Epithelial | 0.105 | **0.092** |
+| Plasmablasts | 0.121 | **0.114** |
+| Cancer Epithelial | 0.159 | **0.203** |
+
+Not affected:
+
+- confinement (§2), a slope of `η`;
+- `Ã` (§7);
+- the archetypes, the states and the support masks;
+- the spec §11 tests (17 pass).
+
+### Thresholds at each archetype's own composition (replaces §3)
+
+| archetype | unbounded | OSDR p = 8 |
+|---|---|---|
+| Endothelial | n = 129 (p80) **unstable**; n = 189 (p95) stable | shrinks |
+| CAFs | n = 71 (p34) **unstable**, no ceiling | n = 75 (p39) unstable; 83 (p49) stable |
+| PVL | shrinks | shrinks |
+| B-cells | n = 132 (p81) stable | 120 (p76) |
+| T-cells | n = 154 (p88) stable | 141 (p85) |
+| Myeloid | n = 83 (p50) **unstable**, no ceiling | shrinks |
+| Normal Epithelial | n = 185 (p95) stable | 113 (p73) |
+| Plasmablasts | n = 211 (p98) stable | 130 (p80) |
+| **Cancer Epithelial** | **n = 79 (p45) stable** | 65 (p27) |
+
+Unbounded, these are identical in the two states. The sweep evaluates `π_k` at the type's
+observed mean neighbourhood state, which does not depend on how a neighbourhood becomes `X`.
+Under the bound the type's own density `X_k` enters. Since 2026-10-20 it takes the mean
+loadings in the portrait's state (type fractions for counts); before that, both states used
+the barycentric loadings.
+
+Three structures are new:
+
+- **The tumour's ceiling is inside the data without any bound.** It is n = 79, the 45th
+  percentile of density, against the 97th under the spec anchor. This is the largest change.
+- **CAFs and Myeloid have escape thresholds.** Above n = 71 (CAFs) and n = 83 (Myeloid) at
+  their own composition they grow, with no ceiling in the fit's own response. For CAFs this
+  is §2's confinement failure, now visible. Myeloid confine only weakly (slope −0.025).
+- **Endothelial has an Allee window high in the density range**, between the 80th and 95th
+  percentiles.
+
+Before, PVL was the only stromal type that shrinks everywhere; that is still true of PVL alone.
+
+### The tumour along the composition path (replaces §4)
+
+Blending from the q50 reference (tumour fraction 0.139) to a pure tumour neighbourhood, and
+sweeping total density at each blend (`composition_bifurcation.csv`):
+
+| tumour fraction | lower ceiling | threshold | upper ceiling |
+|---|---|---|---|
+| 0.139 (reference) | n = 98 (p64) | 134 (p82) | 174 (p93) |
+| 0.40 | 94 | 140 | 169 |
+| 0.66 | 91 | 149 (p87) | 162 |
+| ≥ 0.72 | 89 → 86 (p53) | — | — |
+
+**Every blend has a stable tumour ceiling at the 53rd–64th percentile of density.** Where
+the neighbourhood is less than about 72% tumour there is a second, high-density stable state
+at n ≈ 156–174 (p89–93), separated from the first by an unstable threshold. The two
+high-density branches meet in a fold (saddle-node) at tumour fraction 0.723. Beyond that,
+only the lower ceiling remains. So mixed neighbourhoods are bistable in tumour density and
+tumour-dominated ones are not.
+
+The count-based state gives the same structure: lower ceiling 96 → 86, upper 171 → 157, fold
+at 0.664.
+
+### Nullclines and fixed points (replaces §5, §6)
+
+Every nullcline in the four priority slices now crosses the q50 window. Several are close
+to total-density contours (cv of n along the contour 0.004–0.12, except Myeloid against
+tumour, 0.23, and the tumour against T-cells, 0.34):
+
+| slice (q50) | first archetype's nullcline, mean n | second's |
+|---|---|---|
+| CAFs × Myeloid | 58.4 | 56.0 |
+| Cancer Epithelial × CAFs | 92.7 | 56.3 |
+| Cancer Epithelial × Myeloid | 91.4 | 47.0 |
+| Cancer Epithelial × T-cells | 60.0 | 39.9 |
+
+The 12 masked panels have **one interior fixed point inside support**. It is a **saddle in
+CAFs × Myeloid at q50**: X_CAF = 14.6, X_Myeloid = 11.2, n = 66 (p29). The rest lie outside
+support:
+
+- a CE × CAFs point at q50, n = 84, stable in its slice but unstable in the held directions;
+- a CE × Myeloid point at q75, n = 193, also stable in slice and unstable held;
+- saddles at very low or high tumour density.
+
+A face point sits at X_CAF = 0, X_Myeloid = 10.2 (a Myeloid-only state).
+
+**Reading of the CAF × Myeloid slice.** Below both nullclines (n ≲ 56) both types shrink;
+above both they grow, with no ceiling. The saddle sits where the two cross, and its stable
+manifold divides a CAF-free outcome from joint CAF–Myeloid expansion. That is a threshold
+between collapse and runaway. It is not OSDR's picture of two stable states, because nothing
+stops the expansion: CAFs fail confinement (§2).
+
+**It is fragile.** The two nullclines are near-parallel density contours 2.4 cells apart
+(angle 26° at the 80th percentile). In the count-based state they are 5.6 apart (59.2 and
+64.8) and do not cross inside the window, so the counts portrait has no supported fixed point.
+Whether the saddle exists is what the uncertainty runs (below) have to decide.
+
+### Under OSDR's bound (replaces §10's results)
+
+The bound's form and settings are as in §10. Its `r_k` depends on the anchor and so changed.
+With OSDR's code, `r_k` is the largest capped net rate:
+
+| | Endo | CAFs | PVL | B | T | Myel | NormEpi | Plasma | CancerEpi |
+|---|---|---|---|---|---|---|---|---|---|
+| `r_k` | 0.140 | 0.047 | 0.157 | 0.287 | 0.303 | 0.149 | 0.156 | 0.125 | 0.241 |
+
+The own-composition ceilings by power (n, with its density percentile):
+
+| archetype | p = 2 | p = 4 | p = 8 (OSDR) | p = 16 | unbounded |
+|---|---|---|---|---|---|
+| Cancer Epithelial | 21 (4th) | 44 (10th) | 65 (27th) | 77 (42nd) | 79 (45th) |
+| B-cells | 28 (5th) | 80 (46th) | 120 (76th) | 132 (81st) | 132 (81st) |
+| T-cells | 38 (8th) | 72 (37th) | 141 (85th) | 154 (88th) | 154 (88th) |
+| Normal Epithelial | 45 (10th) | 85 (52nd) | 113 (73rd) | 135 (82nd) | 185 (95th) |
+| Plasmablasts | 57 (19th) | 97 (63rd) | 130 (80th) | 142 (85th) | 211 (98th) |
+
+The pure-tumour ceiling is n = 14, 27, 38 and 46 for p = 2, 4, 8 and 16, against 86
+unbounded. The bound still places its ceilings where p puts them, as §10 found, but it now
+sits on top of a fit whose own ceilings are inside the data. At p = 16 the bound barely
+moves the tumour, B-cells or T-cells.
+
+At p = 8, the in-support fixed points in the barycentric state are:
+
+- **CE × Myeloid at q50**: n = 94, stable in its slice, unstable in the held directions
+  (largest real eigenvalue 0.087).
+- **CAFs × Myeloid**: the q50 saddle is gone. CAFs now have a ceiling (n = 83), and the slice
+  has a stable point only at q75 (n = 164), outside support.
+
+The count-based state at p = 8 has stable-in-slice points in support for CAFs × Myeloid
+(q50, n = 73) and CE × Myeloid (q50, n = 92). Both are unstable in the held directions.
+
+OSDR's docstring version of the bound (`--target-at-max`, smaller corrections) falls between
+p = 8 and the unbounded fit:
+
+- tumour ceiling at own composition n = 69 (p33); pure-tumour ceiling n = 41;
+- CAFs: unstable at n = 73, stable at 86;
+- Myeloid: unstable at 87, stable at 112;
+- no fixed point inside support.
+
+### Reading
+
+The corrected anchor turns the portrait from "most types shrink, the rest grow to the edge
+of the data" into one with structure inside the data, without any bound:
+
+- a tumour ceiling near the median density;
+- bistable tumour density in mixed neighbourhoods, lost through a fold as the neighbourhood
+  becomes tumour-dominated;
+- escape thresholds for CAFs and Myeloid.
+
+None of this has an interval yet. The uncertainty and sensitivity runs (spec §8–§9, written
+2026-10-20 and run on Spartan) decide which parts survive. The CAF × Myeloid saddle is the
+least secure: it depends on the state and on the bound.
+
+### Uncertainty and sensitivity runs (spec §8–§9)
+
+**Covariance for spec §8.1** (`run/portrait_uncertainty_prepare.py`, written to
+`uncertainty/param_cov.npz` and `uncertainty/se.csv`). The 145 parameters of the production
+mixture get a block-cluster sandwich over the 250 spatial blocks. It took 0.5 min locally.
+Three directions are flat (the rank-3 U/V rotation) and are dropped. Two checks:
+
+- **Against the 300-replicate spatial block bootstrap**, for the parameters that job kept
+  (a, b0, c, δ, η_m, h): the median ratio of sandwich SE to bootstrap SD is 0.96–1.07 per
+  block. For δ it is 0.0061 against 0.0059. The parametric draws therefore have the right
+  spread.
+- **Against a cell-level sandwich**, block clustering inflates the SEs 1.1–1.5× for most
+  blocks and 2.3–2.4× for b0 and δ.
+
+**Spartan jobs:**
+
+| job | spec | what it does |
+|---|---|---|
+| `portrait_param_boot` | §8.1 | 50 tasks × 10 draws from MVN(θ̂, V) |
+| `portrait_block_boot` | §8.2 | 50 spatial-block resamples, each refitted from the point estimate and kept with full parameters |
+
+Each replicate recomputes its anchors from its own posterior π and summarises both states on
+the full-data geometry (`portrait.summary.summarise`). `run/portrait_uncertainty_gather.py`
+reports:
+
+- topology preservation, the share of replicates whose in-support (slice, class) set matches;
+- each fixed point's recovery and class;
+- the share of replicates with each threshold or ceiling, and their ranges;
+- the tumour-path ceiling and folds.
+
+**Sensitivity grid for spec §9** (`run/portrait_sensitivity.py`, written to
+`sensitivity/grid.csv`). Axes:
+
+- anchor × 0.7 and × 1.3;
+- δ ± 1 bootstrap SD;
+- 20 draws of per-archetype τ (log-uniform on [0.5, 2]), which reclassifies the fixed points
+  because their locations do not move;
+- K = 7 and 6 (B-cells + Plasmablasts and CAFs + PVL merged, then Normal into Cancer
+  Epithelial), on the counts state;
+- neighbourhood radius 60 and 100 µm. These are refits (`config_r60.yaml`, `config_r100.yaml`,
+  tables from `run/portrait_radius_tables.py`, Spartan `multistart`). The grid shows them as
+  pending until their point estimates exist.
+
 ## Files
 
 ```
@@ -524,6 +782,14 @@ outputs/portrait/
   portrait_q25.png, portrait_q50.png, portrait_q75.png    priority pairs, masked
   portrait_contact_sheet.png                   all 36 pairs at q50, unmasked
   grid_velocities_<a>_<b>_q50.parquet          150x150 grids: n, pi, F, in_mask
-  osdr_p8/, osdr_p8_target_at_max/             section 10: the same set under OSDR's correction
-  osdr_p2/, osdr_p4/, osdr_p16/                section 10: the power sweep (summary, bifurcation)
+  osdr_p8/, osdr_p8_target_at_max/             sections 10, 12: the same set under OSDR's correction
+  osdr_p2/, osdr_p4/, osdr_p16/                sections 10, 12: the power sweep (summary, bifurcation)
+  counts/, counts/osdr_p8/                     sections 11, 12: the count-based state
+  uncertainty/param_cov.npz, se.csv            section 12: block-cluster sandwich (portrait_uncertainty_prepare.py)
+  uncertainty/report.md, summary.json          spec 8, after the Spartan jobs (portrait_uncertainty_gather.py)
+  sensitivity/grid.csv, grid.json              spec 9 (portrait_sensitivity.py)
 ```
+
+Every portrait output in this directory was regenerated on 2026-10-20 with the own-type
+anchor (§12). The spec-anchor versions that §3–§6, §10 and §11 describe are in git at
+`80dac2c`; `--anchor nbhd_loading` regenerates them into `anchor_nbhd/`.

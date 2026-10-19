@@ -181,7 +181,8 @@ def type_count_loadings(df, names, radius_um):
     return np.where(tot > 0, C / np.clip(tot, 1, None), 0.0)
 
 
-def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", radius_um=80.0):
+def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", radius_um=80.0,
+                     anchor="own_type"):
     """Named centroids (spec 1.3's `"centroid"` provider), plus loadings.
 
     `state` sets how a neighbourhood becomes the portrait's state `X = n w`:
@@ -191,6 +192,15 @@ def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", ra
                      literal densities, and `w A` approximates `phibar` (it
                      drops neighbours' within-type variation; `r2_recon` < 1).
     The archetype states `A` are the centroids in both.
+
+    `anchor` sets the death rate `pi_bar[k]`:
+      "own_type"      the mean fitted pi over cells of archetype k: OSDR's
+                      `p_t^- = mean(y_t)` (default since 2026-10-20);
+      "nbhd_loading"  spec 3.2 read literally, `sum_i W[i,k] pi_i / sum_i W[i,k]`
+                      with W the NEIGHBOURHOOD loadings. That is the mean cycling
+                      of cells living among type k, not of type k -- for CAFs
+                      0.066 against their own 0.022 -- and it held stroma below
+                      its anchor and tumour above it everywhere (FINDINGS §12).
     """
     names = list(basis.phi_names)
     own = basis.own(df)
@@ -209,20 +219,20 @@ def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", ra
     r2 = float(1.0 - np.sum((nbr - recon) ** 2) / ss)
     n_local = df["density"].to_numpy(float)
     X = n_local[:, None] * W
-    pb = None
+    pb = pbc = None
     if pi_hat is not None:
-        # Spec 3.2 exactly: signed loadings. 28% of loadings are negative here
-        # (cells sit outside the archetype simplex), but every column's weight
-        # sum is large and positive (36k-129k), so the ratio is well conditioned.
-        # Clipping the negatives moves every anchor by less than 0.017 and is
-        # kept as `pi_bar_clipped` for the sensitivity sweep rather than used.
-        pb = np.array([np.sum(W[:, k] * pi_hat) / np.sum(W[:, k])
-                       for k in range(len(names))])
-    pbc = None
-    if pi_hat is not None:
-        wp = np.clip(W, 0, None)
-        pbc = np.array([np.sum(wp[:, k] * pi_hat) / np.sum(wp[:, k])
-                        for k in range(len(names))])
+        pi_hat = np.asarray(pi_hat, dtype=float)
+        if anchor == "own_type":
+            pb = np.array([pi_hat[arche == nm].mean() for nm in names])
+            pbc = pb.copy()
+        elif anchor == "nbhd_loading":
+            # spec 3.2 literally: signed neighbourhood loadings (and the clipped
+            # variant, which moves no anchor by more than 0.017)
+            pb = np.array([np.sum(W[:, k] * pi_hat) / np.sum(W[:, k]) for k in range(len(names))])
+            wp = np.clip(W, 0, None)
+            pbc = np.array([np.sum(wp[:, k] * pi_hat) / np.sum(wp[:, k]) for k in range(len(names))])
+        else:
+            raise ValueError(f"anchor must be 'own_type' or 'nbhd_loading', not {anchor!r}")
     return Archetypes(names=names, A=A, Q=basis.Q_own, pi_bar=pb, X_obs=X,
                       r2_recon=r2, pi_bar_clipped=pbc), W
 
