@@ -1,0 +1,12 @@
+Full-system stationary points: barycentric_unbounded. 3000 seeds, 7 distinct points (2.3 min).
+Unbounded.
+class from the full Jacobian (face points: absent types' invasion rates included); in support = 20-NN distance <= q95 of observed states'.
+
+ class  in support  kNN dist / q95     n  density pct  n present                                                           invaded by  seeds converging  max Re eig                                                                    composition
+saddle        True            0.79   0.5          0.0          3      Endothelial, PVL, B-cells, Normal Epithelial, Cancer Epithelial                 1    0.068916                                        Myeloid 41%, CAFs 30%, Plasmablasts 29%
+saddle       False            2.06 146.7         86.1          5                                                    Normal Epithelial                 3    0.013525 Myeloid 28%, Plasmablasts 28%, Endothelial 24%, CAFs 15%, Cancer Epithelial 5%
+saddle       False            1.95 214.9         98.2          3      Endothelial, CAFs, B-cells, T-cells, Myeloid, Normal Epithelial                 1    0.170868                               Cancer Epithelial 47%, PVL 40%, Plasmablasts 13%
+saddle       False            1.36  67.0         29.4          4              CAFs, B-cells, T-cells, Normal Epithelial, Plasmablasts                 1    0.061860                   Cancer Epithelial 35%, Myeloid 27%, PVL 20%, Endothelial 19%
+saddle       False            1.74 103.6         67.2          5                                           B-cells, Normal Epithelial                 1    0.021991 Myeloid 31%, Plasmablasts 29%, Endothelial 21%, CAFs 12%, Cancer Epithelial 8%
+saddle       False            1.09 215.8         98.3          2 Endothelial, CAFs, PVL, B-cells, T-cells, Myeloid, Normal Epithelial                 1    0.237500                                        Cancer Epithelial 63%, Plasmablasts 37%
+saddle       False            2.70 230.1         98.8          5                                                                 CAFs                 1    0.017553    Myeloid 51%, Plasmablasts 28%, PVL 7%, Endothelial 7%, Normal Epithelial 7%

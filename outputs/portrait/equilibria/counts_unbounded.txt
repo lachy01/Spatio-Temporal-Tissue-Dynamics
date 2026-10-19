@@ -1,0 +1,6 @@
+Full-system stationary points: counts_unbounded. 3000 seeds, 1 distinct points (1.7 min).
+Unbounded.
+class from the full Jacobian (face points: absent types' invasion rates included); in support = 20-NN distance <= q95 of observed states'.
+
+ class  in support  kNN dist / q95    n  density pct  n present                                                      invaded by  seeds converging  max Re eig                             composition
+saddle       False            2.99 73.0         37.2          3 Endothelial, PVL, B-cells, Normal Epithelial, Cancer Epithelial                 1    0.078809 Myeloid 41%, Plasmablasts 31%, CAFs 28%

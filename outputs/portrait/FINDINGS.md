@@ -914,6 +914,56 @@ reports:
   tables from `run/portrait_radius_tables.py`, Spartan `multistart`). The grid shows them as
   pending until their point estimates exist.
 
+## 13. Stationary points of the full system (2026-10-20)
+
+**One stable tissue state exists, and only under OSDR's bound at p = 4 or 8.** The slice
+search (§6, §12) holds seven densities at a reference that is not at rest, so its points
+are fixed only within their slice. `run/portrait_full_equilibria.py` instead solves
+F(X) = 0 in all nine coordinates, including faces where some types are absent:
+
+- **seeds:** 3,000, from observed neighbourhood states;
+- **classification:** the full Jacobian, so a face point counts as stable only if no absent
+  type can invade;
+- **support:** a point is inside the data when its 20th-nearest-neighbour distance is at
+  most the 95th percentile of the observed one.
+
+Outputs are in `equilibria/<state>_<bound>.{csv,txt}`.
+
+| variant | distinct points | stable | in-support saddles |
+|---|---|---|---|
+| counts, unbounded | 1 | 0 | 0 |
+| barycentric, unbounded | 7 | 0 | 1 |
+| counts, OSDR p = 4 | 20 | **1, in support** (n = 169, p92) | 2 |
+| counts, OSDR p = 8 | 19 | **1, in support** (n = 185, p95) | 2 |
+| counts, OSDR p = 16 | 13 | 0 | 1 |
+| counts, OSDR p = 8, target at max | 16 | 0 | 1 |
+| barycentric, OSDR p = 8 | 61 | 0 | 14 |
+
+**The stable state.**
+
+- **Composition:** all nine types are present. It is lymphocyte-rich (T-cells 22–23%, B-cells
+  16–18%), with tumour at 12–15% and every stromal and immune type at 5–10%.
+- **Basin:** 300–480 of the 3,000 seeds converge to it, the largest of any point.
+- **Stability:** its largest eigenvalue is −0.035 to −0.041.
+
+**The bound holds it, not the fit.** At the p = 8 point:
+
+- **Tumour and T-cells balance on the fit's own rates.** The tumour's π is 0.2037 against
+  its anchor of 0.2033, and both sit at about half their x_max.
+- **The rest are pinned by the correction.** Endothelial, CAFs, Myeloid, Normal Epithelial
+  and Plasmablasts sit at 0.76–0.89 of their x_max. There the correction (−0.014 to −0.022)
+  cancels an excess cycling of the same size. The division-rate cap binds for no type.
+
+As with the tumour wall in §10, the bound's power sets the state. Its density moves from
+n = 169 to 185 between p = 4 and p = 8, and it is gone at p = 16 and in OSDR's docstring
+variant. It needs the count-based state: the barycentric state at p = 8 has many saddles but
+no stable point.
+
+**Reading.** Unbounded, the fitted portrait has no stable equilibrium of the full system:
+the runaway of §2 and §12 is real. The OSDR bound can create a stable, data-supported tissue
+state, but which state, and whether it exists at all, is a property of the bound's settings.
+It should be reported as a sensitivity result, not as an estimate of the tissue's attractor.
+
 ## Files
 
 ```
@@ -935,6 +985,7 @@ outputs/portrait/
   uncertainty/arrows_<source>_<state>.png      spec 8.3 arrow uncertainty (portrait_uncertainty_arrows.py)
   sensitivity/grid.csv, grid.json              spec 9 (portrait_sensitivity.py)
   sensitivity/anchor_sweep.csv/.txt            anchor multiplier 0.7-1.3 (portrait_anchor_sweep.py)
+  equilibria/<state>_<bound>.csv/.txt         section 13: full-system stationary points (portrait_full_equilibria.py)
 ```
 
 Every portrait output in this directory was regenerated on 2026-10-20 with the own-type

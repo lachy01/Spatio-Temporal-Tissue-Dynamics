@@ -1,0 +1,2 @@
+n,density pct,class,max Re eig,n present,invaded by,in support,kNN dist / q95,seeds converging,composition,X_Endothelial,X_CAFs,X_PVL,X_B-cells,X_T-cells,X_Myeloid,X_Normal Epithelial,X_Plasmablasts,X_Cancer Epithelial
+73.0,37.2,saddle,0.07880888506005376,3,"Endothelial, PVL, B-cells, Normal Epithelial, Cancer Epithelial",False,2.99,1,"Myeloid 41%, Plasmablasts 31%, CAFs 28%",0.0,20.218353935377394,0.0,0.0,0.0,30.20289766491476,0.0,22.615153063526808,0.0
