@@ -321,11 +321,105 @@ def covariance(f, p, chunk=8):
     return dict(C=C, index=index, n_dropped=int((~keep).sum()), min_eig=float(w.min()))
 
 
+REQUIRE_ROBUST = False      # set True to refuse model-based standard errors (the notebook does)
+
+
+def robust_cov(fitres, D, blocks, *, weight_ridge, n_reference, ridge_tau, b_penalty="frobenius",
+               **_):
+    """Block-cluster sandwich covariance, V = H^-1 M H^-1.
+
+    H^-1 is the fit's inverse penalised Hessian (`covariance`, the "bread"). M is
+    the "meat": with s_b the block's sum of per-cell estimating functions,
+
+        s_b = sum_{i in b} grad l_i  -  (n_b / n) grad(penalty),
+
+    M = G / (G - 1) * sum_b s_b s_b'. Cells within a block may be arbitrarily
+    correlated; blocks are treated as independent. With the ~250 contiguous
+    spatial blocks that the bootstrap and cross-validation use, this is the
+    analytic counterpart of the spatial block bootstrap (mixture spec 7.2 gives
+    a Conley kernel form; the block form needs no bandwidth). The per-cell
+    gradients come from one forward-mode pass per parameter, block-summed at
+    once, so memory stays O(n).
+    """
+    jax = arms._jax()
+    import jax.numpy as jnp
+    from jax.flatten_util import ravel_pytree
+
+    p = {k: jnp.asarray(v) for k, v in fitres["params"].items()}
+    jD = {k: jnp.asarray(v) for k, v in D.items()}
+    n = len(D["y"])
+    x, unravel = ravel_pytree(p)
+
+    def ll_cells(z):
+        q = unravel(z)
+        return arms.nb_logpmf(jD["y"], _log_mu(q, jD), jnp.broadcast_to(_log_alpha(q, jD), (n,)))
+
+    g_pen = np.asarray(jax.grad(lambda z: arms.penalty(unravel(z), n, weight_ridge, n_reference,
+                                                       ridge_tau, b_penalty))(x))
+    _, bidx = np.unique(np.asarray(blocks), return_inverse=True)
+    G = int(bidx.max()) + 1
+    n_b = np.bincount(bidx, minlength=G).astype(float)
+    jvp = jax.jit(lambda z, v: jax.jvp(ll_cells, (z,), (v,))[1])
+    d = x.shape[0]
+    Gc = np.empty((n, d), np.float32)              # per-cell estimating functions
+    for k in range(d):
+        e = np.zeros(d)
+        e[k] = 1.0
+        Gc[:, k] = np.asarray(jvp(x, jnp.asarray(e))) - g_pen[k] / n
+    S = np.zeros((G, d))
+    np.add.at(S, bidx, Gc)
+    M = (S.T @ S) * G / (G - 1)
+    # the same sandwich with every cell its own cluster (independence, robust to
+    # misspecification): the reference for how much the spatial dependence widens
+    # the SEs. The inverse penalised Hessian is not that reference -- on the
+    # ridge-penalised weight block it overstates a shrunken estimator's sampling
+    # variance -- and neither is H^-1 H_data H^-1, which assumes the NB is right.
+    M_cell = np.zeros((d, d))
+    for s in range(0, n, 100_000):
+        g = Gc[s:s + 100_000].astype(np.float64)
+        M_cell += g.T @ g
+    M_cell *= n / (n - 1)
+    del Gc
+    Cm = fitres["cov"]["C"]
+    V, V_cell = Cm @ M @ Cm, Cm @ M_cell @ Cm
+    ok = np.diag(V_cell) > 1e-12 * np.diag(V_cell).max()
+    ratio = np.sqrt(np.clip(np.diag(V)[ok], 0, None) / np.diag(V_cell)[ok])
+    index = fitres["cov"]["index"]
+    by_block = {}
+    for name, ii in index.items():
+        sel = np.asarray(ii).ravel()
+        r = np.sqrt(np.clip(np.diag(V)[sel], 0, None) / np.clip(np.diag(V_cell)[sel], 1e-300, None))
+        r = r[ok[sel]]
+        if r.size:
+            by_block[name] = float(np.median(r))
+    return dict(C=V, C_cell=V_cell, index=index, n_blocks=G,
+                inflation_median=float(np.median(ratio)),
+                inflation_range=(float(ratio.min()), float(ratio.max())), inflation_by_block=by_block)
+
+
+def robustify(fitres, D, blocks, name=None, **pen):
+    """Attach the block-cluster sandwich (`robust_cov`) as `fitres["cov_robust"]`,
+    cached under `<name>__robust` when `name` is given. Returns `fitres`."""
+    if "cov_robust" not in fitres:
+        fn = lambda: robust_cov(fitres, D, blocks, **pen)          # noqa: E731
+        fitres["cov_robust"] = cached(f"{name}__robust", fn) if name else fn()
+    return fitres
+
+
 def estimate(fitres, block, M=None):
-    """Value and covariance of `M @ vec(params[block])` (M defaults to identity)."""
+    """Value and covariance of `M @ vec(params[block])` (M defaults to identity).
+
+    Uses the block-cluster sandwich when `robustify` has attached one. With
+    `REQUIRE_ROBUST`, a fit without it is an error rather than silently falling
+    back to the model-based (independence) covariance, which is too small here."""
     v = np.asarray(fitres["params"][block], dtype=float).ravel()
-    ii = fitres["cov"]["index"][block].ravel()
-    C = fitres["cov"]["C"][np.ix_(ii, ii)]
+    cov = fitres.get("cov_robust")
+    if cov is None:
+        if REQUIRE_ROBUST:
+            raise ValueError("no block-cluster covariance on this fit: call nbb.robustify first")
+        cov = fitres["cov"]
+    ii = cov["index"][block].ravel()
+    C = cov["C"][np.ix_(ii, ii)]
     if M is None:
         return v, C
     M = np.atleast_2d(M)

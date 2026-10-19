@@ -121,3 +121,21 @@ def summary_row(y, comps, k, u_draw, grid=None):
     if grid is not None:
         row["residual Moran's I"] = morans_i(grid_mean(stats.norm.ppf(u), *grid))
     return row, exp_, u, mean
+
+
+def cluster_mean_se(values, groups, blocks):
+    """Mean of `values` per group, with a block-cluster SE: deviations from the
+    group mean summed within each spatial block, blocks independent. Returns a
+    DataFrame indexed by group with columns `mean`, `se`, and `se`."""
+    import pandas as pd
+
+    v = np.asarray(values, float)
+    g = pd.Series(groups).astype("category")
+    gi = g.cat.codes.to_numpy().astype(np.int64)
+    _, b = np.unique(np.asarray(blocks), return_inverse=True)
+    G, B = len(g.cat.categories), int(b.max()) + 1
+    n_g = np.bincount(gi, minlength=G).astype(float)
+    m = np.bincount(gi, weights=v, minlength=G) / n_g
+    s = np.bincount(gi * B + b, weights=v - m[gi], minlength=G * B).reshape(G, B)
+    se = np.sqrt((s ** 2).sum(1) * B / max(B - 1, 1)) / n_g
+    return pd.DataFrame({"mean": m, "se": se}, index=g.cat.categories)

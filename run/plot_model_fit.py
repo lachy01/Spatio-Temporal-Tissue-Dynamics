@@ -26,7 +26,7 @@ and outputs/figures/model_fit/isolated/<ds>_<model>_<figure>.png with one model 
                 KS distance. The same uniform draws for every model.
   residuals     randomised quantile residuals r = Phi^-1(PIT) (Dunn and Smyth):
                 normal QQ plot, mean residual by depth (N) ventile, and mean
-                residual by cell type, each with +/- 2 SE.
+                residual by cell type, each with +/- 2 block-cluster SE (250 spatial blocks).
   fitted_map    observed count and each model's fitted mean E[y | x], averaged
                 in 50 um squares on one colour scale.
   residual_map  mean quantile residual in 50 um squares (diverging, centred at 0),
@@ -57,8 +57,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt                                       # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap                 # noqa: E402
 
-from tissue_dynamics.count_diagnostics import (KMAX, dist_summaries, grid_mean,  # noqa: E402
-                                               log_lik, morans_i)
+from tissue_dynamics.count_diagnostics import (KMAX, cluster_mean_se, dist_summaries,  # noqa: E402
+                                               grid_mean, log_lik, morans_i)
 from tissue_dynamics.division import arms                             # noqa: E402
 from tissue_dynamics.division import paths as DP                      # noqa: E402
 from tissue_dynamics.mixture.basis import build_basis, spec_from_basis  # noqa: E402
@@ -124,6 +124,10 @@ def main():
     cols = sorted(c for c in df.columns if c.startswith("phi_") and c[4:].isdigit())
     ctype = phi_cell_types(df[cols].to_numpy(float), names, cfg["data"]).astype(str)
     xs, ys_ = df["x"].to_numpy(float), df["y"].to_numpy(float)
+    fm = pd.read_parquet(f"{DP.out_dir()}/folds.parquet")
+    if not np.array_equal(fm["cell_id"].astype(str).to_numpy(), df["cell_id"].astype(str).to_numpy()):
+        sys.exit("folds.parquet lists cells in a different order from the table")
+    BLOCK = fm["block"].to_numpy()          # the 250 spatial blocks: SEs are block-cluster
     say(f"{TITLE[ds]}: {n:,} cells, mean y {y.mean():.3f}")
     nparams = lambda q: sum(int(np.size(np.asarray(v))) for v in q.values())   # noqa: E731
 
@@ -273,8 +277,9 @@ def main():
             ax.set_xlabel("normal quantile")
             ax.set_title(f"{label[m]}\nQQ plot (sd {r.std():.3f})", loc="left", fontsize=10)
             ax = axes[1, j]
-            g = pd.DataFrame({"d": dec, "r": r, "N": N}).groupby("d").agg(
-                r=("r", "mean"), se=("r", lambda v: 2 * v.std() / np.sqrt(len(v))), N=("N", "median"))
+            g = cluster_mean_se(r, dec, BLOCK).rename(columns={"mean": "r"})
+            g["se"] *= 2
+            g["N"] = pd.Series(N).groupby(dec).median().reindex(g.index).to_numpy()
             ax.axhline(0, color=INK2, lw=1)
             ax.fill_between(g["N"], g["r"] - g["se"], g["r"] + g["se"], color=COL[m], alpha=0.2, lw=0)
             ax.plot(g["N"], g["r"], "-o", color=COL[m], ms=4, mec=SURF, mew=0.8, lw=1.8)
@@ -283,8 +288,8 @@ def main():
             ax.set_xlabel("depth N (ventile median, log scale)")
             ax.set_title("mean residual by depth", loc="left", fontsize=10)
             ax = axes[2, j]
-            t = pd.DataFrame({"t": ctype, "r": r}).groupby("t")["r"].agg(
-                ["mean", lambda v: 2 * v.std() / np.sqrt(len(v))]).reindex(types)
+            t = cluster_mean_se(r, ctype, BLOCK).reindex(types)
+            t["se"] *= 2
             yy = np.arange(len(types))[::-1]
             ax.axvline(0, color=INK2, lw=1)
             ax.errorbar(t["mean"], yy, xerr=t.iloc[:, 1], fmt="o", color=COL[m], ms=5, mec=SURF,
