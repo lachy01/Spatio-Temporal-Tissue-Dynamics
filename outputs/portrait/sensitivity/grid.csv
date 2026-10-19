@@ -1,0 +1,17 @@
+axis,value,state,fixed points (interior / in support),in-support classes,principal stable point,topology = baseline,CE ceiling on path (n),CAFs,Myeloid,Cancer Epithelial
+baseline,own-type anchor,barycentric,4 / 1,CAFs x Myeloid|q50|saddle,none,True,86-174,u71,u83,s79
+anchor multiplier,0.7,barycentric,2 / 0,none,none,False,221-228,u53,u23,s218
+anchor multiplier,1.3,barycentric,2 / 1,Cancer Epithelial x T-cells|q50|saddle,none,False,none,u157,shrinks,shrinks
+delta,-1 SD (0.0059),barycentric,5 / 1,CAFs x Myeloid|q50|saddle,none,True,84-172,u71,u84,s76
+delta,+1 SD (0.0059),barycentric,4 / 1,CAFs x Myeloid|q50|saddle,none,True,87-175,u70,u82,s81
+tau,"20 draws, log-U[0.5, 2]",barycentric,4 (locations unchanged),classification kept in 100% of fixed-point x draw,,True,,,,
+baseline,own-type anchor,counts,4 / 0,none,none,True,86-171,u71,u83,s79
+anchor multiplier,0.7,counts,2 / 0,none,none,True,221-227,u53,u23,s218
+anchor multiplier,1.3,counts,2 / 1,Cancer Epithelial x T-cells|q50|saddle,none,False,none,u157,shrinks,shrinks
+delta,-1 SD (0.0059),counts,5 / 0,none,none,True,84-169,u71,u84,s76
+delta,+1 SD (0.0059),counts,4 / 0,none,none,True,87-173,u70,u82,s81
+tau,"20 draws, log-U[0.5, 2]",counts,4 (locations unchanged),classification kept in 100% of fixed-point x draw,,True,,,,
+K,"7 (B/Plasma, CAFs+PVL)",counts,6 / 2,"Cancer Epithelial x CAFs+PVL|q25|saddle, Cancer Epithelial x CAFs+PVL|q50|stable",Cancer Epithelial x CAFs+PVL q50: n 99,n/a (different slices),86-167,u187,u83,s79
+K,"6 (B/Plasma, CAFs+PVL, Cancer Epithelial)",counts,9 / 1,Cancer Epithelial x CAFs+PVL|q50|stable,Cancer Epithelial x CAFs+PVL q50: n 98,n/a (different slices),23-170,u187,u83,s77
+radius,60 um,-,,pending: outputs/hpc_r60/point_estimate.json not found,,,,,,
+radius,100 um,-,,pending: outputs/hpc_r100/point_estimate.json not found,,,,,,

@@ -1,5 +1,5 @@
 Blend from the q50 reference neighbourhood (w_CE = 0.139) to a pure tumour neighbourhood, sweeping total density at each blend.
 stable ceiling exists for 0.139 <= w_CE <= 1.000 (blends run 0.139 to 1.000)
 observed neighbourhoods: 54.7% below, 45.3% inside, 0.0% above
-ceiling density spans n = 50 to 214 (pct 13.5 to 98.2)
-crossings per blend: [1]; unstable thresholds at 0 of 301 blends; folds at w_CE = none
+ceiling density spans n = 46 to 174 (pct 11.0 to 92.9)
+crossings per blend: [1, 3]; unstable thresholds at 55 of 301 blends; folds at w_CE = [0.295]

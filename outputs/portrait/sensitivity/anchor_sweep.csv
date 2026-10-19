@@ -1,0 +1,12 @@
+multiplier,CE anchor,CE path ceiling (n),CE path folds,Cancer Epithelial,CAFs,Myeloid,T-cells,B-cells
+0.7,0.1423,221-228,0,stable 218 (p98),UNSTABLE 53 (p15),UNSTABLE 23 (p4),stable 222 (p99),stable 252 (p99)
+0.8,0.1626,204-212,0,stable 200 (p97),UNSTABLE 59 (p21),UNSTABLE 44 (p10),stable 201 (p97),stable 213 (p98)
+0.85,0.1728,195-203,0,stable 191 (p96),UNSTABLE 62 (p24),UNSTABLE 54 (p16),stable 190 (p96),stable 196 (p96)
+0.9,0.1829,185-195,0,stable 106 (p69); UNSTABLE 124 (p78); stable 180 (p94),UNSTABLE 65 (p27),UNSTABLE 64 (p25),stable 180 (p94),stable 178 (p94)
+0.95,0.1931,97-185,1,stable 92 (p58); UNSTABLE 145 (p86); stable 165 (p91),UNSTABLE 68 (p31),UNSTABLE 74 (p38),stable 168 (p92),stable 158 (p89)
+1.0,0.2033,86-174,1,stable 79 (p45),UNSTABLE 71 (p34),UNSTABLE 83 (p50),stable 154 (p88),stable 132 (p81)
+1.05,0.2134,55-87,0,shrinks,UNSTABLE 74 (p38),UNSTABLE 93 (p60); stable 283 (p100),stable 48 (p12),shrinks
+1.1,0.2236,14-66,2,shrinks,UNSTABLE 77 (p43); stable 100 (p65); UNSTABLE 130 (p80),UNSTABLE 104 (p67); stable 248 (p99),stable 15 (p2),shrinks
+1.15,0.2338,none,0,shrinks,UNSTABLE 85 (p52); stable 89 (p56); UNSTABLE 137 (p83),UNSTABLE 117 (p75); stable 215 (p98),shrinks,shrinks
+1.2,0.2439,none,0,shrinks,UNSTABLE 144 (p85),UNSTABLE 144 (p85); stable 172 (p92),shrinks,shrinks
+1.3,0.2643,none,0,shrinks,UNSTABLE 157 (p89),shrinks,shrinks,shrinks

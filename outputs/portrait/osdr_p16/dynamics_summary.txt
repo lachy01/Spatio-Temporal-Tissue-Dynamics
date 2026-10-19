@@ -1,4 +1,4 @@
-PORTRAIT DYNAMICS SUMMARY  (561,897 cells; technical: mistic, lambda 300, rank 3; spec 3.2 signed anchor)
+PORTRAIT DYNAMICS SUMMARY  (561,897 cells; technical: mistic, lambda 300, rank 3; anchor: own_type, state: barycentric)
 SENSITIVITY VARIANT: OSDR maximal-density correction, power 16
 
 Loadings: 19.4% of entries outside [0, 1]; 15.8% of cells have every X_k > 0.
@@ -7,31 +7,31 @@ Loadings: 19.4% of entries outside [0, 1]; 15.8% of cells have every X_k > 0.
    neighbourhood composition (stable = ceiling, UNSTABLE = escape threshold).
 
    Endothelial          none (always shrinks)
-   CAFs                 none (always shrinks)
+   CAFs                 n=71 [pct 35] UNSTABLE (shrink->grow);  n=97 [pct 62] stable (grow->shrink)
    PVL                  none (always shrinks)
-   B-cells              n=183 [pct 95] stable (grow->shrink)
-   T-cells              n=192 [pct 96] stable (grow->shrink)
-   Myeloid              none (always shrinks)
-   Normal Epithelial    n=68 [pct 31] UNSTABLE (shrink->grow);  n=76 [pct 41] stable (grow->shrink)
-   Plasmablasts         n=140 [pct 84] stable (grow->shrink)
-   Cancer Epithelial    n=95 [pct 61] stable (grow->shrink)
+   B-cells              n=132 [pct 81] stable (grow->shrink)
+   T-cells              n=154 [pct 88] stable (grow->shrink)
+   Myeloid              n=83 [pct 50] UNSTABLE (shrink->grow);  n=128 [pct 79] stable (grow->shrink)
+   Normal Epithelial    n=135 [pct 82] stable (grow->shrink)
+   Plasmablasts         n=142 [pct 85] stable (grow->shrink)
+   Cancer Epithelial    n=77 [pct 42] stable (grow->shrink)
 
 2. Are the nullclines total-density contours?  (n along the zero contour, q50)
    pair                             nullcline              mean n     sd n      cv
-   CAFs x Myeloid                   CAFs                 no contour in the window (shrinks throughout)
-   CAFs x Myeloid                   Myeloid              no contour in the window (shrinks throughout)
-   Cancer Epithelial x CAFs         Cancer Epithelial        95.6     5.21  0.0545
-   Cancer Epithelial x CAFs         CAFs                 no contour in the window (shrinks throughout)
-   Cancer Epithelial x Myeloid      Cancer Epithelial        93.0     6.56  0.0705
-   Cancer Epithelial x Myeloid      Myeloid                  70.9    15.24  0.2151
-   Cancer Epithelial x T-cells      Cancer Epithelial       102.2    21.65  0.2119
-   Cancer Epithelial x T-cells      T-cells                 127.9    14.85  0.1161
+   CAFs x Myeloid                   CAFs                     61.0     8.89  0.1457
+   CAFs x Myeloid                   Myeloid                  56.0     6.72  0.1201
+   Cancer Epithelial x CAFs         Cancer Epithelial        88.3     1.37  0.0155
+   Cancer Epithelial x CAFs         CAFs                     63.7    16.23  0.2550
+   Cancer Epithelial x Myeloid      Cancer Epithelial        86.7     5.24  0.0604
+   Cancer Epithelial x Myeloid      Myeloid                  51.9    18.64  0.3591
+   Cancer Epithelial x T-cells      Cancer Epithelial        70.6    33.08  0.4683
+   Cancer Epithelial x T-cells      T-cells                 102.3    40.47  0.3957
 
 3. Angle between the two nullcline gradients at the 80th pct (0 deg = degenerate)
-   CAFs x Myeloid                    23.11 deg
-   Cancer Epithelial x CAFs          65.73 deg
-   Cancer Epithelial x Myeloid       70.66 deg
-   Cancer Epithelial x T-cells       50.01 deg
+   CAFs x Myeloid                    22.28 deg
+   Cancer Epithelial x CAFs          65.20 deg
+   Cancer Epithelial x Myeloid       71.76 deg
+   Cancer Epithelial x T-cells       50.65 deg
 
 4. Atilde = A B A^T (row <- column: effect of the column archetype's share on the row's log-odds)
    symmetric / antisymmetric Frobenius norms 5.931 / 1.495; largest entries:

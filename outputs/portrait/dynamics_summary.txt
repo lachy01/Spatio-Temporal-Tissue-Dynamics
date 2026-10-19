@@ -1,30 +1,30 @@
-PORTRAIT DYNAMICS SUMMARY  (561,897 cells; technical: mistic, lambda 300, rank 3; spec 3.2 signed anchor)
+PORTRAIT DYNAMICS SUMMARY  (561,897 cells; technical: mistic, lambda 300, rank 3; anchor: own_type, state: barycentric)
 
 Loadings: 19.4% of entries outside [0, 1]; 15.8% of cells have every X_k > 0.
 
 1. Density thresholds per archetype, swept at that archetype's own mean
    neighbourhood composition (stable = ceiling, UNSTABLE = escape threshold).
 
-   Endothelial          none (always shrinks)
-   CAFs                 none (always shrinks)
+   Endothelial          n=129 [pct 80] UNSTABLE (shrink->grow);  n=189 [pct 95] stable (grow->shrink)
+   CAFs                 n=71 [pct 34] UNSTABLE (shrink->grow)
    PVL                  none (always shrinks)
-   B-cells              n=205 [pct 98] stable (grow->shrink)
-   T-cells              n=200 [pct 97] stable (grow->shrink)
-   Myeloid              none (always shrinks)
-   Normal Epithelial    n=68 [pct 31] UNSTABLE (shrink->grow);  n=76 [pct 42] stable (grow->shrink)
-   Plasmablasts         n=201 [pct 97] stable (grow->shrink)
-   Cancer Epithelial    n=203 [pct 97] stable (grow->shrink)
+   B-cells              n=132 [pct 81] stable (grow->shrink)
+   T-cells              n=154 [pct 88] stable (grow->shrink)
+   Myeloid              n=83 [pct 50] UNSTABLE (shrink->grow)
+   Normal Epithelial    n=185 [pct 95] stable (grow->shrink)
+   Plasmablasts         n=211 [pct 98] stable (grow->shrink)
+   Cancer Epithelial    n=79 [pct 45] stable (grow->shrink)
 
 2. Are the nullclines total-density contours?  (n along the zero contour, q50)
    pair                             nullcline              mean n     sd n      cv
-   CAFs x Myeloid                   CAFs                 no contour in the window (shrinks throughout)
-   CAFs x Myeloid                   Myeloid              no contour in the window (shrinks throughout)
-   Cancer Epithelial x CAFs         Cancer Epithelial    no contour in the window (grows throughout)
-   Cancer Epithelial x CAFs         CAFs                 no contour in the window (shrinks throughout)
-   Cancer Epithelial x Myeloid      Cancer Epithelial    no contour in the window (grows throughout)
-   Cancer Epithelial x Myeloid      Myeloid                  70.9    15.11  0.2131
-   Cancer Epithelial x T-cells      Cancer Epithelial    no contour in the window (grows throughout)
-   Cancer Epithelial x T-cells      T-cells              no contour in the window (grows throughout)
+   CAFs x Myeloid                   CAFs                     58.4     5.22  0.0893
+   CAFs x Myeloid                   Myeloid                  56.0     6.72  0.1201
+   Cancer Epithelial x CAFs         Cancer Epithelial        92.7     1.76  0.0190
+   Cancer Epithelial x CAFs         CAFs                     56.3     5.50  0.0976
+   Cancer Epithelial x Myeloid      Cancer Epithelial        91.4     3.38  0.0369
+   Cancer Epithelial x Myeloid      Myeloid                  47.0    10.98  0.2335
+   Cancer Epithelial x T-cells      Cancer Epithelial        60.0    20.48  0.3411
+   Cancer Epithelial x T-cells      T-cells                  39.9     0.16  0.0040
 
 3. Angle between the two nullcline gradients at the 80th pct (0 deg = degenerate)
    CAFs x Myeloid                    25.66 deg

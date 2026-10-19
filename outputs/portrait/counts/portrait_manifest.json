@@ -3,6 +3,7 @@
   "K": 9,
   "r2_recon": 0.8406249565052412,
   "state": "counts",
+  "anchor": "own_type",
   "oxygen_held_at": 0.3135611652640109,
   "bounded": false,
   "n_grid": 150,
@@ -18,30 +19,30 @@
     "oxygen and endothelial density are coupled in tissue but decoupled here; the vascular field is frozen at its median",
     "technical covariates are held at reference and are not on the causal path of the dynamics",
     "own_state_mode = 'vertex': pi_k is evaluated at phi = A[k]",
-    "pi_bar uses the spec 3.2 signed-loading formula; the clipped variant differs by at most 0.017 and is recorded as pi_bar_clipped"
+    "pi_bar: the mean fitted pi over each archetype's own cells (OSDR's anchor; --anchor nbhd_loading reproduces the earlier spec-3.2 neighbourhood-loading mean)"
   ],
   "frac_cells_all_positive": 0.7561136649599481,
   "pi_bar": {
-    "Endothelial": 0.07170578912014741,
-    "CAFs": 0.07129867597584438,
-    "PVL": 0.08219868266728834,
-    "B-cells": 0.07766177366138627,
-    "T-cells": 0.08802884162588376,
-    "Myeloid": 0.08547699960235698,
-    "Normal Epithelial": 0.10737861097494468,
-    "Plasmablasts": 0.1165182182724384,
-    "Cancer Epithelial": 0.14356053108500055
+    "Endothelial": 0.03678379517044518,
+    "CAFs": 0.02183636708225247,
+    "PVL": 0.05594773776869387,
+    "B-cells": 0.08950794008492781,
+    "T-cells": 0.10973020786310914,
+    "Myeloid": 0.04239438574329583,
+    "Normal Epithelial": 0.09166801515330224,
+    "Plasmablasts": 0.11369394295851037,
+    "Cancer Epithelial": 0.2032728252254449
   },
   "pi_bar_clipped": {
-    "Endothelial": 0.07170578912014741,
-    "CAFs": 0.07129867597584438,
-    "PVL": 0.08219868266728834,
-    "B-cells": 0.07766177366138627,
-    "T-cells": 0.08802884162588376,
-    "Myeloid": 0.08547699960235698,
-    "Normal Epithelial": 0.10737861097494468,
-    "Plasmablasts": 0.1165182182724384,
-    "Cancer Epithelial": 0.14356053108500055
+    "Endothelial": 0.03678379517044518,
+    "CAFs": 0.02183636708225247,
+    "PVL": 0.05594773776869387,
+    "B-cells": 0.08950794008492781,
+    "T-cells": 0.10973020786310914,
+    "Myeloid": 0.04239438574329583,
+    "Normal Epithelial": 0.09166801515330224,
+    "Plasmablasts": 0.11369394295851037,
+    "Cancer Epithelial": 0.2032728252254449
   },
   "Atilde_singular_values": [
     4.080481584313787,
@@ -80,5 +81,5 @@
     "Cancer Epithelial|Myeloid|q75": 0.9988888888888889,
     "Cancer Epithelial|T-cells|q75": 0.9988888888888889
   },
-  "n_fixed_points": 5
+  "n_fixed_points": 6
 }

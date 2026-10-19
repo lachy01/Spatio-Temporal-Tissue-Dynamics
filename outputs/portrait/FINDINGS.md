@@ -659,11 +659,23 @@ support:
 
 A face point sits at X_CAF = 0, X_Myeloid = 10.2 (a Myeloid-only state).
 
-**Reading of the CAF × Myeloid slice.** Below both nullclines (n ≲ 56) both types shrink;
-above both they grow, with no ceiling. The saddle sits where the two cross, and its stable
-manifold divides a CAF-free outcome from joint CAF–Myeloid expansion. That is a threshold
-between collapse and runaway. It is not OSDR's picture of two stable states, because nothing
-stops the expansion: CAFs fail confinement (§2).
+**Reading of the CAF × Myeloid slice** (`portrait_q50.png`, top left; signs checked on
+`grid_velocities_CAFs_Myeloid_q50.parquet`).
+
+- **Myeloid settles at X_Myeloid ≈ 10–12** whatever the CAF density. They grow below their
+  nullcline and shrink above it, so that nullcline attracts.
+- **CAFs grow only where Myeloid is plentiful.** They shrink below their nullcline and grow
+  above it, so that nullcline repels.
+- **Left of the saddle** (X_CAF < 14.6), the Myeloid nullcline lies below the CAFs'. Once
+  Myeloid has settled, CAFs therefore shrink and the flow runs to the face point
+  X_CAF = 0, X_Myeloid = 10.2: a Myeloid-only state.
+- **Right of the saddle** the order flips, and CAFs grow with no ceiling.
+
+So the saddle is a CAF threshold set by Myeloid. Below it the tissue loses its CAFs; above it
+they expand. The Myeloid nullcline rises slightly with CAF density, so CAFs support Myeloid
+weakly. This is half of OSDR's fibroblast–macrophage picture: one stable state (Myeloid
+without CAFs) and a threshold. Where OSDR has a second stable state there is a runaway,
+because CAFs fail confinement (§2).
 
 **It is fragile.** The two nullclines are near-parallel density contours 2.4 cells apart
 (angle 26° at the 80th percentile). In the count-based state they are 5.6 apart (59.2 and
@@ -722,9 +734,59 @@ of the data" into one with structure inside the data, without any bound:
   becomes tumour-dominated;
 - escape thresholds for CAFs and Myeloid.
 
-None of this has an interval yet. The uncertainty and sensitivity runs (spec §8–§9, written
-2026-10-20 and run on Spartan) decide which parts survive. The CAF × Myeloid saddle is the
-least secure: it depends on the state and on the bound.
+None of this has an interval yet. The sensitivity grid below shows that the tumour's
+structure hangs on the anchor's level within about 5%. The CAF × Myeloid saddle depends on the
+state, the bound and the anchor. The Spartan uncertainty runs (spec §8) will give the
+parameter intervals.
+
+### Sensitivity (spec §9, local axes run 2026-10-20; radius pending)
+
+**The anchor's level decides the tumour's structure, and the margin is about 5%.** The
+results come from `sensitivity/grid.csv` (the spec's axes) and `sensitivity/anchor_sweep.txt`
+(`run/portrait_anchor_sweep.py`, multiplier 0.7–1.3, barycentric). Every anchor is scaled by
+the multiplier:
+
+| multiplier (CE anchor) | CE at own composition | CE path ceiling | CAFs | Myeloid | T-cells |
+|---|---|---|---|---|---|
+| 0.80 (0.163) | stable 200 (p97) | 204–212 | unstable 59 | unstable 44 | stable 201 |
+| 0.90 (0.183) | stable 106, unstable 124, stable 180 | 185–195 | unstable 65 | unstable 64 | stable 180 |
+| 0.95 (0.193) | stable 92, unstable 145, stable 165 | 97–185, one fold | unstable 68 | unstable 74 | stable 168 |
+| **1.00 (0.203)** | **stable 79 (p45)** | **86–174, one fold** | **unstable 71** | **unstable 83** | **stable 154** |
+| 1.05 (0.213) | shrinks | 55–87 | unstable 74 | unstable 93 | stable 48 |
+| 1.10 (0.224) | shrinks | 14–66 | unstable 77, stable 100, unstable 130 | unstable 104 | stable 15 |
+| 1.20 (0.244) | shrinks | none | unstable 144 | unstable 144, stable 172 | shrinks |
+
+The spec's own points behave the same way:
+
+- **×0.7:** the tumour ceiling is at n = 218 (p98) and no fixed point lies inside support.
+- **×1.3:** the tumour shrinks everywhere and the only supported point is a CE × T-cells
+  saddle.
+
+A 5% lower anchor gives the tumour a second, high-density state. A 5% higher one makes the
+tumour shrink at its own composition. The spec anchor's tumour value, 0.159, is ×0.78. That
+alone explains why §3–§4 put the ceiling at the edge of the data.
+
+**Why:** the tumour's cycling barely changes with density at its own composition. Where a
+nearly flat curve crosses a constant, the crossing is ill-conditioned. The CAFs threshold
+(n = 65–77 over ×0.9–1.1) and the Myeloid one (64–104) are firmer. T-cells and B-cells are
+as fragile as the tumour.
+
+**What is robust:**
+
+- **δ ± 1 SD:** thresholds move by at most 3 cells and the in-support topology is unchanged,
+  in both states.
+- **τ (20 draws):** every fixed point keeps its classification.
+- **K = 7 and K = 6 merges (counts state):** the tumour's ceiling (n = 77–79) and the Myeloid
+  threshold are unchanged. The merged CAFs + PVL group's threshold rises to n = 187 because
+  PVL shrinks everywhere.
+
+The parameter uncertainty in the anchor is small. One MVN draw and one block resample both
+gave a tumour anchor of 0.202–0.203. The Spartan runs will give its interval. The open risk
+is the steady-state assumption itself. A tumour that grows on net has death below division,
+so its true anchor sits below its mean π, pushing toward the ×0.9–0.95 rows. The finding to
+carry forward is therefore conditional. If the tumour is near steady state (within ~5%), its
+ceiling sits near the median density. A modest net growth gives bistability in tumour
+density, with a high-density state near the 90th percentile.
 
 ### Uncertainty and sensitivity runs (spec §8–§9)
 
@@ -788,6 +850,7 @@ outputs/portrait/
   uncertainty/param_cov.npz, se.csv            section 12: block-cluster sandwich (portrait_uncertainty_prepare.py)
   uncertainty/report.md, summary.json          spec 8, after the Spartan jobs (portrait_uncertainty_gather.py)
   sensitivity/grid.csv, grid.json              spec 9 (portrait_sensitivity.py)
+  sensitivity/anchor_sweep.csv/.txt            anchor multiplier 0.7-1.3 (portrait_anchor_sweep.py)
 ```
 
 Every portrait output in this directory was regenerated on 2026-10-20 with the own-type
