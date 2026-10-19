@@ -52,7 +52,137 @@ Everything below is conditional on it.
 **The state is a signed pseudo-density.** The exact reconstruction comes from a square
 linear system, not a non-negative fit: **19.4%** of loading entries fall outside [0, 1],
 and only **15.8%** of cells have all nine `X_k > 0`. "Density of archetype k" is literal
-only where the loadings are positive; the 9-dimensional state is not a simplex.
+only where the loadings are positive; the 9-dimensional state is not a simplex. §1a
+explains why.
+
+---
+
+## 1a. How the state and the interaction matrix are built
+
+Written 2026-10-20 in answer to three questions: what `A` is, what a pseudo-density is,
+and how the contact and regional neighbourhoods enter the portrait. Every number is
+recomputed from `outputs/hpc/point_estimate.json`
+(`src/tissue_dynamics/portrait/core.py`, `mixture/basis.py`).
+
+### What `A` is
+
+`A` is the **9 × 8 archetype matrix**. Row `k` is the centroid of archetype *k* in the
+model's own-state coordinates:
+
+```
+A_k = mean of φ_i over cells i typed as archetype k
+φ_i = (s_i − m) Q_own      (s_i: the cell's nine PhiSpace scores; m: their section mean)
+```
+
+`Q_own` projects the nine compositional scores onto the 8-dimensional sum-to-zero subspace
+and whitens them. These are the coordinates the weight model's `a`, `c` and `B` were
+fitted in. Archetypes are the nine `celltype_major` types, and a cell's type is the argmax
+of its column-standardised scores.
+
+`A` does three jobs:
+1. **It turns a composition into a state.** A neighbourhood made of a fraction `w_j` of
+   each archetype has mean state `φ̄ = w A` (with `Σ_j w_j = 1`). The portrait's state
+   `X = n · w` therefore maps to the model's covariates through `A`
+   (`covariates_from_state`).
+2. **It supplies each archetype's own state.** The growth rate of archetype *k* is the
+   cycling probability of a cell sitting exactly at its centroid, `π_k(X) = π(φ = A_k, φ̄(X), n(X))`.
+3. **It translates the interaction into archetype terms.** `Ã = A B̃ Aᵀ` re-expresses
+   the fitted state-by-neighbourhood interaction `B̃` (8 × 8, below) as a 9 × 9 matrix of
+   archetype pairs. That is the generalised Lotka–Volterra form of spec §4.
+
+### What a pseudo-density is, and why loadings leave [0, 1]
+
+Each cell's **loadings** `w_i` solve `φ̄_i = w_i A` with `Σ_k w_ik = 1`. Here `φ̄_i` is the
+mean PhiSpace state of the cell's 80 µm disc, in the same coordinates. Nine unknowns,
+eight coordinates plus the sum-to-one constraint: the system is square, so the solution
+is unique and exact (reconstruction R² = 1). These are **barycentric coordinates** of the
+neighbourhood relative to the nine centroids. The state is `X_i = n_i · w_i`, with `n_i`
+the local density (cells per (100 µm)² in the disc). So `X_ik` is a **pseudo-density**:
+"archetype-k cells per unit area" when the neighbourhood lies inside the simplex the
+centroids span, and a signed coordinate when it does not.
+
+Loadings leave [0, 1] whenever a neighbourhood's mean state lies **outside the simplex of
+the nine centroids**. Here that is almost always on the negative side: 19.4% of entries
+are below 0, and fewer than 0.1% are above 1. It happens because the centroids are not
+pure types:
+- Each centroid averages every cell of its type across the whole section. That includes
+  cells in mixed regions whose PhiSpace scores carry other types' signal, from
+  segmentation spillover and from the scores themselves being mixtures. A typical stromal
+  centroid, for example, carries a little Cancer Epithelial signal.
+- A neighbourhood cleaner than that average sits beyond the simplex. A stromal
+  neighbourhood far from tumour has less Cancer Epithelial signal than the stromal
+  centroids, so it needs a negative Cancer Epithelial weight to reproduce it. Cancer
+  Epithelial has the most negative loadings, 33.5% of cells.
+- Individual cells scatter around their centroid much more than neighbourhood means do.
+  Loading each cell's own state on the same centroids puts 53% of entries outside
+  [0, 1], and the median own-type loading is 0.83–0.95, not 1. Averaging over the disc
+  removes most of that scatter, but not all.
+
+| archetype | loadings < 0 | 1st–99th percentile | min | max |
+|---|---|---|---|---|
+| Endothelial | 17.2% | −0.06 to 0.48 | −0.84 | 2.30 |
+| CAFs | 15.2% | −0.03 to 0.60 | −0.55 | 2.52 |
+| PVL | 15.1% | −0.10 to 0.37 | −0.97 | 2.48 |
+| B-cells | 25.7% | −0.11 to 0.63 | −0.84 | 0.94 |
+| T-cells | 22.7% | −0.10 to 0.68 | −0.62 | 1.84 |
+| Myeloid | 10.1% | −0.06 to 0.45 | −0.38 | 2.47 |
+| Normal Epithelial | 18.1% | −0.15 to 0.50 | −2.55 | 4.70 |
+| Plasmablasts | 16.6% | −0.12 to 0.37 | −0.56 | 4.28 |
+| Cancer Epithelial | 33.5% | −0.19 to 0.86 | −2.41 | 1.49 |
+
+Most negative loadings are small (1st percentile −0.03 to −0.19). The death anchors `π̄_k`
+use the signed loadings, as spec §3.2 states. Clipping them at 0 moves no anchor by more
+than 0.017.
+
+### How the contact and regional neighbourhoods are combined
+
+**In the fitted model the two blocks are separate.** The weight's neighbourhood terms are
+
+```
+η ⊃ φ̄_cᵀ c_c + φ̄_rᵀ c_r + φᵀ U (V_cᵀ φ̄_c + V_rᵀ φ̄_r)
+```
+
+`φ̄_c` (contact, 0–15 µm) and `φ̄_r` (regional, 15–80 µm) are each centred, projected and
+whitened on their own. The interaction is one rank-3 matrix over the stacked
+neighbourhood, `B = U Vᵀ` (8 × 16), with `V = [V_c; V_r]`. So
+`B_c = U V_cᵀ` and `B_r = U V_rᵀ` **share the own-state factor `U`**. The low-rank
+constraint is on the joint matrix, not on each block separately.
+
+**In the portrait they share one composition.** The portrait has one neighbourhood
+composition per state, `φ̄(X) = w A`, the 80 µm disc's. It uses a *mean-field closure*:
+the contact and regional blocks are both given that composition. `basis.nbr_from_own()`
+gives each block's design coordinates as an exact affine function of own-state
+coordinates, `φ̄_b = o_b + φ̄ M_b`. Substituting folds the two blocks into one own-state
+model (`PortraitModel.from_fit`):
+
+```
+c̃ = M_c c_c + M_r c_r
+B̃ = B_c M_cᵀ + B_r M_rᵀ = U (M_c V_c + M_r V_r)ᵀ        (8 × 8)
+the offsets o_b are absorbed into a and a0
+```
+
+**Why `Ã` has rank 3.** Your intuition is right that two separate rank-3 matrices can
+sum to rank 6. That would happen here if the blocks had their own own-state factors:
+replacing `U` in the regional term with a different 8 × 3 matrix gives rank 6. But
+because both blocks share `U`, every column of `B̃` lies in the 3-dimensional span of
+`U`. So `B̃` has rank ≤ 3, and so does `Ã = A B̃ Aᵀ`.
+
+| matrix | leading singular values (rest 0) |
+|---|---|
+| `B_c` (contact half of `B`) | 0.372, 0.133, 0.061 |
+| `B_r` (regional half) | 0.177, 0.152, 0.092 |
+| contact term `B_c M_cᵀ` | 0.441, 0.202, 0.106 |
+| regional term `B_r M_rᵀ` | 0.577, 0.430, 0.282 |
+| `B̃` (their sum) | 0.801, 0.692, 0.434 |
+| `Ã = A B̃ Aᵀ` | 4.08, 3.84, 2.46 |
+
+Mapped into own-state units, the regional term is the larger of the two (Frobenius norm
+0.77 against 0.50).
+
+**What the closure costs.** The portrait cannot represent a cell whose contacts differ
+from its region, such as a stromal cell touching tumour inside a stromal region. Every
+portrait statement is about shifting the whole 0–80 µm neighbourhood together.
+Boundary-specific effects are in the fit but not in the portrait.
 
 ---
 
@@ -165,9 +295,9 @@ coordinates at once is what empties q75, a limit of slice-based support, not of 
 
 ## 7. The interaction matrix `Ã = A B Aᵀ`
 
-Rank 3, mostly reciprocal (symmetric / antisymmetric Frobenius norms 5.93 / 1.50). Every
-self-term is negative: compositional crowding by the same archetype lowers its cycling
-odds. Largest entries, in log-odds of cycling per unit neighbourhood fraction (row ←
+Rank 3 (why: §1a), mostly reciprocal (symmetric / antisymmetric Frobenius norms 5.93 /
+1.50). Every self-term of `Ã` is negative, but `Ã` leaves out the neighbourhood main
+effect; with it, the reading changes for Cancer Epithelial and T-cells (caution below). Largest entries, in log-odds of cycling per unit neighbourhood fraction (row ←
 column):
 
 | effect | value |
@@ -186,6 +316,42 @@ column):
 October: +0.66 (Cancer Epithelial ← T-cells) and +0.71 (T-cells ← Cancer Epithelial),
 against +0.45 and +0.48. Myeloid and Plasmablasts form a second reciprocal pair (+1.31,
 +1.27). One October entry reversed: Plasmablasts ← Endothelial is now +0.90, against −0.70.
+
+**Caution (added 2026-10-20): `Ã` is only the interaction part of the neighbourhood
+effect.** The full effect on archetype *k*'s log-odds of a unit of neighbourhood fraction
+of archetype *j* is
+
+```
+∂η_k / ∂w_j = Ã_kj + c̃ · A_j
+```
+
+The main-effect term `c̃ · A_j` is the same for every row. It is as large as `Ã`
+(Frobenius norm 7.2 against 6.1): Cancer Epithelial +1.00, Plasmablasts +0.70,
+T-cells +0.46, Endothelial −1.78, CAFs −0.72. And because the loadings sum to one,
+only differences within a row are meaningful: raising one archetype's fraction lowers
+the others'. Read that way (each row of `Ã + c̃ · A_j` centred), most self-terms are
+still at or near the bottom of their row. Endothelial, CAFs, PVL, B-cells, Myeloid and
+Normal Epithelial rank first or second most negative. Two do not: Cancer Epithelial's
+self-effect is about 0 (−0.02, fifth of nine) and T-cells' is +0.07 (fifth). "Crowding
+by the same archetype lowers its cycling odds" therefore holds for stroma and most
+immune types, but not for Cancer Epithelial or T-cells. Their neighbourhood response is
+dominated by the main effect: a Cancer Epithelial and T-cell neighbourhood raises every
+archetype's cycling odds.
+
+The portrait's dynamics (§2–§6) use the full model, `c̃` and `B̃` together, so only this
+reading of `Ã` changes. The row-centred full matrix:
+
+| own ↓ / neighbour → | Endo | CAFs | PVL | B | T | Myel | NormEpi | Plasma | CancerEpi |
+|---|---|---|---|---|---|---|---|---|---|
+| Endothelial | −2.68 | −0.65 | −1.28 | 0.37 | 0.69 | −0.18 | 0.53 | 1.36 | 1.85 |
+| CAFs | −1.26 | −0.95 | −0.31 | −0.15 | 0.52 | 0.39 | 0.50 | −0.12 | 1.39 |
+| PVL | −2.33 | −0.93 | −1.80 | 0.74 | 0.78 | 0.61 | 0.61 | 0.48 | 1.84 |
+| B-cells | −1.47 | −0.74 | 0.74 | −0.96 | 0.10 | −0.90 | 0.81 | 0.77 | 1.66 |
+| T-cells | −1.63 | −0.81 | 0.42 | −0.80 | 0.07 | −0.86 | 0.99 | 0.74 | 1.87 |
+| Myeloid | −2.22 | −0.34 | 0.93 | −1.11 | 0.16 | −1.73 | 0.56 | 2.09 | 1.65 |
+| Normal Epithelial | −1.37 | −0.20 | 0.51 | −0.39 | 1.11 | 0.17 | −0.99 | 1.03 | 0.13 |
+| Plasmablasts | −0.70 | −0.87 | −0.12 | −0.08 | 0.85 | 1.06 | −0.18 | −0.62 | 0.66 |
+| Cancer Epithelial | −1.30 | −0.17 | 0.57 | −0.39 | 1.18 | 0.25 | −1.14 | 1.01 | −0.02 |
 
 ---
 
