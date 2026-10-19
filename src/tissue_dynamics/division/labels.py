@@ -307,7 +307,8 @@ def fit_nb_truncated(y, X, offset, m, c, keep, x0, maxiter=2000):
                 n_iter=int(res.nit), mu=mu, k_max=k_max, x=x)
 
 
-def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None, param_tol=None):
+def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None, param_tol=None,
+                   fit_maxiter=2000, c_floor=1):
     """Addendum 1, section 1.2: the iteratively truncated technical null.
 
     From `start` (a null fit: beta, eta, alpha), repeat: c_i = smallest count
@@ -320,7 +321,16 @@ def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None, pa
     moves by more than `param_tol` between iterations. At large alpha_trim a
     few dozen boundary cells can flip back and forth indefinitely after the
     parameters have settled (A1: alpha_trim 0.05 ran to the cap). The default
-    (None) keeps the A1 rule.
+    (None) keeps the A1 rule. `fit_maxiter` caps each inner L-BFGS fit; with
+    many null covariates (e.g. per-type intercepts) and a flat optimum, the
+    strict inner tolerances can otherwise crawl to the 2,000-iteration cap.
+
+    `c_floor` (default 1, the A1 rule): the smallest truncation point allowed.
+    With 2, a count of 1 is never trimmed. Without it, a per-type intercept can
+    run away on shallow cells at heavy alpha_trim: where P(Y >= 1) < alpha_trim
+    every non-zero count is trimmed, the cells left carry no information on the
+    type's mean, its intercept falls, more cells reach c = 1, and so on (seen on
+    thinned Wu at alpha_trim 0.3, B-cells).
     """
     say = say or (lambda *a: None)
     y = np.asarray(y, float)
@@ -332,12 +342,12 @@ def truncated_null(y, X, offset, m, alpha_trim, start, max_iter=20, say=None, pa
     c_prev, trace, fit, stopped = None, [], None, "max_iter"
     x_prev = x.copy()
     for it in range(1, max_iter + 1):
-        c = smallest_c_below(mu, alpha, alpha_trim, family="nb")
+        c = np.maximum(smallest_c_below(mu, alpha, alpha_trim, family="nb"), c_floor)
         if c_prev is not None and np.array_equal(c, c_prev):
             stopped = "thresholds unchanged"
             break
         keep = y < c
-        fit = fit_nb_truncated(y, X, offset, m, c, keep, x)
+        fit = fit_nb_truncated(y, X, offset, m, c, keep, x, maxiter=fit_maxiter)
         x, mu, alpha = fit["x"], fit["mu"], fit["alpha"]
         changed = int(np.sum(c != c_prev)) if c_prev is not None else int(len(c))
         trace.append(dict(iteration=it, beta0=float(fit["beta"][0]), theta_m=fit["theta_m"],

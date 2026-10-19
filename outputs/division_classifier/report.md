@@ -2488,3 +2488,105 @@ Done in 22 min. Not propagated to Stages 3-7; the user decides.
   A 10% label catches 86% of Wu's confidently cycling cells, but most of what it calls are not
   confidently cycling there. On a continuum, that is the difference between "cycling" and "strongly
   cycling", not an error in either calibration.
+
+## BASE-T calibrated on Wu again: every cell scored, cell type in the null (2026-10-19 21:01)
+
+`run/division_wu_calibration_v2.py`. Requested by the user (2026-10-19): score every cell rather than
+confident calls (which favour cells with many cycle-gene counts), and test a technical null that
+carries cell type, since types differ in basal cycle-gene expression. Primary truth: Seurat's own
+call (max(S, G2M) > 0) on every ER+ Wu cell (12.6% of them called S/G2M;
+cells are weighted to this section's type mix in every score). Null designs: `none` = depth only (as before); `type` = depth + a per-type
+intercept (Wu: celltype_major; this section: its types). Thinning, seeds, grids and weights as in the
+first Wu run; 3 seeds.
+
+### Fitted nulls: alpha0 by design
+
+Mean over seeds. The section's nulls are the production MisTIC null (theta_m m included); Wu's are
+plain-depth (scRNA-seq has no misassignment term).
+
+| null | section, none | section, type | Wu ER+, none | Wu ER+, type | Wu all patients, none | Wu all patients, type |
+| --- | --- | --- | --- | --- | --- | --- |
+| naive | 0.7889 | 0.6987 | 0.322 | 0.2739 | 1.254 | 1.202 |
+| trunc 0.001 | 0.7904 | 0.7071 | 0.3155 | 0.2653 | 1.248 | 1.2 |
+| trunc 0.005 | 0.6341 | 0.6432 | 0.2521 | 0.2 | 0.6695 | 0.6428 |
+| trunc 0.01 | 0.5254 | 0.5613 | 0.2161 | 0.1745 | 0.4999 | 0.4171 |
+| trunc 0.02 | 0.4203 | 0.4434 | 0.1963 | 0.1601 | 0.4006 | 0.3169 |
+| trunc 0.05 | 0.2961 | 0.3006 | 0.209 | 0.1282 | 0.3322 | 0.2398 |
+| trunc 0.1 | 0.2442 | 0.2563 | 0.2976 | 0.1386 | 0.3504 | 0.2296 |
+| trunc 0.2 | 0.2408 | 0.2543 | 0.5299 | 0.1951 | 0.4678 | 0.28 |
+| trunc 0.3 | 0.2506 | 0.2728 | 0.5824 | 0.2427 | 0.539 | 0.3266 |
+
+### Picks, primary truth (ER+, Seurat call on every cell)
+
+Section rate: the label rate those settings give on this section with the same design. RG: Rogan-Gladen
+fraction of this section, from Wu's sensitivity and FPR. Type-rate Spearman: over the nine types, the
+label's per-type rate against the truth's on Wu (1 = the between-type ordering is kept).
+
+| design | criterion | null | alpha_B | MCC (Wu) | sensitivity | precision (Wu) | type-rate Spearman | section rate | RG section fraction |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| none | MCC (rule) | trunc 0.3 | 0.1547 | 0.3004 | 0.2838 | 0.4821 | 0.9667 | 0.1175 | 0.3002 |
+| none | Youden J | trunc 0.3 | 0.3084 | 0.2592 | 0.3946 | 0.3369 | 0.9833 | 0.2063 | 0.3198 |
+| none | MCC at section fraction | trunc 0.3 | 0.1776 | 0.2991 | 0.3085 | 0.4545 | 0.9833 | 0.1307 | 0.2954 |
+| type | MCC (rule) | trunc 0.2 | 0.01699 | 0.2397 | 0.1006 | 0.7266 | 0.5611 | 0.03468 | 0.3051 |
+| type | Youden J | trunc 0.3 | 0.3305 | 0.1972 | 0.3736 | 0.2744 | 0.55 | 0.2111 | 0.2735 |
+| type | MCC at section fraction | trunc 0.3 | 0.1903 | 0.2172 | 0.2742 | 0.3472 | 0.5111 | 0.1329 | 0.2794 |
+
+### How the rule's pick moves with the truth and the scope
+
+| design | truth | scope | null | alpha_B | MCC (Wu) | section rate | type-rate Spearman |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| none | Seurat call, >= 3k UMI | ER+ | trunc 0.01 | 0.02399 | 0.4032 | 0.02884 | 0.8889 |
+| none | score > 0.05, every cell | ER+ | trunc 0.02 | 0.00246 | 0.3963 | 0.01273 | 0.8556 |
+| none | confident (first run) | ER+ | trunc 0.005 | 0.003474 | 0.7676 | 0.008389 | 0.7213 |
+| none | Seurat call, every cell | all patients | trunc 0.05 | 0.04785 | 0.4432 | 0.05369 | 0.9556 |
+| type | Seurat call, >= 3k UMI | ER+ | trunc 0.1 | 0.01381 | 0.3565 | 0.03194 | 0.5778 |
+| type | score > 0.05, every cell | ER+ | trunc 0.05 | 0.004578 | 0.3872 | 0.01897 | 0.6389 |
+| type | confident (first run) | ER+ | trunc 0.1 | 0.003722 | 0.7364 | 0.01998 | 0.8629 |
+| type | Seurat call, every cell | all patients | trunc 0.1 | 0.03388 | 0.4284 | 0.046 | 0.9056 |
+
+### Truth rates by type on ER+ Wu
+
+| type | Seurat call, every cell | Seurat call, >= 3k UMI | score > 0.05, every cell | confident (first run) |
+| --- | --- | --- | --- | --- |
+| Endothelial | 0.035 | 0.013 | 0.007 | 0.002 |
+| CAFs | 0.026 | 0.012 | 0.005 | 0.001 |
+| PVL | 0.038 | 0.017 | 0.011 | 0.007 |
+| B-cells | 0.277 | 0.174 | 0.059 | 0.000 |
+| T-cells | 0.330 | 0.305 | 0.109 | 0.091 |
+| Myeloid | 0.186 | 0.154 | 0.066 | 0.048 |
+| Normal Epithelial | 0.047 | 0.034 | 0.007 | 0.001 |
+| Plasmablasts | 0.089 | 0.045 | 0.014 | 0.000 |
+| Cancer Epithelial | 0.063 | 0.050 | 0.038 | 0.031 |
+
+![MCC against section rate](wu_calibration_v2/mcc_vs_rate.png)
+
+Done in 2 min. Not propagated to Stages 3-7; the user decides.
+
+**Reading (written after the results).**
+- *The truncation floor.* With a per-type intercept, iterated truncation ran away on shallow
+  types at alpha_trim 0.3. Every non-zero B-cell count was trimmed, and the B-cell intercept then
+  jumped to +26 with an unbounded truncation point. Every null here therefore never trims a count
+  of 1 (`c_floor` 2). On this section the floor leaves alpha0 unchanged up to alpha_trim 0.05 but
+  raises it at heavy truncation (0.183 to 0.241 at 0.2; 0.097 to 0.251 at 0.3): most of the earlier
+  fall at heavy truncation came from trimming single counts. It does not change the t10 label
+  materially. Re-tuned to 10% (alpha_B 0.120), the floored trunc 0.2 null labels the same cells
+  (agreement 99.7%, kappa 0.983; per-type rates within 0.004). On shallow thinned Wu, alpha0 rises
+  again at heavy truncation (0.53-0.58 at 0.2-0.3, ER+): once most retained cells hold 0 or 1
+  counts, the dispersion is barely identified.
+- *Scoring every cell does not settle the threshold.* Against Seurat's call on every cell, the
+  depth-only null picks trunc 0.3 at alpha_B 0.155, labelling 11.7% of this section, but the MCC
+  surface is flat: 0.27-0.30 for any section rate from about 2% to 13% (figure). Agreement is low
+  (MCC 0.30; sensitivity 0.28, precision 0.48 on Wu) because this truth is noisy where cells are
+  shallow. On ER+ Wu it calls 33% of T-cells and 28% of B-cells S/G2M (median depth about 2,100
+  UMI) against 6% of Cancer Epithelial. A lenient threshold is the only way to catch those calls.
+  With the same call restricted to cells with at least 3,000 UMI, the pick moves to trunc 0.01 at
+  alpha_B 0.024 (2.9% of this section). Stricter truths move it lower still (0.8-1.3%). The label
+  rate this calibration implies is therefore set by how the truth treats shallow cells, not by the
+  data's own separation.
+- *Cell type in the null does not help.* For every truth and scope, the type design agrees with the
+  truth no better than depth only, and usually worse (primary MCC 0.24 against 0.30; at least 3k
+  UMI, 0.36 against 0.40; all patients, 0.43 against 0.44). It also erodes the between-type
+  ordering of the label (type-rate Spearman 0.51-0.56 against 0.97-0.98 under the primary truth).
+  A per-type baseline absorbs real between-type differences in cycling along with any difference
+  in basal expression, and on Wu the first outweighs the second. A depth-only null is the better
+  choice.

@@ -271,3 +271,5 @@ data/ovarian/
 outputs/division_classifier*/trunc_calibration/real_nulls.npz
 outputs/division_classifier*/wu_calibration/*.npz
 data/wu2021/wu_counts_panel_csr*
+outputs/division_classifier*/wu_calibration_v2/cache/
+outputs/division_classifier*/wu_calibration_v2/*.npz
