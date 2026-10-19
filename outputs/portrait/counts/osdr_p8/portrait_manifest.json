@@ -1,0 +1,133 @@
+{
+  "n_cells": 561897,
+  "K": 9,
+  "r2_recon": 0.8406249565052412,
+  "state": "counts",
+  "oxygen_held_at": 0.3135611652640109,
+  "bounded": true,
+  "n_grid": 150,
+  "min_cells": 20,
+  "support_bins": 30,
+  "weight_ridge": 300.0,
+  "note": "SENSITIVITY VARIANT: OSDR maximal-density correction applied",
+  "assumptions": [
+    "mean-field closure: E[dX/dt | all cells share neighbourhood N(x)]; spatial correlation is not represented",
+    "existence of an interior fixed point is partly assumed -- anchoring h_minus[k] = pi_bar[k] forces each nullcline through the data cloud; the informative content is location, multiplicity and stability",
+    "archetype identity is fixed: cells cannot move in PhiSpace without dividing or dying",
+    "the archetype residual is discarded (R2_recon reported)",
+    "oxygen and endothelial density are coupled in tissue but decoupled here; the vascular field is frozen at its median",
+    "technical covariates are held at reference and are not on the causal path of the dynamics",
+    "own_state_mode = 'vertex': pi_k is evaluated at phi = A[k]",
+    "pi_bar uses the spec 3.2 signed-loading formula; the clipped variant differs by at most 0.017 and is recorded as pi_bar_clipped"
+  ],
+  "frac_cells_all_positive": 0.7561136649599481,
+  "pi_bar": {
+    "Endothelial": 0.07170578912014741,
+    "CAFs": 0.07129867597584438,
+    "PVL": 0.08219868266728834,
+    "B-cells": 0.07766177366138627,
+    "T-cells": 0.08802884162588376,
+    "Myeloid": 0.08547699960235698,
+    "Normal Epithelial": 0.10737861097494468,
+    "Plasmablasts": 0.1165182182724384,
+    "Cancer Epithelial": 0.14356053108500055
+  },
+  "pi_bar_clipped": {
+    "Endothelial": 0.07170578912014741,
+    "CAFs": 0.07129867597584438,
+    "PVL": 0.08219868266728834,
+    "B-cells": 0.07766177366138627,
+    "T-cells": 0.08802884162588376,
+    "Myeloid": 0.08547699960235698,
+    "Normal Epithelial": 0.10737861097494468,
+    "Plasmablasts": 0.1165182182724384,
+    "Cancer Epithelial": 0.14356053108500055
+  },
+  "Atilde_singular_values": [
+    4.080481584313787,
+    3.838344010386237,
+    2.455337276115131,
+    8.344228623564593e-16,
+    3.2526198090879747e-16,
+    1.985786511440514e-16,
+    1.7262106402270908e-16,
+    1.1153112766827037e-16,
+    8.014033199328508e-17
+  ],
+  "density_slope_at_q90": {
+    "Endothelial": -0.06445499402822147,
+    "CAFs": 0.831121339223426,
+    "PVL": -0.3490996173581511,
+    "B-cells": -0.44577619719416556,
+    "T-cells": -0.6352831075935887,
+    "Myeloid": -0.025364603470116626,
+    "Normal Epithelial": -0.43775135380235736,
+    "Plasmablasts": -0.4070951294732282,
+    "Cancer Epithelial": -0.23292284610937503
+  },
+  "confining": false,
+  "osdr_bound": {
+    "power": 8,
+    "target_at_max": false,
+    "floor": -0.5,
+    "c": {
+      "Endothelial": -9.768783695385468e-12,
+      "CAFs": -0.0,
+      "PVL": -3.1518395769190207e-11,
+      "B-cells": -8.408846730634474e-15,
+      "T-cells": -3.1530423372764205e-16,
+      "Myeloid": -6.932943392276577e-13,
+      "Normal Epithelial": -5.58068007424259e-12,
+      "Plasmablasts": -1.7866950266903505e-11,
+      "Cancer Epithelial": -1.1156702490937214e-14
+    },
+    "x_max": {
+      "Endothelial": 17.856302764881324,
+      "CAFs": 19.4664076470683,
+      "PVL": 15.836306481742609,
+      "B-cells": 49.31491285628061,
+      "T-cells": 75.14238117602399,
+      "Myeloid": 24.489019517413652,
+      "Normal Epithelial": 18.869276411419843,
+      "Plasmablasts": 16.85169985678892,
+      "Cancer Epithelial": 46.20259708637768
+    },
+    "pi_cap": {
+      "Endothelial": 0.19417240014589957,
+      "CAFs": 0.9999822963301064,
+      "PVL": 0.24318698647614642,
+      "B-cells": 0.40416506977645483,
+      "T-cells": 0.5219469849749468,
+      "Myeloid": 0.7839076292175713,
+      "Normal Epithelial": 0.1970655284134026,
+      "Plasmablasts": 0.26173801285319004,
+      "Cancer Epithelial": 0.3752290160485564
+    },
+    "max_flux": {
+      "Endothelial": 0.10096545850306338,
+      "CAFs": 0.0,
+      "PVL": 0.12467956817294994,
+      "B-cells": 0.2941457628553786,
+      "T-cells": 0.32048626969917127,
+      "Myeloid": 0.08967860272890092,
+      "Normal Epithelial": 0.08968691743845793,
+      "Plasmablasts": 0.11619840091489435,
+      "Cancer Epithelial": 0.23166848496355585
+    }
+  },
+  "masked_fraction": {
+    "CAFs|Myeloid|q25": 0.6793333333333333,
+    "Cancer Epithelial|CAFs|q25": 0.6566666666666667,
+    "Cancer Epithelial|Myeloid|q25": 0.71,
+    "Cancer Epithelial|T-cells|q25": 0.7824444444444445,
+    "CAFs|Myeloid|q50": 0.7735555555555556,
+    "Cancer Epithelial|CAFs|q50": 0.75,
+    "Cancer Epithelial|Myeloid|q50": 0.738,
+    "Cancer Epithelial|T-cells|q50": 0.7677777777777778,
+    "CAFs|Myeloid|q75": 1.0,
+    "Cancer Epithelial|CAFs|q75": 1.0,
+    "Cancer Epithelial|Myeloid|q75": 0.9988888888888889,
+    "Cancer Epithelial|T-cells|q75": 0.9988888888888889
+  },
+  "n_fixed_points": 6
+}

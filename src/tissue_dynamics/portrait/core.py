@@ -157,15 +157,53 @@ def simplex_loadings(phibar, A):
     return W.T
 
 
-def build_archetypes(df, basis, model=None, pi_hat=None):
-    """Named centroids (spec 1.3's `"centroid"` provider), plus loadings."""
+def type_count_loadings(df, names, radius_um):
+    """Cell-type fractions of each cell's disc: the share of the analysis cells
+    within `radius_um` (the cell itself excluded) whose archetype is k.
+
+    The portrait's count-based state (`state="counts"`). Fractions are
+    non-negative and sum to one (all zero for a cell with no neighbour), so
+    `n * w` is a literal density of each cell type -- OSDR's state. The pool is
+    the analysis cells; the table's `nbr_phi_*` averaged over every cell with
+    N >= 10, which adds the 0.4% of cells outside the oxygen mask.
+    """
+    from scipy.spatial import cKDTree
+
+    xy = df[["x", "y"]].to_numpy(float)
+    arche = df["archetype"].astype(str).to_numpy()
+    C = np.zeros((len(df), len(names)))
+    for k, nm in enumerate(names):
+        sel = arche == nm
+        if sel.any():
+            C[:, k] = cKDTree(xy[sel]).query_ball_point(xy, r=float(radius_um), return_length=True)
+            C[sel, k] -= 1
+    tot = C.sum(1, keepdims=True)
+    return np.where(tot > 0, C / np.clip(tot, 1, None), 0.0)
+
+
+def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", radius_um=80.0):
+    """Named centroids (spec 1.3's `"centroid"` provider), plus loadings.
+
+    `state` sets how a neighbourhood becomes the portrait's state `X = n w`:
+      "barycentric"  w solves `phibar = w A` exactly (square system): signed
+                     pseudo-densities, 19% of entries negative (FINDINGS §1a);
+      "counts"       w = the disc's cell-type fractions (`type_count_loadings`):
+                     literal densities, and `w A` approximates `phibar` (it
+                     drops neighbours' within-type variation; `r2_recon` < 1).
+    The archetype states `A` are the centroids in both.
+    """
     names = list(basis.phi_names)
     own = basis.own(df)
     arche = df["archetype"].astype(str).to_numpy()
     A = np.vstack([own[arche == nm].mean(0) for nm in names])
     # the 80 um disc's composition, in the same own-state coordinates as A
     nbr = basis.disc_in_own(df)
-    W = simplex_loadings(nbr, A)
+    if state == "barycentric":
+        W = simplex_loadings(nbr, A)
+    elif state == "counts":
+        W = type_count_loadings(df, names, radius_um)
+    else:
+        raise ValueError(f"state must be 'barycentric' or 'counts', not {state!r}")
     recon = W @ A
     ss = np.sum((nbr - nbr.mean(0)) ** 2)
     r2 = float(1.0 - np.sum((nbr - recon) ** 2) / ss)

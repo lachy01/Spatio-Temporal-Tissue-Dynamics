@@ -53,7 +53,8 @@ Everything below is conditional on it.
 linear system, not a non-negative fit: **19.4%** of loading entries fall outside [0, 1],
 and only **15.8%** of cells have all nine `X_k > 0`. "Density of archetype k" is literal
 only where the loadings are positive; the 9-dimensional state is not a simplex. §1a
-explains why.
+explains why; §11 rebuilds the portrait from cell-type counts (literal densities) and finds
+the same results.
 
 ---
 
@@ -461,6 +462,54 @@ wall that power builds. They are a property of the bound, not an estimate, and a
 reported as findings. The fit's own density response confines eight of nine archetypes
 (§2) and puts the tumour's ceiling at the 97th–98th percentile (§3, §4); that, with its
 caveat about sparse data, is the result.
+
+## 11. Variant: the state from cell-type counts (no negative densities)
+
+**A sensitivity variant (user, 2026-10-20).** Asked whether one-hot archetypes would remove
+the signed pseudo-densities of §1a. PhiSpace's pure vertices (+1 for the type, −1
+elsewhere) would: only 0.2% of loadings fall outside [0, 1]. But each archetype's growth rate
+would then be evaluated 5–13 SD from the section mean, where almost no cell lies. The most
+tumour-rich observed neighbourhood is only 42% of the way to the pure Cancer Epithelial vertex.
+So that variant was not built. This one keeps the centroids `A` as the archetype states and
+changes only how a neighbourhood becomes a state:
+
+```
+w_ik = share of the analysis cells within 80 µm of cell i (itself excluded) whose type is k
+X_i  = n_i · w_i                 (n_i: the model's density covariate, as before)
+φ̄(X) = (X / n) A                 (unchanged)
+```
+
+`X_k` is now a literal density of type-*k* cells: never negative, and OSDR's state. What it
+gives up is the neighbours' within-type variation. `w A` reproduces the disc's actual mean
+state with R² 0.84 (0.53–0.93 across the eight coordinates), against 1 for the barycentric
+loadings. Type fractions correlate 0.79–0.98 with the barycentric loadings. The pool is the
+analysis cells; the table's neighbourhood means also include the 0.4% of cells outside the
+oxygen mask. `Ã` and the confinement slopes (§2) do not depend on the state and are unchanged.
+Run with `--state counts` on all three portrait scripts; outputs are in
+`outputs/portrait/counts/` (and `counts/osdr_p8/`).
+
+| result | barycentric (§1–§6, §10) | type counts |
+|---|---|---|
+| loadings outside [0, 1]; cells with every `X_k > 0` | 19.4%; 15.8% | 0%; 75.6% |
+| death anchors `π̄_k` | 0.057–0.159 | 0.071–0.144 (each within 0.015) |
+| confinement (§2) | all but CAFs confine | identical |
+| ceilings at own composition (§3) | B-cells 205, T-cells 200, Plasmablasts 201, Cancer Epithelial 203 (p97–98) | 189, 200, 207, 217 (p96–98) |
+| Normal Epithelial (§3) | Allee window, n = 68 unstable / 76 stable (p31–42) | no crossing: shrinks at every density |
+| tumour ceiling on the composition path (§4) | n = 207–214 (p97.6–98.2), one stable crossing per blend, no folds | n = 220–226 (p98.5–98.7), the same structure |
+| nullclines at q50 (§5) | only Myeloid's crosses (CE × Myeloid, mean n 70.9, cv 0.21) | the same one (mean n 79.5, cv 0.13) |
+| fixed points (§6) | none inside support; interior points in CE × CAFs and CE × Myeloid, stable in slice and unstable in the held directions, n ≈ 202–221 | the same pattern, n ≈ 216–232 |
+| OSDR p = 8 (§10) | tumour wall at X_CE ≈ 44–45; in-support CE × Myeloid points at n = 73 and 100; pure-tumour ceiling n = 46 | wall at X_CE ≈ 39–40; points at n = 73 and 93; ceiling n = 40 |
+
+**Reading.** Every qualitative result of §2–§6 and §10 holds with literal densities. Eight
+archetypes confine; the lymphocyte, plasmablast and tumour ceilings sit at the edge of the
+data; there is no supported fixed point unbounded; and OSDR's bound builds the same
+power-set wall. The ceilings move by 0–14 cells. The one change is Normal Epithelial's Allee
+window, which disappears. It was the narrowest structure in §3 (between the 31st and 42nd
+percentiles of density), so it should not be reported as a finding. The signed
+pseudo-densities were cosmetic for these conclusions.
+
+One visual difference: at low density the count-based state sits on a lattice
+(`portrait_q50.png`), because type counts are integers.
 
 ## Files
 

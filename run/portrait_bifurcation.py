@@ -42,11 +42,16 @@ def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--bound", choices=("none", "osdr"), default="none")
+    ap.add_argument("--state", choices=("barycentric", "counts"), default="barycentric",
+                    help="counts: X_k = density x the disc's type-k fraction (a literal density, "
+                         "OSDR's state), written to outputs/portrait/counts/")
     ap.add_argument("--power", type=int, default=8)
     ap.add_argument("--target-at-max", action="store_true")
     a = ap.parse_args()
+    base = "outputs/portrait" + ("/counts" if a.state == "counts" else "")
+    OUT = base
     if a.bound == "osdr":
-        OUT = f"outputs/portrait/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
+        OUT = f"{base}/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
     os.makedirs(OUT, exist_ok=True)
     flag = ("  (UNBOUNDED: no OSDR density correction)" if a.bound == "none" else
             f"  (SENSITIVITY: OSDR density correction, power {a.power})")
@@ -60,7 +65,8 @@ def main():
     P = {k: jnp.asarray(np.asarray(v)) for k, v in pe["params"].items()}
     pi_hat = np.asarray(responsibilities(P, data.as_jax(), spec))
     model = PortraitModel.from_fit(pe["params"], basis)
-    arch, _W = build_archetypes(df, basis, pi_hat=pi_hat)
+    arch, _W = build_archetypes(df, basis, pi_hat=pi_hat, state=a.state,
+                                 radius_um=float(cfg["data"]["neighbour_radius_um"]))
 
     names, Xo = arch.names, arch.X_obs
     ox = float(np.median(df["oxygen"]))

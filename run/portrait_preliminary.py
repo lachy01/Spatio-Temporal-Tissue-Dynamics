@@ -9,6 +9,9 @@ Spec 5 says to check confinement first and add the correction only as a flagged
 sensitivity variant, never as the default. `--bound osdr` is that variant
 (`portrait.core.fit_osdr_bound`, OSDR's code and settings); it writes to its own
 folder, outputs/portrait/osdr_p<power>[_target_at_max]/, and flags every figure.
+`--state counts` builds the state from the disc's cell-type counts (literal
+densities, OSDR's state) instead of the signed barycentric loadings, and writes
+to outputs/portrait/counts/ (FINDINGS §11).
 """
 import argparse
 import json
@@ -119,13 +122,18 @@ def main():
     global OUT, OUT_F
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--bound", choices=("none", "osdr"), default="none")
+    ap.add_argument("--state", choices=("barycentric", "counts"), default="barycentric",
+                    help="counts: X_k = density x the disc's type-k fraction (a literal density, "
+                         "OSDR's state), written to outputs/portrait/counts/")
     ap.add_argument("--power", type=int, default=8, help="OSDR's published analyses use 8")
     ap.add_argument("--target-at-max", action="store_true",
                     help="hold the target type at its maximal density when setting c_k "
                          "(OSDR's docstring) instead of sampling it (OSDR's code)")
     a = ap.parse_args()
+    base = "outputs/portrait" + ("/counts" if a.state == "counts" else "")
+    OUT = OUT_F = base
     if a.bound == "osdr":
-        OUT = OUT_F = f"outputs/portrait/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
+        OUT = OUT_F = f"{base}/osdr_p{a.power}{'_target_at_max' if a.target_at_max else ''}"
     flag = ("[UNBOUNDED: no OSDR density correction]" if a.bound == "none" else
             f"[SENSITIVITY: OSDR density correction, power {a.power}"
             f"{', target held at max' if a.target_at_max else ''}]")
@@ -140,7 +148,8 @@ def main():
     pi_hat = np.asarray(responsibilities(P0, data.as_jax(), spec))
 
     model = PortraitModel.from_fit(pe["params"], basis)
-    arch, W = build_archetypes(df, basis, pi_hat=pi_hat)
+    arch, W = build_archetypes(df, basis, pi_hat=pi_hat, state=a.state,
+                                 radius_um=float(cfg["data"]["neighbour_radius_um"]))
     names, K, Xo = arch.names, arch.K, arch.X_obs
     ox = float(np.median(df["oxygen"]))
     os.makedirs(OUT, exist_ok=True)
@@ -148,7 +157,7 @@ def main():
     if a.bound == "osdr":
         bound = fit_osdr_bound(model, arch, ox, cell_archetype=df["archetype"].astype(str).to_numpy(),
                                power=a.power, target_at_max=a.target_at_max)
-    man = {"n_cells": int(len(df)), "K": K, "r2_recon": arch.r2_recon,
+    man = {"n_cells": int(len(df)), "K": K, "r2_recon": arch.r2_recon, "state": a.state,
            "oxygen_held_at": ox, "bounded": bound is not None, "n_grid": NGRID,
            "min_cells": MIN_CELLS, "support_bins": NSUPP,
            "weight_ridge": float(pe["weight_ridge"]),
@@ -172,7 +181,7 @@ def main():
                "differs by at most 0.017 and is recorded as pi_bar_clipped",
            ]}
 
-    print(f"{len(df):,} cells | {K} archetypes | reconstruction R2 = {arch.r2_recon:.6f}")
+    print(f"{len(df):,} cells | {K} archetypes | state: {a.state} | reconstruction R2 = {arch.r2_recon:.6f}")
     print(f"loadings outside [0,1]: {100*np.mean((W < 0) | (W > 1)):.1f}% of entries; "
           f"only {100*np.mean(np.all(Xo > 0, axis=1)):.1f}% of cells have every X_k > 0")
     man["frac_cells_all_positive"] = float(np.mean(np.all(Xo > 0, axis=1)))
