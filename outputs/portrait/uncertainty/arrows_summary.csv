@@ -1,0 +1,33 @@
+source,state,slice,cells in support,median circular SD (deg),share < 30 deg,share < 60 deg
+param,barycentric,CAFs x Myeloid q25,203,2.2167404341348154,1.0,1.0
+param,barycentric,Cancer Epithelial x CAFs q25,152,41.14653399015293,0.125,0.9671052631578947
+param,barycentric,Cancer Epithelial x Myeloid q25,108,25.41587331155778,0.6296296296296297,0.9351851851851852
+param,barycentric,Cancer Epithelial x T-cells q25,23,3.007374273315489,1.0,1.0
+param,barycentric,CAFs x Myeloid q50,166,15.559349480483048,0.7831325301204819,0.963855421686747
+param,barycentric,Cancer Epithelial x CAFs q50,135,8.996523889743465,1.0,1.0
+param,barycentric,Cancer Epithelial x Myeloid q50,154,8.8728295160883,1.0,1.0
+param,barycentric,Cancer Epithelial x T-cells q50,120,4.466026862260993,1.0,1.0
+block,barycentric,CAFs x Myeloid q25,203,2.3269260387009205,1.0,1.0
+block,barycentric,Cancer Epithelial x CAFs q25,152,43.204312024712564,0.14473684210526316,0.9868421052631579
+block,barycentric,Cancer Epithelial x Myeloid q25,108,22.88620546845153,0.6111111111111112,0.9166666666666666
+block,barycentric,Cancer Epithelial x T-cells q25,23,2.464928804656779,1.0,1.0
+block,barycentric,CAFs x Myeloid q50,166,13.77691284647518,0.8012048192771084,0.9698795180722891
+block,barycentric,Cancer Epithelial x CAFs q50,135,9.418941325637213,0.9407407407407408,1.0
+block,barycentric,Cancer Epithelial x Myeloid q50,154,9.615937487235179,1.0,1.0
+block,barycentric,Cancer Epithelial x T-cells q50,120,4.928805156750878,0.975,1.0
+param,counts,CAFs x Myeloid q25,193,7.717027627455457,1.0,1.0
+param,counts,Cancer Epithelial x CAFs q25,221,39.46345458820806,0.2398190045248869,0.9638009049773756
+param,counts,Cancer Epithelial x Myeloid q25,178,21.069431659057074,0.6348314606741573,0.9887640449438202
+param,counts,Cancer Epithelial x T-cells q25,141,3.719242564318201,0.9432624113475178,1.0
+param,counts,CAFs x Myeloid q50,141,15.232967000168918,0.900709219858156,1.0
+param,counts,Cancer Epithelial x CAFs q50,159,10.014522077707326,1.0,1.0
+param,counts,Cancer Epithelial x Myeloid q50,168,9.906572198722412,1.0,1.0
+param,counts,Cancer Epithelial x T-cells q50,146,4.635180063819598,1.0,1.0
+block,counts,CAFs x Myeloid q25,193,6.406718891831437,1.0,1.0
+block,counts,Cancer Epithelial x CAFs q25,221,43.70758622307206,0.23529411764705882,0.8914027149321267
+block,counts,Cancer Epithelial x Myeloid q25,178,20.698385995002997,0.5842696629213483,0.949438202247191
+block,counts,Cancer Epithelial x T-cells q25,141,3.7332288795622803,0.9290780141843972,1.0
+block,counts,CAFs x Myeloid q50,141,13.483218717794626,0.900709219858156,1.0
+block,counts,Cancer Epithelial x CAFs q50,159,11.70675749022149,0.9622641509433962,1.0
+block,counts,Cancer Epithelial x Myeloid q50,168,11.469950608571022,0.9880952380952381,1.0
+block,counts,Cancer Epithelial x T-cells q50,146,5.411463163854276,1.0,1.0

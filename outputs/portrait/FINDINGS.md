@@ -396,8 +396,8 @@ cycling (§12), which uses no loadings, so the clipped variant no longer applies
 
 ## 9. Not yet done
 
-- Spec §8 and §9: run 2026-10-20 (§12). Not done: spec §8.3's arrow-direction SD and overlaid
-  bootstrap arrows; the calibration α/β, oxygen, `L0` and `own_state_mode` axes do not apply.
+- Spec §8 and §9: run 2026-10-20 (§12), including spec §8.3's arrow figures. Not applicable:
+  the calibration α/β, oxygen, `L0` and `own_state_mode` axes do not apply.
 - ~~The OSDR maximal-density bound~~: run as a sensitivity variant (§10, §12). Its fixed
   points and nullclines are not reported as findings.
 - Spec §7's q25/q50/q75 robustness check is only partly possible (§6): q75's mask is still
@@ -844,8 +844,32 @@ in-support points come and go near the edge of support.
 in only 40–57% of replicates, so it should not be reported as a finding. This matches the
 anchor sweep: the fold appears only between ×0.95 and ×1.0.
 
-Not done from spec §8.3: the per-cell circular SD of arrow direction and the overlaid
-bootstrap arrows (the replicates did not store velocity grids).
+**Arrow directions** (spec §8.3; `run/portrait_uncertainty_arrows.py`, `uncertainty/arrows_*.png`,
+`arrows_summary.csv`). Every replicate was replayed locally, so no rerun was needed:
+
+- block replicates from their stored parameters;
+- parametric draws from their seeds. A regenerated draw's anchors match the Spartan summary
+  to 1e-16.
+
+The figures shade each grid cell by the circular SD of arrow direction across replicates.
+They draw the point-estimate arrows in black over 30 replicates in grey. Inside support, the
+median circular SD is:
+
+| slice | q50 | q25 |
+|---|---|---|
+| CAFs × Myeloid | 14–16° | 2° |
+| CE × CAFs | 9–12° | 39–44° |
+| CE × Myeloid | 9–11° | 21–25° |
+| CE × T-cells | 4–5° | 2–4° |
+
+The ranges cover both bootstrap types and both states, which agree closely.
+
+Direction is firm almost everywhere at q50, but two places are not:
+
+- **The band between the CAF and Myeloid nullclines at q50**, where the saddle sits. Arrows
+  there reverse between replicates, so the saddle's existence turns on that band.
+- **The tumour-poor part of the q25 tumour slices.** Net rates there are close to zero, so
+  their direction is poorly determined.
 
 ### Uncertainty and sensitivity runs (spec §8–§9)
 
@@ -908,6 +932,7 @@ outputs/portrait/
   counts/, counts/osdr_p8/                     sections 11, 12: the count-based state
   uncertainty/param_cov.npz, se.csv            section 12: block-cluster sandwich (portrait_uncertainty_prepare.py)
   uncertainty/report.md, summary.json          spec 8, after the Spartan jobs (portrait_uncertainty_gather.py)
+  uncertainty/arrows_<source>_<state>.png      spec 8.3 arrow uncertainty (portrait_uncertainty_arrows.py)
   sensitivity/grid.csv, grid.json              spec 9 (portrait_sensitivity.py)
   sensitivity/anchor_sweep.csv/.txt            anchor multiplier 0.7-1.3 (portrait_anchor_sweep.py)
 ```
