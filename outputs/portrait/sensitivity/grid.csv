@@ -13,5 +13,7 @@ delta,+1 SD (0.0059),counts,4 / 0,none,none,True,87-173,u70,u82,s81
 tau,"20 draws, log-U[0.5, 2]",counts,4 (locations unchanged),classification kept in 100% of fixed-point x draw,,True,,,,
 K,"7 (B/Plasma, CAFs+PVL)",counts,6 / 2,"Cancer Epithelial x CAFs+PVL|q25|saddle, Cancer Epithelial x CAFs+PVL|q50|stable",Cancer Epithelial x CAFs+PVL q50: n 99,n/a (different slices),86-167,u187,u83,s79
 K,"6 (B/Plasma, CAFs+PVL, Cancer Epithelial)",counts,9 / 1,Cancer Epithelial x CAFs+PVL|q50|stable,Cancer Epithelial x CAFs+PVL q50: n 98,n/a (different slices),23-170,u187,u83,s77
-radius,60 um,-,,pending: outputs/hpc_r60/point_estimate.json not found,,,,,,
-radius,100 um,-,,pending: outputs/hpc_r100/point_estimate.json not found,,,,,,
+radius,60 um,barycentric,7 / 3,"CAFs x Myeloid|q50|stable, Cancer Epithelial x CAFs|q50|saddle, Cancer Epithelial x Myeloid|q50|saddle",CAFs x Myeloid q50: n 55,False,130-153,s40; u108; s145; u198,u106,u70; s126; u264
+radius,60 um,counts,7 / 2,"CAFs x Myeloid|q50|stable, Cancer Epithelial x CAFs|q50|saddle",CAFs x Myeloid q50: n 61,False,130-152,s40; u108; s145; u198,u106,u70; s126; u264
+radius,100 um,barycentric,4 / 0,none,none,False,93-99,u69,u81,u14; s74
+radius,100 um,counts,4 / 0,none,none,True,93-94,u69,u81,u14; s74

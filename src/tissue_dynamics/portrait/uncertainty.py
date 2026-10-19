@@ -63,6 +63,12 @@ def _setup(cfg):
     return ctx
 
 
+def _provenance(cfg, ctx):
+    """The settings the worker's stale check compares (hpc/worker.py)."""
+    return {"technical": cfg["model"].get("technical", "area"), "rank": int(cfg["model"]["rank"]),
+            "weight_ridge": float(ctx["pe"]["weight_ridge"])}
+
+
 def _summaries(ctx, params, pi_hat, cells=None):
     """Both states' summaries for one parameter set; anchors from `pi_hat` over
     `cells` (row indices into the table; all cells when None)."""
@@ -106,7 +112,7 @@ def run_param_chunk(task, cfg, say=None):
         draws.append({"draw": int(task["chunk"]) * N_DRAWS_PER_TASK + b,
                       "summary": _summaries(ctx, P, w)})
         say(f"  draw {b + 1}/{N_DRAWS_PER_TASK}")
-    return {"chunk": int(task["chunk"]), "draws": draws}
+    return {"chunk": int(task["chunk"]), "draws": draws, **_provenance(cfg, ctx)}
 
 
 def run_block_rep(task, cfg, say=None):
@@ -131,7 +137,8 @@ def run_block_rep(task, cfg, say=None):
     res = fit_lbfgs(sub, ctx["spec"], P0, maxiter=int(cfg["inference"]["bootstrap_maxiter"]))
     say(f"  refit: converged {res.converged}, loglik {res.loglik:,.1f}")
     w = np.asarray(responsibilities(res.params, sub.as_jax(), ctx["spec"]))
-    return {"rep": int(task["rep"]), "n_cells": int(len(idx)), "converged": bool(res.converged),
+    return {**_provenance(cfg, ctx), "rep": int(task["rep"]), "n_cells": int(len(idx)),
+            "converged": bool(res.converged),
             "loglik": float(res.loglik),
             "params": {k: np.asarray(v).tolist() for k, v in res.params.items()},
             "summary": _summaries(ctx, res.params, w, cells=idx)}

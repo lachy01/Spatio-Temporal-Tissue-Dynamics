@@ -2844,5 +2844,1254 @@
    "Cancer Epithelial x Myeloid|q50|stable",
    "Cancer Epithelial x T-cells|q50|saddle"
   ]
+ },
+ "radius 60|barycentric": {
+  "pi_bar": {
+   "Endothelial": 0.036943486065464,
+   "CAFs": 0.02274052617132174,
+   "PVL": 0.05693813297545952,
+   "B-cells": 0.09072490686240532,
+   "T-cells": 0.11219938029263252,
+   "Myeloid": 0.04231714097213622,
+   "Normal Epithelial": 0.09266963305345872,
+   "Plasmablasts": 0.11439407245646896,
+   "Cancer Epithelial": 0.20530647226168489
+  },
+  "confinement": {
+   "Endothelial": 0.31492517275006093,
+   "CAFs": -0.18612799452338832,
+   "PVL": -0.5083096041393579,
+   "B-cells": -0.7108427430654305,
+   "T-cells": -0.3695155969716998,
+   "Myeloid": 0.9013912574838533,
+   "Normal Epithelial": -0.02946429405501808,
+   "Plasmablasts": 0.6846118788726824,
+   "Cancer Epithelial": -0.19654966100666416
+  },
+  "own_sweep": {
+   "Endothelial": {
+    "crossings": [
+     {
+      "n": 184.69908797729582,
+      "pct": 93.33561133090228,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "CAFs": {
+    "crossings": [
+     {
+      "n": 40.37834082961696,
+      "pct": 8.549075720283254,
+      "kind": "stable"
+     },
+     {
+      "n": 108.02281097249903,
+      "pct": 68.53017545920338,
+      "kind": "unstable"
+     },
+     {
+      "n": 145.46717692085377,
+      "pct": 83.98211771908375,
+      "kind": "stable"
+     },
+     {
+      "n": 197.6823103412982,
+      "pct": 95.55897255190898,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "PVL": {
+    "crossings": [],
+    "sign": "shrinks"
+   },
+   "B-cells": {
+    "crossings": [
+     {
+      "n": 43.012617831008754,
+      "pct": 9.556733707423247,
+      "kind": "stable"
+     },
+     {
+      "n": 97.95610957432325,
+      "pct": 61.53369745700724,
+      "kind": "unstable"
+     },
+     {
+      "n": 150.9238935665939,
+      "pct": 85.59629255895653,
+      "kind": "stable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "T-cells": {
+    "crossings": [
+     {
+      "n": 38.4967144000514,
+      "pct": 7.961245566358246,
+      "kind": "stable"
+     },
+     {
+      "n": 108.68138022284698,
+      "pct": 68.53017545920338,
+      "kind": "unstable"
+     },
+     {
+      "n": 154.21673981833365,
+      "pct": 86.59950133209468,
+      "kind": "stable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "Myeloid": {
+    "crossings": [
+     {
+      "n": 106.32934718589001,
+      "pct": 67.49902562213359,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "Normal Epithelial": {
+    "crossings": [
+     {
+      "n": 52.04442469292347,
+      "pct": 14.21345905032417,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "Plasmablasts": {
+    "crossings": [],
+    "sign": "grows"
+   },
+   "Cancer Epithelial": {
+    "crossings": [
+     {
+      "n": 70.10803841675289,
+      "pct": 32.83341964808497,
+      "kind": "unstable"
+     },
+     {
+      "n": 125.80418073189362,
+      "pct": 76.93598648862692,
+      "kind": "stable"
+     },
+     {
+      "n": 263.72739801904953,
+      "pct": 99.53532408964632,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   }
+  },
+  "ce_path": {
+   "ceiling_min": 129.94375887693786,
+   "ceiling_max": 153.2759266035509,
+   "ceiling_pct_min": 78.34674326433492,
+   "ceiling_pct_max": 86.36956595247884,
+   "crossings_per_blend": [
+    3
+   ],
+   "folds": 0
+  },
+  "fixed_points": [
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 25,
+    "X_a": 135.67374461789584,
+    "X_b": 98.39346774404068,
+    "n": 233.37298260017425,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.06382070065745193
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 35.29703793735845,
+    "X_b": 79.83578376819841,
+    "n": 120.31244982593975,
+    "classification": "stable",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.048607089076949155
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 33.11215279084449,
+    "X_b": 32.84158700005472,
+    "n": 71.1333679112821,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.07976922235814281
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 0.0,
+    "X_b": 4.884587637433323,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 25,
+    "X_a": 27.085809231842898,
+    "X_b": 32.88914450480459,
+    "n": 63.354982190368915,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.08200538687924994
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 25,
+    "X_a": 0.0,
+    "X_b": 1.025330422751487,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 50,
+    "X_a": 7.812414133799249,
+    "X_b": 9.140236921115154,
+    "n": 55.30471790837788,
+    "classification": "stable",
+    "in_support": true,
+    "unstable_held": true,
+    "max_re_full": 0.03338657796562417
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 50,
+    "X_a": 9.412105923430163,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 9.714532136447746,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 50,
+    "X_a": 11.237918958020208,
+    "X_b": 9.824516909782034,
+    "n": 61.724999609505396,
+    "classification": "saddle",
+    "in_support": true,
+    "unstable_held": true,
+    "max_re_full": 0.05559687170886641
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 50,
+    "X_a": 19.900566998642734,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 4.4185676723719105,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 50,
+    "X_a": 9.308601336851238,
+    "X_b": 14.09844471034915,
+    "n": 60.2213745042808,
+    "classification": "saddle",
+    "in_support": true,
+    "unstable_held": true,
+    "max_re_full": 0.05057565592185207
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 50,
+    "X_a": 25.755597539541824,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 0.36942893027760526,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 50,
+    "X_a": 225.49124806156414,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   }
+  ],
+  "topology": [
+   "CAFs x Myeloid|q50|stable",
+   "Cancer Epithelial x CAFs|q50|saddle",
+   "Cancer Epithelial x Myeloid|q50|saddle"
+  ],
+  "topology_interior": [
+   "CAFs x Myeloid|q25|saddle",
+   "CAFs x Myeloid|q50|stable",
+   "Cancer Epithelial x CAFs|q25|saddle",
+   "Cancer Epithelial x CAFs|q25|stable",
+   "Cancer Epithelial x CAFs|q50|saddle",
+   "Cancer Epithelial x Myeloid|q25|saddle",
+   "Cancer Epithelial x Myeloid|q50|saddle"
+  ]
+ },
+ "radius 60|counts": {
+  "pi_bar": {
+   "Endothelial": 0.036943486065464,
+   "CAFs": 0.02274052617132174,
+   "PVL": 0.05693813297545952,
+   "B-cells": 0.09072490686240532,
+   "T-cells": 0.11219938029263252,
+   "Myeloid": 0.04231714097213622,
+   "Normal Epithelial": 0.09266963305345872,
+   "Plasmablasts": 0.11439407245646896,
+   "Cancer Epithelial": 0.20530647226168489
+  },
+  "confinement": {
+   "Endothelial": 0.31492517275006093,
+   "CAFs": -0.18612799452338832,
+   "PVL": -0.5083096041393579,
+   "B-cells": -0.7108427430654305,
+   "T-cells": -0.3695155969716998,
+   "Myeloid": 0.9013912574838533,
+   "Normal Epithelial": -0.02946429405501808,
+   "Plasmablasts": 0.6846118788726824,
+   "Cancer Epithelial": -0.19654966100666416
+  },
+  "own_sweep": {
+   "Endothelial": {
+    "crossings": [
+     {
+      "n": 184.69908797729582,
+      "pct": 93.33561133090228,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "CAFs": {
+    "crossings": [
+     {
+      "n": 40.37834082961696,
+      "pct": 8.549075720283254,
+      "kind": "stable"
+     },
+     {
+      "n": 108.02281097249903,
+      "pct": 68.53017545920338,
+      "kind": "unstable"
+     },
+     {
+      "n": 145.46717692085377,
+      "pct": 83.98211771908375,
+      "kind": "stable"
+     },
+     {
+      "n": 197.6823103412982,
+      "pct": 95.55897255190898,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "PVL": {
+    "crossings": [],
+    "sign": "shrinks"
+   },
+   "B-cells": {
+    "crossings": [
+     {
+      "n": 43.012617831008754,
+      "pct": 9.556733707423247,
+      "kind": "stable"
+     },
+     {
+      "n": 97.95610957432325,
+      "pct": 61.53369745700724,
+      "kind": "unstable"
+     },
+     {
+      "n": 150.9238935665939,
+      "pct": 85.59629255895653,
+      "kind": "stable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "T-cells": {
+    "crossings": [
+     {
+      "n": 38.4967144000514,
+      "pct": 7.961245566358246,
+      "kind": "stable"
+     },
+     {
+      "n": 108.68138022284698,
+      "pct": 68.53017545920338,
+      "kind": "unstable"
+     },
+     {
+      "n": 154.21673981833365,
+      "pct": 86.59950133209468,
+      "kind": "stable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "Myeloid": {
+    "crossings": [
+     {
+      "n": 106.32934718589001,
+      "pct": 67.49902562213359,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "Normal Epithelial": {
+    "crossings": [
+     {
+      "n": 52.04442469292347,
+      "pct": 14.21345905032417,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "Plasmablasts": {
+    "crossings": [],
+    "sign": "grows"
+   },
+   "Cancer Epithelial": {
+    "crossings": [
+     {
+      "n": 70.10803841675289,
+      "pct": 32.83341964808497,
+      "kind": "unstable"
+     },
+     {
+      "n": 125.80418073189362,
+      "pct": 76.93598648862692,
+      "kind": "stable"
+     },
+     {
+      "n": 263.72739801904953,
+      "pct": 99.53532408964632,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   }
+  },
+  "ce_path": {
+   "ceiling_min": 129.94375887693786,
+   "ceiling_max": 152.2410320672898,
+   "ceiling_pct_min": 78.34674326433492,
+   "ceiling_pct_max": 86.11346919453209,
+   "crossings_per_blend": [
+    3
+   ],
+   "folds": 0
+  },
+  "fixed_points": [
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 25,
+    "X_a": 8.498731330819098,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 25,
+    "X_a": 0.0,
+    "X_b": 2.381022846518423,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 29.91254827988122,
+    "X_b": 72.12929082670223,
+    "n": 121.11842285391704,
+    "classification": "stable",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.04297706431533134
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 27.103566805190532,
+    "X_b": 24.285481088593976,
+    "n": 70.46563164111811,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.08025080990246601
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 0.0,
+    "X_b": 8.049382484587381,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 25,
+    "X_a": 20.430237663354095,
+    "X_b": 27.240037539127115,
+    "n": 64.93143909066966,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.07212108195309644
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 25,
+    "X_a": 0.0,
+    "X_b": 0.35612980735745015,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 50,
+    "X_a": 5.902260828507216,
+    "X_b": 12.211816189875488,
+    "n": 61.47992851440732,
+    "classification": "stable",
+    "in_support": true,
+    "unstable_held": true,
+    "max_re_full": 0.04716227420478097
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 50,
+    "X_a": 8.663543167960604,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 12.324865697197202,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 50,
+    "X_a": 8.484059987402599,
+    "X_b": 6.819457862674299,
+    "n": 60.459836480734694,
+    "classification": "saddle",
+    "in_support": true,
+    "unstable_held": true,
+    "max_re_full": 0.048116250134951584
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 50,
+    "X_a": 14.467318060051932,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 2.875448297749009,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 50,
+    "X_a": 7.28888291013017,
+    "X_b": 11.287933786074177,
+    "n": 60.063008884034986,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.0442661542894435
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 50,
+    "X_a": 20.480233039026043,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 0.20123744868446763,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 50,
+    "X_a": 0.6429645476797642,
+    "X_b": 10.33207926946438,
+    "n": 54.059032459626216,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.016409981943972005
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 50,
+    "X_a": 34.40763241288736,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   }
+  ],
+  "topology": [
+   "CAFs x Myeloid|q50|stable",
+   "Cancer Epithelial x CAFs|q50|saddle"
+  ],
+  "topology_interior": [
+   "CAFs x Myeloid|q50|stable",
+   "Cancer Epithelial x CAFs|q25|saddle",
+   "Cancer Epithelial x CAFs|q25|stable",
+   "Cancer Epithelial x CAFs|q50|saddle",
+   "Cancer Epithelial x Myeloid|q25|saddle",
+   "Cancer Epithelial x Myeloid|q50|saddle",
+   "Cancer Epithelial x T-cells|q50|saddle"
+  ]
+ },
+ "radius 100|barycentric": {
+  "pi_bar": {
+   "Endothelial": 0.03675005917241169,
+   "CAFs": 0.021757964248751028,
+   "PVL": 0.055845942230246116,
+   "B-cells": 0.08938930685698544,
+   "T-cells": 0.10968791168131954,
+   "Myeloid": 0.04234202264153505,
+   "Normal Epithelial": 0.09147239321971837,
+   "Plasmablasts": 0.11373492061555703,
+   "Cancer Epithelial": 0.2031779370326248
+  },
+  "confinement": {
+   "Endothelial": -0.09282923418290678,
+   "CAFs": 0.6889309450400061,
+   "PVL": -0.5031806967764576,
+   "B-cells": -0.49400094194264843,
+   "T-cells": -0.6368740846895028,
+   "Myeloid": -0.14975784611149645,
+   "Normal Epithelial": -0.2260243171850198,
+   "Plasmablasts": -0.2766808031877902,
+   "Cancer Epithelial": 0.11928790184276575
+  },
+  "own_sweep": {
+   "Endothelial": {
+    "crossings": [
+     {
+      "n": 16.10028174228256,
+      "pct": 2.535874012496952,
+      "kind": "unstable"
+     },
+     {
+      "n": 36.74255580182519,
+      "pct": 7.398153042283551,
+      "kind": "stable"
+     },
+     {
+      "n": 106.90818034632318,
+      "pct": 70.34919211172155,
+      "kind": "unstable"
+     },
+     {
+      "n": 210.75330467218018,
+      "pct": 98.4059356074156,
+      "kind": "stable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "CAFs": {
+    "crossings": [
+     {
+      "n": 68.6113297884875,
+      "pct": 32.28225101753524,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "PVL": {
+    "crossings": [],
+    "sign": "shrinks"
+   },
+   "B-cells": {
+    "crossings": [
+     {
+      "n": 132.16780518234245,
+      "pct": 82.71017642023361,
+      "kind": "stable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "T-cells": {
+    "crossings": [
+     {
+      "n": 62.00218063784446,
+      "pct": 23.905626831963865,
+      "kind": "stable"
+     },
+     {
+      "n": 84.45518049208381,
+      "pct": 52.34820616589874,
+      "kind": "unstable"
+     },
+     {
+      "n": 140.94982528662152,
+      "pct": 85.95400936470563,
+      "kind": "stable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "Myeloid": {
+    "crossings": [
+     {
+      "n": 81.3769466410994,
+      "pct": 48.759292183442874,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "Normal Epithelial": {
+    "crossings": [
+     {
+      "n": 8.857378563495672,
+      "pct": 0.9273941665465378,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "Plasmablasts": {
+    "crossings": [],
+    "sign": "grows"
+   },
+   "Cancer Epithelial": {
+    "crossings": [
+     {
+      "n": 13.74633820917682,
+      "pct": 2.0473503150933356,
+      "kind": "unstable"
+     },
+     {
+      "n": 73.59082572390349,
+      "pct": 39.161981644322715,
+      "kind": "stable"
+     }
+    ],
+    "sign": "shrinks"
+   }
+  },
+  "ce_path": {
+   "ceiling_min": 92.96559172715841,
+   "ceiling_max": 98.66937798045309,
+   "ceiling_pct_min": 60.50486121121843,
+   "ceiling_pct_max": 64.76044541971216,
+   "crossings_per_blend": [
+    3
+   ],
+   "folds": 0
+  },
+  "fixed_points": [
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 20.62162870665449,
+    "X_b": 32.77744890609581,
+    "n": 64.72514562169732,
+    "classification": "unstable",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.05338501290208257
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 0.44340393077715134,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 25,
+    "X_a": 4.649216422544624,
+    "X_b": 2.1299594836577342,
+    "n": 16.127392410095645,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.12438972798375096
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 25,
+    "X_a": 11.027318299556137,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 25,
+    "X_a": 4.015667833003248,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 12.934808881065171,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 50,
+    "X_a": 7.222150148682794,
+    "X_b": 32.11718733616073,
+    "n": 81.9170635751306,
+    "classification": "stable",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.01138802491143371
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 1.7356802314533437,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 50,
+    "X_a": 0.440805703995589,
+    "X_b": 1.9856447727588558,
+    "n": 42.21899091671485,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.004760934025116145
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 7.305246925052643,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   }
+  ],
+  "topology": [],
+  "topology_interior": [
+   "Cancer Epithelial x CAFs|q25|unstable",
+   "Cancer Epithelial x CAFs|q50|stable",
+   "Cancer Epithelial x Myeloid|q25|saddle",
+   "Cancer Epithelial x T-cells|q50|saddle"
+  ]
+ },
+ "radius 100|counts": {
+  "pi_bar": {
+   "Endothelial": 0.03675005917241169,
+   "CAFs": 0.021757964248751028,
+   "PVL": 0.055845942230246116,
+   "B-cells": 0.08938930685698544,
+   "T-cells": 0.10968791168131954,
+   "Myeloid": 0.04234202264153505,
+   "Normal Epithelial": 0.09147239321971837,
+   "Plasmablasts": 0.11373492061555703,
+   "Cancer Epithelial": 0.2031779370326248
+  },
+  "confinement": {
+   "Endothelial": -0.09282923418290678,
+   "CAFs": 0.6889309450400061,
+   "PVL": -0.5031806967764576,
+   "B-cells": -0.49400094194264843,
+   "T-cells": -0.6368740846895028,
+   "Myeloid": -0.14975784611149645,
+   "Normal Epithelial": -0.2260243171850198,
+   "Plasmablasts": -0.2766808031877902,
+   "Cancer Epithelial": 0.11928790184276575
+  },
+  "own_sweep": {
+   "Endothelial": {
+    "crossings": [
+     {
+      "n": 16.10028174228256,
+      "pct": 2.535874012496952,
+      "kind": "unstable"
+     },
+     {
+      "n": 36.74255580182519,
+      "pct": 7.398153042283551,
+      "kind": "stable"
+     },
+     {
+      "n": 106.90818034632318,
+      "pct": 70.34919211172155,
+      "kind": "unstable"
+     },
+     {
+      "n": 210.75330467218018,
+      "pct": 98.4059356074156,
+      "kind": "stable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "CAFs": {
+    "crossings": [
+     {
+      "n": 68.6113297884875,
+      "pct": 32.28225101753524,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "PVL": {
+    "crossings": [],
+    "sign": "shrinks"
+   },
+   "B-cells": {
+    "crossings": [
+     {
+      "n": 132.16780518234245,
+      "pct": 82.71017642023361,
+      "kind": "stable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "T-cells": {
+    "crossings": [
+     {
+      "n": 62.00218063784446,
+      "pct": 23.905626831963865,
+      "kind": "stable"
+     },
+     {
+      "n": 84.45518049208381,
+      "pct": 52.34820616589874,
+      "kind": "unstable"
+     },
+     {
+      "n": 140.94982528662152,
+      "pct": 85.95400936470563,
+      "kind": "stable"
+     }
+    ],
+    "sign": "grows"
+   },
+   "Myeloid": {
+    "crossings": [
+     {
+      "n": 81.3769466410994,
+      "pct": 48.759292183442874,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "Normal Epithelial": {
+    "crossings": [
+     {
+      "n": 8.857378563495672,
+      "pct": 0.9273941665465378,
+      "kind": "unstable"
+     }
+    ],
+    "sign": "shrinks"
+   },
+   "Plasmablasts": {
+    "crossings": [],
+    "sign": "grows"
+   },
+   "Cancer Epithelial": {
+    "crossings": [
+     {
+      "n": 13.74633820917682,
+      "pct": 2.0473503150933356,
+      "kind": "unstable"
+     },
+     {
+      "n": 73.59082572390349,
+      "pct": 39.161981644322715,
+      "kind": "stable"
+     }
+    ],
+    "sign": "shrinks"
+   }
+  },
+  "ce_path": {
+   "ceiling_min": 92.96559172715841,
+   "ceiling_max": 94.14256349371128,
+   "ceiling_pct_min": 60.50486121121843,
+   "ceiling_pct_max": 61.29717724066867,
+   "crossings_per_blend": [
+    3
+   ],
+   "folds": 0
+  },
+  "fixed_points": [
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 25,
+    "X_a": 0.0,
+    "X_b": 1.7986040502564542,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 25,
+    "X_a": 16.750215963106367,
+    "X_b": 23.391917598546094,
+    "n": 62.739018221601725,
+    "classification": "unstable",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.04889520118374871
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 25,
+    "X_a": 3.1647518328595146,
+    "X_b": 2.788495574507415,
+    "n": 26.724481714812335,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.053816171202941854
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 25,
+    "X_a": 13.792688524333611,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 25,
+    "X_a": 15.597679498104414,
+    "X_b": 0.0,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "CAFs x Myeloid",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 15.214898249302001,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x CAFs",
+    "q_ref": 50,
+    "X_a": 5.553840524467174,
+    "X_b": 29.135511213542927,
+    "n": 81.26023817955144,
+    "classification": "stable",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.010463608199362848
+   },
+   {
+    "slice": "Cancer Epithelial x Myeloid",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 1.9485014521553032,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 50,
+    "X_a": 1.214497370268065,
+    "X_b": 3.2229544456945356,
+    "n": 48.37869358814349,
+    "classification": "saddle",
+    "in_support": false,
+    "unstable_held": true,
+    "max_re_full": 0.005375981243554379
+   },
+   {
+    "slice": "Cancer Epithelial x T-cells",
+    "q_ref": 50,
+    "X_a": 0.0,
+    "X_b": 22.224938128582444,
+    "n": null,
+    "classification": "face",
+    "in_support": false,
+    "unstable_held": null,
+    "max_re_full": null
+   }
+  ],
+  "topology": [],
+  "topology_interior": [
+   "Cancer Epithelial x CAFs|q25|unstable",
+   "Cancer Epithelial x CAFs|q50|stable",
+   "Cancer Epithelial x Myeloid|q25|saddle",
+   "Cancer Epithelial x T-cells|q50|saddle"
+  ]
  }
 }

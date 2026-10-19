@@ -396,17 +396,8 @@ cycling (§12), which uses no loadings, so the clipped variant no longer applies
 
 ## 9. Not yet done
 
-- **Spec §8, uncertainty: written, not yet run** (§12, last part). The parametric bootstrap
-  (`portrait_param_boot`, MVN draws from the block-cluster sandwich, which checks against the
-  block bootstrap) and the spatial block bootstrap with refits (`portrait_block_boot`) are
-  Spartan jobs; `run/portrait_uncertainty_gather.py` gives the topology-preservation fraction.
-  Not implemented: the per-grid-cell circular SD of arrow direction and the overlaid bootstrap
-  arrows (spec §8.3's figures).
-- **Spec §9, sensitivity grid: written, not yet run** (`run/portrait_sensitivity.py`): the
-  anchor multiplier, `δ`, `τ`, `K` and radius 60/100 µm (the radius rows need the Spartan
-  refits). Not applicable to the production model: the calibration α/β and oxygen axes, `L0`,
-  `own_state_mode` (equal to the vertex for centroid archetypes) and the clipped anchor
-  (the own-type anchor uses no loadings).
+- Spec §8 and §9: run 2026-10-20 (§12). Not done: spec §8.3's arrow-direction SD and overlaid
+  bootstrap arrows; the calibration α/β, oxygen, `L0` and `own_state_mode` axes do not apply.
 - ~~The OSDR maximal-density bound~~: run as a sensitivity variant (§10, §12). Its fixed
   points and nullclines are not reported as findings.
 - Spec §7's q25/q50/q75 robustness check is only partly possible (§6): q75's mask is still
@@ -739,7 +730,7 @@ structure hangs on the anchor's level within about 5%. The CAF × Myeloid saddle
 state, the bound and the anchor. The Spartan uncertainty runs (spec §8) will give the
 parameter intervals.
 
-### Sensitivity (spec §9, local axes run 2026-10-20; radius pending)
+### Sensitivity (spec §9, 2026-10-20)
 
 **The anchor's level decides the tumour's structure, and the margin is about 5%.** The
 results come from `sensitivity/grid.csv` (the spec's axes) and `sensitivity/anchor_sweep.txt`
@@ -780,6 +771,27 @@ as fragile as the tumour.
   threshold are unchanged. The merged CAFs + PVL group's threshold rises to n = 187 because
   PVL shrinks everywhere.
 
+**Neighbourhood radius (refits at 60 and 100 µm).** Both were refitted from 10 restarts
+(10/10 converged, 90% agreement), with δ unchanged (e^δ 1.902). Densities are per
+(100 µm)², so they compare directly across radii.
+
+| radius | CAFs | Myeloid | tumour (own composition) | tumour path ceiling | in-support fixed points (barycentric) |
+|---|---|---|---|---|---|
+| 60 µm | stable 40, unstable 108, stable 145, unstable 198 | unstable 106 | unstable 70, stable 126 | 130–153 | CAFs × Myeloid stable; CE × CAFs and CE × Myeloid saddles (q50) |
+| **80 µm** | **unstable 71** | **unstable 83** | **stable 79** | **86–174** | **CAFs × Myeloid saddle (q50)** |
+| 100 µm | unstable 69 | unstable 81 | unstable 14, stable 74 | 93–99 | none |
+
+At 100 µm the thresholds reproduce production's within 5 cells, but the CAF × Myeloid saddle
+is gone. At 60 µm the picture changes:
+
+- the CAFs gain a low-density stable state at n = 40;
+- the tumour gains an escape threshold at n = 70, with its ceiling moving up to 126;
+- the CAF × Myeloid point becomes stable in its slice.
+
+So the 80 µm thresholds are stable to widening the disc but not to narrowing it. Across all
+three radii, two things hold: the tumour has a ceiling inside the data, and Myeloid has an
+escape threshold. The CAF × Myeloid fixed point is not robust to the radius.
+
 The parameter uncertainty in the anchor is small. One MVN draw and one block resample both
 gave a tumour anchor of 0.202–0.203. The Spartan runs will give its interval. The open risk
 is the steady-state assumption itself. A tumour that grows on net has death below division,
@@ -787,6 +799,53 @@ so its true anchor sits below its mean π, pushing toward the ×0.9–0.95 rows.
 carry forward is therefore conditional. If the tumour is near steady state (within ~5%), its
 ceiling sits near the median density. A modest net growth gives bistability in tumour
 density, with a high-density state near the 90th percentile.
+
+### Uncertainty (spec §8, Spartan 2026-10-20)
+
+The runs: **500 parametric draws** (MVN from the block-cluster sandwich) and **50 spatial
+block-bootstrap refits** (all converged). The full tables are in `uncertainty/report.md`. The
+two sources agree closely, so the numbers below give the parametric run with the block run in
+brackets.
+
+**Anchors are tight.** The tumour's is 0.199–0.207 (0.196–0.210), about ±2–3%. The other
+types' intervals are within about ±12% of their point estimates. Even so, ±3% on the tumour anchor is
+about half the ±5% margin found in the sensitivity sweep, so it carries into the tumour
+results.
+
+| feature | point estimate | share of replicates | 95% range of n |
+|---|---|---|---|
+| CAFs escape threshold (own composition) | n = 71 | **100%** (100%) | 66–77 (67–76) |
+| Myeloid escape threshold | n = 83 | **100%** (100%) | 71–100 (72–97) |
+| tumour ceiling at own composition | n = 79 | **95%** (96%) | 53–111 (50–152) |
+| B-cells ceiling | n = 132 | 100% (96%) | 58–159 (23–166) |
+| T-cells ceiling | n = 154 | 100% (100%) | 45–164 (38–158) |
+| tumour bistability on the path (a fold) | one fold | **57%** (40%) | — |
+| CAF × Myeloid saddle at q50 (barycentric) | n = 66, in support | found 86% (80%), still a saddle 71% (74%) | 55–91 (54–85) |
+
+**Topology preservation** (spec §8.3's headline: the same set of in-support fixed points)
+is low:
+
+- **Barycentric state:** 36% (38%).
+- **Counts state**, where the point estimate has no supported fixed point: 50% (46%).
+
+The CAF × Myeloid saddle itself recurs in most replicates. The headline fails because other
+in-support points come and go near the edge of support.
+
+**What survives:**
+
+- **CAFs and Myeloid escape thresholds:** in every replicate, at a narrow density (CAFs
+  n ≈ 66–77, the 30th–40th percentiles). This is the firmest result of the portrait.
+- **A tumour ceiling inside the data at its own composition:** 95–96% of replicates. Its
+  position is loose, from about the 20th to the 70th percentile (block bootstrap: to the
+  90th).
+- **The CAF × Myeloid saddle:** present as a saddle in about three replicates in four.
+
+**What does not survive:** the tumour's bistability along the composition path. It appears
+in only 40–57% of replicates, so it should not be reported as a finding. This matches the
+anchor sweep: the fold appears only between ×0.95 and ×1.0.
+
+Not done from spec §8.3: the per-cell circular SD of arrow direction and the overlaid
+bootstrap arrows (the replicates did not store velocity grids).
 
 ### Uncertainty and sensitivity runs (spec §8–§9)
 

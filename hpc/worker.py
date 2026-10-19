@@ -66,7 +66,7 @@ def stale_reasons(existing, task, cfg):
     # results from before 2026-10-12 carry no "technical" and are area fits
     tech = mc.get("technical", "area")
     if existing.get("technical", "area") != tech and not existing.get("job", "").startswith(
-            ("sim_", "division_sim")):
+            ("sim_", "division_sim", "portrait_")):
         out.append(f"technical: file {existing.get('technical', 'area')!r}, config {tech!r}")
     return out
 
