@@ -2590,3 +2590,114 @@ Done in 2 min. Not propagated to Stages 3-7; the user decides.
   A per-type baseline absorbs real between-type differences in cycling along with any difference
   in basal expression, and on Wu the first outweighs the second. A depth-only null is the better
   choice.
+
+## Rerun on the floored truncated null (variant w30), agreement with MIX, and the noise in Wu's truth (2026-10-20)
+
+**Request (user).** Rerun the comparisons with the updated truncated null at the best
+parameters found so far. Say whether the 10% label was best and how the labels agree with MIX.
+Show how noisy the whole-transcriptome (scanpy) score on Wu is, and so why thresholds cannot be
+calibrated to it.
+
+### The variant
+
+`DIV_VARIANT=w30` (`labels.VARIANTS`) builds BASE-T on the **floored** truncated null:
+`c_floor` 2, so a count of 1 is never trimmed (Wu calibration v2). It uses alpha_trim 0.3, the
+choice of both the G4 and the Wu v2 calibrations. The primary is **alpha_B 0.1547**, the Wu v2
+rule pick, which labels 11.8% of the section. The grid adds 0.1229, which labels exactly 10%,
+then 0.05, 0.01 and 0.001. BASE-O and SCORE are unchanged.
+
+Stages 1–5 and 7 are in `outputs/division_classifier_w30/` (its own `report.md`). Stage 6 is
+the Spartan job `division_sim_w30` (inputs committed; one replicate tested locally in 228 s).
+
+- **With the floor, the trunc level hardly matters.** The nulls at trunc 0.1, 0.2 and 0.3 have
+  alpha0 0.244, 0.241 and 0.251. The alpha_B that labels 10% is 0.121, 0.120 and 0.123.
+- **The 10% labels are the same cells.** w30 at alpha_B 0.1229 and t10 agree on 99.6% of
+  cells. The t10 results therefore stand for the floored null, and w30 adds only the 11.8%
+  primary and a stricter grid (5.8%, 3.0%, 1.5%).
+- **Stage 4 at 11.8% repeats t10's pattern.** On log loss NB-d and NB-c score best (0.3314,
+  0.3316) and LOG-T worst (0.3398). MIX is the best calibrated (mean p / rate 0.98). LOG-T beats
+  MIX on its own label only at strict thresholds, at 3% and below (Stage 7 grid).
+- **The more lenient label adds type-dependent false positives.** The Rogan–Gladen fraction is
+  negative in 3 types at 11.8% (Endothelial, CAFs, Myeloid), against 1 type (CAFs) at 10%.
+
+### Agreement with MIX across every BASE-T label
+
+`run/division_mix_agreement.py`; `outputs/division_classifier_w30/mix_agreement.{csv,md,png}`.
+MIX's out-of-fold prior π uses no counts, so agreement with it means agreement on what
+predicts cycling.
+
+| label | rate | per-type log-ratio SD vs MIX | AUC of MIX π | LOG-T vs MIX π (Spearman) |
+|---|---|---|---|---|
+| original, naive null, α_B 0.05 | 3.3% | 0.220 | 0.738 | 0.843 |
+| t10, α_B 0.1085 | 10.0% | 0.222 | 0.686 | 0.871 |
+| w30, α_B 0.1229 | 10.0% | 0.221 | 0.681 | — |
+| w30, α_B 0.1547 (primary) | 11.8% | 0.240 | 0.669 | 0.913 |
+| w30, α_B 0.05 | 5.8% | 0.229 | 0.731 | — |
+| w30, α_B 0.001 | 1.5% | 0.599 | 0.823 | — |
+
+- **Per-type ordering** matches MIX for every label (Spearman 0.98–1.00), so it cannot
+  separate them.
+- **Per-type contrasts** (the SD across types of log(label rate / MIX π)) are closest to MIX,
+  and flat, from 3% to 10% (0.220–0.229). They are worse at 11.8% (0.240) and much worse below
+  3%.
+- **MIX predicts every label's overall rate** within 0.6 percentage points (push-through).
+- **MIX π's AUC** falls as the label widens (0.82 at 1.5% to 0.67 at 11.8%). Wider labels take
+  in borderline cells, so AUC cannot choose a rate.
+- **LOG-T's cell-level agreement with MIX** rises with the rate (0.84, 0.87, 0.91).
+
+### Noise in Wu's whole-transcriptome call
+
+`run/division_wu_score_noise.py`; `wu_score_noise/` (report, four figures). scanpy's
+`score_genes_cell_cycle` on Wu's raw counts reproduces Wu's published Seurat scores: max-score
+r 0.996, call kappa 0.91, and an ER+ call rate of 11.7% against 13.2%.
+
+- **The call depends on the random control genes.** Across 10 control-gene seeds, 16% of ER+
+  cells change call, and so do **45% of the cells called S/G2M**. The cut at 0 sits on the
+  shoulder of a unimodal score distribution with no gap, so any cell within about ±0.05 of it
+  flips (`control_seed_flips.png`).
+- **The call does not repeat.** Each cell's reads were split at random into two independent
+  halves and each half scored. The halves' scores correlate at r = 0.74 (Spearman–Brown
+  full-depth reliability 0.85), but their **calls agree only at kappa 0.28** (ER+). By depth
+  decile, kappa is 0.09–0.13 below about 2,700 UMI and reaches 0.83 only in the deepest decile
+  (24k UMI; `repeatability_by_depth.png`). A half-depth call recovers the full-depth call at
+  MCC 0.52.
+- **Shallow cells are called more often.** Within types, the call rate falls with depth:
+
+  | type | shallowest | deepest |
+  |---|---|---|
+  | T-cells | 33–36% (< 1,200 UMI) | 24% (4,400 UMI) |
+  | B-cells | 27–39% | 12% |
+  | Myeloid | 22% | 9–13% |
+  | CAFs | 6.8% | 0.4% |
+
+  This is the 33% of ER+ T-cells found earlier: noise around a cut at 0 inflates calls where
+  counts are few (`call_rate_by_depth.png`).
+
+**Why the truth cannot calibrate the threshold.** The best label reached MCC 0.30 against this
+truth, and the MCC surface was flat over 2–13% (Wu calibration v2). The truth's own
+repeatability is of the same order: kappa 0.28 between two half-depth measurements of the same
+cells, and lower still in the shallow lymphocytes that dominate its positives. So the
+differences in MCC between thresholds sit inside the truth's measurement noise. A threshold
+fitted to this truth would also inherit the truth's depth bias. Stricter truths (deep cells,
+confident calls) move the pick to 1–3% because they drop exactly those cells, not because they
+measure cycling better.
+
+### Was the 10% label best?
+
+No calibration singles out a rate.
+
+- **Wu's truth is too noisy** (above), and its pick moves from 1% to 12% with how the truth
+  treats shallow cells.
+- **The G4 simulation** peaks at about a 7% rate. 10% costs little there (MCC 0.54 against
+  0.56; pre-floor null).
+- **Agreement with MIX** is flat on per-type contrasts from 3% to 10%. It favours higher rates
+  only on cell-level LOG-T agreement, which partly reflects that a wider label is easier to
+  reproduce from covariates.
+- **11.8% is slightly worse than 10%** on per-type contrasts and on type-dependent false
+  positives (Rogan–Gladen).
+- **Against simulated truth (t10's Stage 6)**, 10% traded better fraction recovery (about 3×
+  smaller error) for weaker neighbourhood-effect recovery (LOG-T slope 0.73 → 0.38).
+
+10% is therefore a defensible middle and marginally better than the Wu pick of 11.8%. Nothing in
+the data prefers it over about 6%, so it should be reported with 5.8% beside it as a
+sensitivity. Stage 6 on w30 (Spartan) will add the 11.8% point.

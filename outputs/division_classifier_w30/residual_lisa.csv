@@ -1,0 +1,10 @@
+label,arm,global I,HH bins (under-prediction),LL bins (over-prediction),HH overlap with count-residual HH (Jaccard),LL overlap with count-residual LL (Jaccard),HH by quadrant,LL by quadrant
+BASE-T,NB-c,0.1801457231794491,70,187,0.3046875,0.22857142857142856,"lower-left 36%, lower-right 34%, upper-left 21%, upper-right 9%","lower-right 42%, lower-left 28%, upper-right 27%, upper-left 3%"
+BASE-T,NB-d,0.1785201616886172,68,185,0.2992125984251969,0.23553719008264462,"lower-left 37%, lower-right 35%, upper-left 19%, upper-right 9%","lower-right 42%, lower-left 28%, upper-right 26%, upper-left 3%"
+BASE-T,MIX,0.1748995150387132,169,116,0.26666666666666666,0.29213483146067415,"lower-left 49%, lower-right 45%, upper-left 4%, upper-right 2%","upper-right 38%, lower-right 33%, lower-left 22%, upper-left 7%"
+BASE-T,LOG-T,0.1545311295013567,108,129,0.3576158940397351,0.32065217391304346,"lower-right 49%, lower-left 40%, upper-left 7%, upper-right 4%","lower-right 42%, upper-right 33%, lower-left 21%, upper-left 5%"
+BASE-O,NB-c,0.16537606137221714,59,142,0.3,0.29949238578680204,"upper-left 37%, lower-right 31%, lower-left 19%, upper-right 14%","lower-right 44%, upper-right 31%, lower-left 22%, upper-left 4%"
+BASE-O,NB-d,0.16409547650410383,61,142,0.29508196721311475,0.29949238578680204,"upper-left 38%, lower-right 30%, lower-left 20%, upper-right 13%","lower-right 44%, upper-right 31%, lower-left 21%, upper-left 4%"
+BASE-O,MIX,0.17142165428128645,99,86,0.42028985507246375,0.43884892086330934,"lower-right 43%, lower-left 29%, upper-left 22%, upper-right 5%","upper-right 30%, lower-right 29%, upper-left 23%, lower-left 17%"
+BASE-O,LOG-O,0.1431083112396578,60,105,0.256,0.32727272727272727,"upper-left 45%, lower-left 28%, lower-right 17%, upper-right 10%","lower-right 56%, upper-right 27%, lower-left 14%, upper-left 3%"
+SCORE,LOG-S,0.18209694149009573,112,158,0.24404761904761904,0.32038834951456313,"upper-left 32%, lower-left 32%, lower-right 31%, upper-right 4%","lower-right 53%, upper-right 25%, lower-left 14%, upper-left 9%"

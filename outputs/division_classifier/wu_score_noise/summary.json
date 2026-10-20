@@ -1,0 +1,41 @@
+{
+ "vs Wu's Seurat scores": {
+  "r S": 0.9999999999999999,
+  "r G2M": 0.9927008659018045,
+  "r max": 0.99560738484043,
+  "call kappa": 0.9078458974896869,
+  "call rate scanpy / Seurat (ER+)": [
+   0.11738709761774012,
+   0.13192646635809732
+  ]
+ },
+ "control-gene seeds": {
+  "seeds": 10,
+  "median per-cell SD of max score": 0.01726483989481815,
+  "median |max score|": 0.07239103168317079,
+  "cells whose call flips across seeds (ER+)": 0.16008995580659502,
+  "of cells called at seed 0, share that flip (ER+)": 0.4517709957674315
+ },
+ "split half, ER+": {
+  "cells": 38241,
+  "median UMI": 4241.0,
+  "split-half r": 0.736449280707611,
+  "Spearman-Brown full-depth r": 0.8482243494120423,
+  "split-half call kappa": 0.2762272664693176,
+  "split-half call MCC": 0.2769085655875165,
+  "half call vs full call MCC": 0.522807642214657,
+  "call rate full": 0.11738709761774012,
+  "call rate half": 0.17054993331764337
+ },
+ "split half, all patients": {
+  "cells": 100064,
+  "median UMI": 3573.0,
+  "split-half r": 0.8579300175404868,
+  "Spearman-Brown full-depth r": 0.9235331895613677,
+  "split-half call kappa": 0.37446584645162573,
+  "split-half call MCC": 0.37525361372435273,
+  "half call vs full call MCC": 0.6021164712149354,
+  "call rate full": 0.18195354972817396,
+  "call rate half": 0.23188159577870163
+ }
+}
