@@ -204,7 +204,8 @@ def main():
         say(f"BASE-T null: truncated likelihood at alpha_trim {L.BASE_T_TRUNC:g} (variant {L.VARIANT}) ...")
         full_fit = L.fit_nb_additive_null(y, Xa, off, m_null if mistic else np.zeros(n))
         trunc_fit = L.truncated_null(y, Xa, off, m_null if mistic else np.zeros(n), L.BASE_T_TRUNC,
-                                     full_fit, say=say, param_tol=L.TRUNC_PARAM_TOL)
+                                     full_fit, say=say, param_tol=L.TRUNC_PARAM_TOL,
+                                     c_floor=L.TRUNC_C_FLOOR)
         muT, aT = trunc_fit["mu"], float(trunc_fit["alpha"])
         out["mu0_T"], out["alpha0_T"] = muT, aT
         say(f"  alpha0_T = {aT:.4f}, theta_m {trunc_fit['theta_m']:.4f}, stopped on "
@@ -310,7 +311,7 @@ def main():
         mm = m_null if mistic else np.zeros(n)
         ysT = L.sim_nb(muT, aT, np.random.default_rng(2027))
         ft_s = L.truncated_null(ysT, Xa, off, mm, L.BASE_T_TRUNC, L.fit_nb_additive_null(ysT, Xa, off, mm),
-                                param_tol=L.TRUNC_PARAM_TOL)
+                                param_tol=L.TRUNC_PARAM_TOL, c_floor=L.TRUNC_C_FLOOR)
         muT_s, aT_s = ft_s["mu"], float(ft_s["alpha"])
     for ab in L.ALPHA_B_GRID:
         Lt_s, _c, ai_s, _p = L.base_t(ysT, muT_s, aT_s, ab)

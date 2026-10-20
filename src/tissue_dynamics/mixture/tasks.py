@@ -110,7 +110,7 @@ def enumerate_tasks(job, cfg):
     if job == "portrait_block_boot":
         # Phase portrait spec 8.2: spatial block bootstrap with refits.
         return [{"job": job, "rep": r} for r in range(int(cfg.get("portrait_block_reps", 50)))]
-    if job in ("division_sim", "division_sim_addendum", "division_sim_t10"):
+    if job in ("division_sim", "division_sim_addendum", "division_sim_t10", "division_sim_w30"):
         # Division classifier comparison, spec 7: the known-truth simulation.
         # One task per generator and replicate; the replicate's cells are
         # shared by its three generators (division/simulation.py). The
@@ -174,12 +174,13 @@ def run_task(task, cfg, verbose=False, out_dir=None):
         say = (lambda *a: print(*a, flush=True)) if verbose else None
         fn = run_param_chunk if job == "portrait_param_boot" else run_block_rep
         return {**task, **fn(task, cfg, say=say)}
-    if job in ("division_sim", "division_sim_addendum", "division_sim_t10"):
+    if job in ("division_sim", "division_sim_addendum", "division_sim_t10", "division_sim_w30"):
         from ..division.simulation import run_replicate
         return {**task, **run_replicate(task, cfg,
                                         say=(lambda *a: print(*a, flush=True)) if verbose else None,
                                         addendum=job == "division_sim_addendum",
-                                        variant="t10" if job == "division_sim_t10" else None)}
+                                        variant=(job.rsplit("_", 1)[1] if job in ("division_sim_t10",
+                                                 "division_sim_w30") else None))}
     try:
         return _run_sim(task, cfg) if job.startswith("sim_") else _run_real(
             task, cfg, verbose=verbose, out_dir=out_dir)

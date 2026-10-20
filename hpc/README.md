@@ -26,6 +26,7 @@ is a no-op (the worker skips one whose output already exists).
 | `portrait_param_boot` | 50 | phase portrait spec 8.1: 50 x 10 draws from the mixture's block-cluster sandwich covariance, each portrait summarised |
 | `portrait_block_boot` | 50 | phase portrait spec 8.2: spatial block bootstrap refits (full parameters kept), each portrait summarised |
 | `division_sim_t10` | 30 | Stage 6 rerun on the t10 label variant (BASE-T from the alpha_trim 0.2 truncated null at alpha_B 0.1085) |
+| `division_sim_w30` | 30 | Stage 6 rerun on the w30 label variant (floored alpha_trim 0.3 truncated null at alpha_B 0.1547, the Wu v2 pick) |
 
 ## One-time setup
 
@@ -138,6 +139,19 @@ truncated null on its simulated counts (about a minute at n = 100,000), so tasks
 a little longer than `division_sim`'s 2-5 min. Copy back
 `outputs/hpc/division_sim_t10/` and run
 `DIV_VARIANT=t10 python run/division_stage6_gather.py`.
+
+## Stage 6 on the w30 label variant (2026-10-20)
+
+```bash
+git pull                                   # labels.py (variant w30), simulation.py, tasks.py
+./hpc/submit.sh division_sim_w30           # 30 tasks; the same draws as division_sim
+```
+
+As for t10: its inputs, `outputs/division_classifier_w30/{sim_inputs.npz, folds.parquet,
+nb_params_nbc_full.json}`, are committed. Each replicate refits the floored truncated null
+(c_floor 2) at alpha_trim 0.3 on its simulated counts. Copy back
+`outputs/hpc/division_sim_w30/` and run
+`DIV_VARIANT=w30 python run/division_stage6_gather.py`.
 
 ## Phase portrait uncertainty and the radius sensitivity (2026-10-20)
 

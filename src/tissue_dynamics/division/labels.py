@@ -25,11 +25,19 @@ TRUNC_GRID = (0.001, 0.01, 0.05)                  # addendum 1, section 1.3: alp
 #        fitted it) at the alpha_B that labels 10% of the breast section's cells.
 #        Both calibrations support alpha_trim ~0.2; 0.1085 is the 10% level (report.md,
 #        "BASE-T-trunc calibrated ..."). BASE-O and SCORE are unchanged.
+#   w30  2026-10-20 (user: "the updated truncated null with the best parameters"):
+#        the floored truncated null (c_floor 2: a count of 1 is never trimmed; the
+#        floor added in Wu calibration v2) at alpha_trim 0.3, the choice of both the G4
+#        and the Wu v2 calibrations, at the Wu v2 rule pick alpha_B 0.1547 (Seurat call
+#        on every ER+ Wu cell; 11.8% of the section). 0.1229 labels exactly 10%.
 VARIANTS = {"t10": dict(trunc=0.2, alpha_b=0.1085, grid=(0.1085, 0.05, 0.01, 0.001),
-                        dataset=None)}
+                        dataset=None, c_floor=1),
+            "w30": dict(trunc=0.3, alpha_b=0.1547, grid=(0.1547, 0.1229, 0.05, 0.01, 0.001),
+                        dataset=None, c_floor=2)}
 VARIANT = os.environ.get("DIV_VARIANT") or None
 BASE_T_TRUNC = None            # alpha_trim of BASE-T's null; None = Stage 1's naive null
 TRUNC_PARAM_TOL = 1e-3
+TRUNC_C_FLOOR = 1              # truncated_null's c_floor for BASE-T's null
 if VARIANT is not None:
     if VARIANT not in VARIANTS:
         raise ValueError(f"unknown DIV_VARIANT {VARIANT!r}; known: {sorted(VARIANTS)}")
@@ -39,6 +47,7 @@ if VARIANT is not None:
     ALPHA_B_PRIMARY = VARIANTS[VARIANT]["alpha_b"]
     ALPHA_B_GRID = VARIANTS[VARIANT]["grid"]
     BASE_T_TRUNC = VARIANTS[VARIANT]["trunc"]
+    TRUNC_C_FLOOR = VARIANTS[VARIANT]["c_floor"]
 TD_GRID = (0.0, 0.25, 0.5, 0.75, 1.0)
 TD_PRIMARY = 0.5
 TRIM_P = 0.001
@@ -46,8 +55,10 @@ SCORE_P = 0.001
 
 
 def ab_tag(a):
-    return {0.2: "a2", 0.1085: "a1085", 0.1: "a1", 0.05: "a05", 0.01: "a01", 0.001: "a001",
-            1e-4: "a0001"}[float(a)]
+    known = {0.2: "a2", 0.1085: "a1085", 0.1: "a1", 0.05: "a05", 0.01: "a01", 0.001: "a001",
+             1e-4: "a0001"}
+    a = float(a)
+    return known.get(a) or "a" + f"{a:g}".split(".")[1]           # 0.1547 -> a1547
 
 
 def trunc_tag(a):

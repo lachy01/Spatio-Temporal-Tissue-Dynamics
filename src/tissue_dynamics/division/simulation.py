@@ -61,7 +61,7 @@ plus:
 The per-type ratio spread (section 6) and the alpha_B surface (section 2.3)
 are computed from the stored contrasts by run/division_addendum_a5_gather.py.
 
-Label variant (job `division_sim_t10`, `variant="t10"`; labels.VARIANTS):
+Label variants (jobs `division_sim_t10` / `division_sim_w30`; labels.VARIANTS):
 BASE-T is rebuilt from the truncated-likelihood null at the variant's
 alpha_trim, refitted on the simulated y from the untrimmed fit as Stage 1
 fits it, at the variant's primary alpha_B; inputs are read from, and
@@ -221,7 +221,8 @@ def run_replicate(task, cfg, say=None, addendum=False, variant=None):
     if vset:
         mz = m_null if m_null is not None else np.zeros(n_sim)
         ft = L.truncated_null(y, Xa, off_null, mz, vset["trunc"],
-                              L.fit_nb_additive_null(y, Xa, off_null, mz), param_tol=L.TRUNC_PARAM_TOL)
+                              L.fit_nb_additive_null(y, Xa, off_null, mz), param_tol=L.TRUNC_PARAM_TOL,
+                              c_floor=vset.get("c_floor", 1))
         LT, cT, _, _ = L.base_t(y, ft["mu"], ft["alpha"], ab_primary)
         baset_alpha0 = float(ft["alpha"])
     else:
