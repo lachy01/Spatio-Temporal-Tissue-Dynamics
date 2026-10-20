@@ -2701,3 +2701,28 @@ No calibration singles out a rate.
 10% is therefore a defensible middle and marginally better than the Wu pick of 11.8%. Nothing in
 the data prefers it over about 6%, so it should be reported with 5.8% beside it as a
 sensitivity. Stage 6 on w30 (Spartan) will add the 11.8% point.
+
+### Stage 6 on w30 (Spartan, gathered 2026-10-20)
+
+30 replicates, all fits converged (`outputs/division_classifier_w30/report.md`). LOG-T on its
+BASE-T label against the simulated truth, beside the earlier labels. Each cell gives G1 / G2,
+medians over replicates:
+
+| label | rate on the section | rank agreement with π_true | neighbourhood slope (1 = recovered) | fraction error |
+|---|---|---|---|---|
+| original (naive null, α_B 0.05) | 3.3% | 0.846 / 0.867 | **0.730 / 0.588** | 0.055 / 0.055 |
+| t10 (trunc 0.2, 10%) | 10.0% | 0.826 / 0.827 | 0.383 / 0.332 | **0.017 / 0.018** |
+| w30 (floored trunc 0.3, α_B 0.1547) | 11.8% | **0.866 / 0.857** | 0.340 / 0.288 | 0.025 / 0.023 |
+| MIX π (no label) | — | 0.970 / 0.960 | 0.974 / 0.958 | 0.007 / 0.032 |
+
+**Reading.**
+- **11.8% is worse than 10%** on the two quantities the thesis uses: per-type fractions (error
+  0.024 against 0.017) and neighbourhood effects (slope 0.30–0.34 against 0.33–0.38). It is
+  slightly better on cell ranking (0.86 against 0.83).
+- **The strict 3% label recovers neighbourhood effects best** (0.73 / 0.59), but its fractions
+  are 3× worse.
+- **No label comes close to MIX's π** on any measure.
+
+This completes the evidence for the choice of rate. Keep **10%** as the primary BASE-T (t10, or
+equivalently w30 at α_B 0.1229; 99.6% the same cells). Report the strict label beside it for
+neighbourhood effects. The Wu pick of 11.8% is dominated by 10%.
