@@ -1,0 +1,97 @@
+{
+ "power": 8,
+ "stable point": {
+  "Endothelial": 14.24755402154822,
+  "CAFs": 17.39864106515671,
+  "PVL": 10.006682146635324,
+  "B-cells": 33.30671759804595,
+  "T-cells": 41.439352706758655,
+  "Myeloid": 18.50890404456988,
+  "Normal Epithelial": 14.633337418295728,
+  "Plasmablasts": 13.433220118458843,
+  "Cancer Epithelial": 21.99601891821523
+ },
+ "n": 184.97042803768454,
+ "excess cycling pi - pi_bar": {
+  "Endothelial": 0.022323872146753534,
+  "CAFs": 0.01719907130383331,
+  "PVL": 0.0038358949312813848,
+  "B-cells": 0.012221901563355925,
+  "T-cells": 0.002556128777151251,
+  "Myeloid": 0.014136622694567613,
+  "Normal Epithelial": 0.013789086249962959,
+  "Plasmablasts": 0.019405329949846423,
+  "Cancer Epithelial": 0.00045377386110329043
+ },
+ "density / x_max": {
+  "Endothelial": 0.7979005625716333,
+  "CAFs": 0.8937777005700893,
+  "PVL": 0.631882324213152,
+  "B-cells": 0.6753883494656546,
+  "T-cells": 0.5514777687133089,
+  "Myeloid": 0.755804209776899,
+  "Normal Epithelial": 0.775511317934773,
+  "Plasmablasts": 0.7971433287216483,
+  "Cancer Epithelial": 0.47607754337040314
+ },
+ "nearest 2%": {
+  "cells": 11238,
+  "median density": 158.65758389473316,
+  "median X": {
+   "Endothelial": 12.006086911473293,
+   "CAFs": 13.614682458284594,
+   "PVL": 11.484855978995371,
+   "B-cells": 22.6882335713221,
+   "T-cells": 41.605593910433306,
+   "Myeloid": 16.586164976956958,
+   "Normal Epithelial": 10.336563841021738,
+   "Plasmablasts": 8.933243020372966,
+   "Cancer Epithelial": 11.624650137114813
+  },
+  "own type of those cells": {
+   "T-cells": 0.274,
+   "B-cells": 0.154,
+   "Myeloid": 0.119,
+   "CAFs": 0.099,
+   "Endothelial": 0.085,
+   "PVL": 0.085,
+   "Normal Epithelial": 0.067,
+   "Cancer Epithelial": 0.059,
+   "Plasmablasts": 0.058
+  }
+ },
+ "trajectories": {
+  "unbounded": {
+   "starts": 400,
+   "reach the stable state": 0.0,
+   "collapse (n < 1 cell per (100 um)^2)": 0.9675,
+   "run away (n above the 99.9th pct and rising)": 0.0,
+   "other (another state, or still moving at t = 3000)": 0.0325,
+   "median n at the end of 'other'": 246.82160231147864,
+   "start with every type present": 0.785
+  },
+  "OSDR bound, p = 8": {
+   "starts": 400,
+   "reach the stable state": 0.6225,
+   "collapse (n < 1 cell per (100 um)^2)": 0.2975,
+   "run away (n above the 99.9th pct and rising)": 0.0,
+   "other (another state, or still moving at t = 3000)": 0.08,
+   "median n at the end of 'other'": 187.87556202581817,
+   "start with every type present": 0.785
+  }
+ },
+ "fate crosstab (rows unbounded, columns bounded)": {
+  "collapse": {
+   "collapse": 117,
+   "other": 2
+  },
+  "other": {
+   "collapse": 21,
+   "other": 11
+  },
+  "stable": {
+   "collapse": 249,
+   "other": 0
+  }
+ }
+}

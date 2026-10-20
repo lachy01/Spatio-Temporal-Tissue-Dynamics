@@ -964,6 +964,61 @@ the runaway of §2 and §12 is real. The OSDR bound can create a stable, data-su
 state, but which state, and whether it exists at all, is a property of the bound's settings.
 It should be reported as a sensitivity result, not as an estimate of the tissue's attractor.
 
+### The stable state in pictures, and what flows into it (2026-10-20)
+
+`run/portrait_stable_state_figure.py` (count-based state, p = 8). It writes
+`equilibria/stable_state_{composition,flow,tissue}.png` and `stable_state_summary.json`.
+
+- **Composition** (`stable_state_composition.png`). The figure shows each type's density
+  against the bound's x_max and against the 2% of observed neighbourhoods closest to the
+  stable state. It also shows the excess cycling π_k − π̄_k that the bound cancels there.
+  - Tumour (+0.000), T-cells (+0.003) and PVL (+0.004) balance on the fit's own rates.
+  - Endothelial, CAFs, B-cells, Myeloid, Normal Epithelial and Plasmablasts need the
+    correction (+0.012 to +0.022).
+  - The closest observed neighbourhoods (11,238 cells, median n 159) are T-cell-rich and have
+    less tumour than the stable point. Their own cells are T-cells 27%, B-cells 15% and
+    Myeloid 12%.
+- **Where it is in the tissue** (`stable_state_tissue.png`). Those neighbourhoods form bands
+  and rings bordering tumour nests: lymphocyte-rich stroma at the tumour margin.
+- **What flows into it** (`stable_state_flow.png`). The ODE was integrated to t = 3000 from 400
+  observed neighbourhoods, shown in the first two principal components of log2(1 + X):
+
+  | | reach the stable state | collapse (n < 1) | other |
+  |---|---|---|---|
+  | unbounded | 0% | 97% | 3% (a dense state at n ≈ 247, beyond the data) |
+  | OSDR bound, p = 8 | 62% | 30% | 8% (near-stable states with some types absent, n ≈ 188) |
+
+  "Collapse" ends at the only low-density state, CAFs alone at n = 0.16. That density is far
+  below any observed one, in a range where the density response is extrapolated, so it reads
+  as tissue emptying out. Under the bound the dynamics are therefore **bistable: the
+  lymphocyte-rich state or collapse**. A 9-type saddle inside support at n = 141 sits between
+  them.
+
+**Why the bound turns collapse into the stable state.** 249 of the 400 starts collapse
+unbounded and reach the stable state under the bound. A bound can only lower growth, so the
+effect runs through the interactions. Median trajectories of these starts:
+
+| t | Endothelial | CAFs | Myeloid | T-cells | Tumour | n |
+|---|---|---|---|---|---|---|
+| 0 | 6.6 | 7.6 | 12.3 | 22.0 | 10.6 | 87 |
+| 50, unbounded | 17.7 | 15.0 | 24.1 | 38.3 | 13.0 | 183 |
+| 120, unbounded | 25.1 | 28.5 | 28.2 | 8.9 | 2.3 | 151 |
+| 300, unbounded | 3.8 | 6.9 | 1.8 | 0.0 | 0.0 | 15 |
+| 300, bound p = 8 | 14.2 | 17.4 | 18.5 | 41.4 | 22.0 | 185 |
+
+The two runs agree up to t ≈ 50: every type grows.
+
+- **Unbounded:** the stromal and myeloid types have escape thresholds and no ceiling (§12), so
+  they keep expanding. A stroma-rich neighbourhood lowers every type's cycling (§7's
+  row-centred table), so T-cells and tumour die out. The neighbourhood then thins below the
+  stroma's own escape threshold and collapses.
+- **Bounded:** the stroma is held at 75–90% of x_max, never crowds out the lymphocytes and
+  tumour, and the neighbourhood settles.
+
+The bound's work is therefore to **stop stromal overgrowth**, and that alone turns
+crowd-out-then-collapse into a stable lymphocyte-rich state. Unbounded, the stromal escape
+thresholds of §12 (present in 100% of bootstrap replicates) are what drive the collapse.
+
 ## Files
 
 ```
@@ -986,6 +1041,7 @@ outputs/portrait/
   sensitivity/grid.csv, grid.json              spec 9 (portrait_sensitivity.py)
   sensitivity/anchor_sweep.csv/.txt            anchor multiplier 0.7-1.3 (portrait_anchor_sweep.py)
   equilibria/<state>_<bound>.csv/.txt         section 13: full-system stationary points (portrait_full_equilibria.py)
+  equilibria/stable_state_*.png, *_summary.json section 13: the stable state's figures (portrait_stable_state_figure.py)
 ```
 
 Every portrait output in this directory was regenerated on 2026-10-20 with the own-type
