@@ -181,8 +181,29 @@ def type_count_loadings(df, names, radius_um):
     return np.where(tot > 0, C / np.clip(tot, 1, None), 0.0)
 
 
+def type_score_weights(df, names, temperature=None):
+    """Soft type memberships from the PhiSpace scores, for the score-weighted anchor.
+
+    `temperature=None`: the scores as memberships. PhiSpace regresses a +/-1
+    one-hot code, so `(s + 1) / 2` sums to one over types; negative entries
+    (13% on breast) are clipped and rows renormalised. These are shrunk toward
+    1/K (a cell's own-type membership averages 0.29-0.49), so most of a type's
+    weight comes from cells of other types.
+    `temperature=t`: softmax of the column-standardised scores (the breast
+    labelling rule's scale) at temperature t; t -> 0 recovers hard argmax
+    labels, large t the uniform weights.
+    """
+    S = df[[f"phi_{j:02d}" for j in range(len(names))]].to_numpy(float)
+    if temperature is None:
+        M = np.clip((S + 1) / 2, 0, None)
+        return M / M.sum(1, keepdims=True)
+    Z = (S - S.mean(0)) / np.where(S.std(0) > 0, S.std(0), 1.0) / float(temperature)
+    E = np.exp(Z - Z.max(1, keepdims=True))
+    return E / E.sum(1, keepdims=True)
+
+
 def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", radius_um=80.0,
-                     anchor="own_type"):
+                     anchor="own_type", anchor_weights=None):
     """Named centroids (spec 1.3's `"centroid"` provider), plus loadings.
 
     `state` sets how a neighbourhood becomes the portrait's state `X = n w`:
@@ -200,7 +221,10 @@ def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", ra
                       with W the NEIGHBOURHOOD loadings. That is the mean cycling
                       of cells living among type k, not of type k -- for CAFs
                       0.066 against their own 0.022 -- and it held stroma below
-                      its anchor and tumour above it everywhere (FINDINGS §12).
+                      its anchor and tumour above it everywhere (FINDINGS §12);
+      "score_weighted" `sum_i S[i,k] pi_i / sum_i S[i,k]` with `anchor_weights`
+                      S (N, K) the cells' soft own-type memberships
+                      (`type_score_weights`); hard labels are the limit (FINDINGS §14).
     """
     names = list(basis.phi_names)
     own = basis.own(df)
@@ -225,6 +249,12 @@ def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", ra
         if anchor == "own_type":
             pb = np.array([pi_hat[arche == nm].mean() for nm in names])
             pbc = pb.copy()
+        elif anchor == "score_weighted":
+            if anchor_weights is None:
+                raise ValueError("anchor='score_weighted' needs anchor_weights (N, K)")
+            S = np.asarray(anchor_weights, dtype=float)
+            pb = (S * pi_hat[:, None]).sum(0) / S.sum(0)
+            pbc = pb.copy()
         elif anchor == "nbhd_loading":
             # spec 3.2 literally: signed neighbourhood loadings (and the clipped
             # variant, which moves no anchor by more than 0.017)
@@ -232,7 +262,7 @@ def build_archetypes(df, basis, model=None, pi_hat=None, state="barycentric", ra
             wp = np.clip(W, 0, None)
             pbc = np.array([np.sum(wp[:, k] * pi_hat) / np.sum(wp[:, k]) for k in range(len(names))])
         else:
-            raise ValueError(f"anchor must be 'own_type' or 'nbhd_loading', not {anchor!r}")
+            raise ValueError(f"anchor must be 'own_type', 'score_weighted' or 'nbhd_loading', not {anchor!r}")
     return Archetypes(names=names, A=A, Q=basis.Q_own, pi_bar=pb, X_obs=X,
                       r2_recon=r2, pi_bar_clipped=pbc), W
 

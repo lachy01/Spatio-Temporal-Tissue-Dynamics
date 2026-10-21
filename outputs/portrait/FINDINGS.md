@@ -1019,6 +1019,124 @@ The bound's work is therefore to **stop stromal overgrowth**, and that alone tur
 crowd-out-then-collapse into a stable lymphocyte-rich state. Unbounded, the stromal escape
 thresholds of §12 (present in 100% of bootstrap replicates) are what drive the collapse.
 
+## 14. Sensitivity: a score-weighted own-type anchor (2026-10-21)
+
+The anchor of §12 is a hard-label mean, `π̄_k = mean of π̂_i over the cells labelled k` (argmax
+of the standardised PhiSpace scores). The score-weighted version replaces the label with a
+soft membership `S_ik`, giving `π̄_k = Σ_i S_ik π̂_i / Σ_i S_ik`. It is implemented as
+`build_archetypes(..., anchor="score_weighted", anchor_weights=S)`, with weights from
+`portrait.core.type_score_weights`, and run by `run/portrait_anchor_weighted.py`.
+
+Only the anchor changes. The centroids, states and the bound's π-cap keep the hard labels.
+Everything is computed on the count-based state.
+
+### The weights
+
+PhiSpace regresses a ±1 one-hot code, so `(s + 1)/2` sums to one over types. This gives a
+parameter-free "membership". (13% of entries are negative; they are clipped and the rows
+renormalised.)
+
+**It is not a calibrated probability.**
+
+- A cell's membership in its own labelled type averages only 0.29–0.49.
+- 78% of cells have no type above 0.5.
+- The total membership mass is nearly flat across types: 42k–72k, against label counts
+  of 40k–111k. This is PLS shrinkage toward 1/9.
+
+As a result, only 21–57% of each anchor's weight comes from the type's own cells. The rest
+mixes in other types' cycling, the same contamination as spec §3.2's neighbourhood anchor
+(§12). The CAF anchor, for example, is 0.064 here, against 0.066 for the neighbourhood
+anchor and 0.022 for its own cells.
+
+A softmax of the standardised scores at temperature `t` sits between the two. It recovers
+the hard labels as t → 0 and tends toward uniform weights as t grows. Nothing in the data
+fixes `t`, so these runs are a sensitivity sweep, not a replacement anchor.
+
+| archetype | hard (§12) | t = 0.25 | t = 0.5 | t = 1 | membership |
+|---|---|---|---|---|---|
+| Endothelial | 0.037 | 0.042 | 0.052 | 0.069 | 0.074 |
+| CAFs | 0.022 | 0.024 | 0.035 | 0.058 | 0.064 |
+| PVL | 0.056 | 0.062 | 0.071 | 0.083 | 0.089 |
+| B-cells | 0.090 | 0.091 | 0.095 | 0.099 | 0.097 |
+| T-cells | 0.110 | 0.110 | 0.109 | 0.107 | 0.104 |
+| Myeloid | 0.042 | 0.044 | 0.050 | 0.065 | 0.063 |
+| Normal Epithelial | 0.092 | 0.100 | 0.108 | 0.110 | 0.111 |
+| Plasmablasts | 0.114 | 0.120 | 0.122 | 0.117 | 0.113 |
+| Cancer Epithelial | 0.203 | 0.203 | 0.192 | 0.165 | 0.159 |
+| own cells' share of the weight | 100% | 71–92% | 51–82% | 32–61% | 21–57% |
+
+Softening the labels raises the low anchors (stroma and myeloid) and lowers the tumour's.
+Every anchor moves toward the section mean of 0.098.
+
+### Thresholds at each archetype's own composition (as §12)
+
+Notation: `s`/`u` is a stable/unstable crossing at density n (its percentile in brackets).
+
+| | hard | t = 0.25 | t = 0.5 | t = 1 | membership |
+|---|---|---|---|---|---|
+| Cancer Epithelial | s79 (p45) | s80 (p46) | s93 (p59); u143; s167 (p91) | s198 (p97) | s203 (p97) |
+| CAFs | u71 (p34) | u79; s98; u132 | shrinks | shrinks | shrinks |
+| Myeloid | u83 (p50) | u93; s283 | u133; s187 | shrinks | shrinks |
+| T-cells | s154 (p88) | s154 | s157 | s161 | s168 |
+| B-cells | s132 (p81) | s115 (p74) | shrinks | shrinks | shrinks |
+| Endothelial | u129; s189 | shrinks | shrinks | shrinks | shrinks |
+| tumour composition-path ceiling | 86–171 | 86–172 | 98–184 | 202–208 | 207–213 |
+| under OSDR p = 8: Cancer Epithelial | s58 (p19) | s58 (p20) | s66 (p28) | s74 (p38) | s74 (p39) |
+
+- **t = 0.25 leaves the tumour unchanged.** Its ceiling stays at n ≈ 80 and its composition
+  path is unchanged. The structures near zero net rate do shift: CAFs gain a ceiling above
+  their escape threshold, Myeloid's escape moves to n = 93, and Endothelial's Allee window
+  disappears.
+- **By t = 1 (and membership) the unbounded picture of §12 is undone.** The tumour's
+  ceiling goes back to the 97th percentile, where the spec anchor had put it. Stroma,
+  myeloid and B-cells shrink at every density, and the escape thresholds disappear.
+- **t = 0.5 is the crossover.** Under it the tumour is bistable at its own composition.
+- **Under the bound the tumour's ceiling stays inside the data throughout.** It moves from
+  the 19th to the 39th percentile of density.
+
+### Where trajectories end (as §13)
+
+Trajectories start from 400 observed states and run to t = 3000, as in §13.
+
+Classification rules:
+- A type below 0.5 cells per (100 µm)² that is still declining at the end is counted as
+  going extinct. At rates near −0.001 it is still far from 0 at t = 3000.
+- The surviving types must have |r_k| < 1e-5 to count as settled.
+- Types absent at the start stay at 0, since the face is invariant.
+
+Attractors are given as share of starts, n and the number of types present.
+
+| anchor | unbounded | OSDR p = 8 |
+|---|---|---|
+| hard | 95% collapse; the rest on 3–4-type faces | **56% to n = 185 (9 types)**; 34% collapse; 6% to 8-type faces |
+| t = 0.25 | 96% collapse | **58% to n = 187 (9 types)**; 32% collapse |
+| t = 0.5 | 31% to n = 188 (CAFs, Myeloid, tumour, Plasmablasts, Endothelial; no lymphocytes); 13% collapse; 47% unsettled | **74% to n = 190 (9 types)**; 9% collapse |
+| t = 1 | 42% to n = 211 (B-cells 105, tumour 45, PVL, T-cells); 3% collapse; 44% unsettled | **79% to n = 190 (8 types, no CAFs)**; 3% collapse |
+| membership | 12% to n = 216 (as t = 1); 3% collapse; 72% unsettled | **80% to n = 188 (7 types, no CAFs or PVL)**; 3% collapse |
+
+The hard-anchor numbers differ slightly from §13 (56% and 34%, against 62% and 30%) because
+the 400 starts are a different sample.
+
+### Reading
+
+- **The bounded stable state of §13 is robust to the anchor.** Under every weighting, most
+  trajectories under the bound end at a lymphocyte-rich state near n = 185–190. Its
+  composition holds closely: T-cells 41–56, B-cells 33–36, Myeloid 15–19, Plasmablasts
+  13–15, tumour 22–39. What the anchor decides is whether the stroma persist in it:
+  - CAFs persist up to t = 0.5;
+  - CAFs are lost at t = 1;
+  - CAFs and PVL are both lost under membership weights.
+- **Softer anchors also reduce collapse.** Collapse falls from 34% to 3% because the
+  tumour's anchor drops. The CAF escape threshold, which drives collapse (§13), disappears
+  once CAFs shrink everywhere.
+- **The unbounded portrait is not robust to the anchor.** Its thresholds, its tumour
+  ceiling and whether trajectories collapse all depend on how much of other types'
+  cycling the anchor absorbs. This extends §12's ±5% anchor sensitivity.
+- **The hard-label anchor stays the primary.** The score weights are uncalibrated, so any
+  `t` beyond about 0.25 mostly measures mixing between types rather than uncertainty in a
+  cell's type. t = 0.25, which keeps 71–92% of each anchor's weight on its own cells,
+  changes nothing that §12–§13 report about the tumour or the bounded stable state.
+
 ## Files
 
 ```
@@ -1040,6 +1158,7 @@ outputs/portrait/
   uncertainty/arrows_<source>_<state>.png      spec 8.3 arrow uncertainty (portrait_uncertainty_arrows.py)
   sensitivity/grid.csv, grid.json              spec 9 (portrait_sensitivity.py)
   sensitivity/anchor_sweep.csv/.txt            anchor multiplier 0.7-1.3 (portrait_anchor_sweep.py)
+  sensitivity/anchor_weighted.csv/.txt/.json   section 14: score-weighted anchor (portrait_anchor_weighted.py)
   equilibria/<state>_<bound>.csv/.txt         section 13: full-system stationary points (portrait_full_equilibria.py)
   equilibria/stable_state_*.png, *_summary.json section 13: the stable state's figures (portrait_stable_state_figure.py)
 ```

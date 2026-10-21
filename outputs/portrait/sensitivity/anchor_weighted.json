@@ -1,0 +1,778 @@
+{
+ "anchors": {
+  "hard": {
+   "Endothelial": 0.037,
+   "CAFs": 0.022,
+   "PVL": 0.056,
+   "B-cells": 0.09,
+   "T-cells": 0.11,
+   "Myeloid": 0.042,
+   "Normal Epithelial": 0.092,
+   "Plasmablasts": 0.114,
+   "Cancer Epithelial": 0.203
+  },
+  "softmax t=0.25": {
+   "Endothelial": 0.042,
+   "CAFs": 0.024,
+   "PVL": 0.062,
+   "B-cells": 0.091,
+   "T-cells": 0.11,
+   "Myeloid": 0.044,
+   "Normal Epithelial": 0.1,
+   "Plasmablasts": 0.12,
+   "Cancer Epithelial": 0.203
+  },
+  "softmax t=0.5": {
+   "Endothelial": 0.052,
+   "CAFs": 0.035,
+   "PVL": 0.071,
+   "B-cells": 0.095,
+   "T-cells": 0.109,
+   "Myeloid": 0.05,
+   "Normal Epithelial": 0.108,
+   "Plasmablasts": 0.122,
+   "Cancer Epithelial": 0.192
+  },
+  "softmax t=1": {
+   "Endothelial": 0.069,
+   "CAFs": 0.058,
+   "PVL": 0.083,
+   "B-cells": 0.099,
+   "T-cells": 0.107,
+   "Myeloid": 0.065,
+   "Normal Epithelial": 0.11,
+   "Plasmablasts": 0.117,
+   "Cancer Epithelial": 0.165
+  },
+  "membership": {
+   "Endothelial": 0.074,
+   "CAFs": 0.064,
+   "PVL": 0.089,
+   "B-cells": 0.097,
+   "T-cells": 0.104,
+   "Myeloid": 0.063,
+   "Normal Epithelial": 0.111,
+   "Plasmablasts": 0.113,
+   "Cancer Epithelial": 0.159
+  }
+ },
+ "own-cell share": {
+  "hard": {
+   "Endothelial": 1.0,
+   "CAFs": 1.0,
+   "PVL": 1.0,
+   "B-cells": 1.0,
+   "T-cells": 1.0,
+   "Myeloid": 1.0,
+   "Normal Epithelial": 1.0,
+   "Plasmablasts": 1.0,
+   "Cancer Epithelial": 1.0
+  },
+  "softmax t=0.25": {
+   "Endothelial": 0.8,
+   "CAFs": 0.9,
+   "PVL": 0.76,
+   "B-cells": 0.83,
+   "T-cells": 0.92,
+   "Myeloid": 0.87,
+   "Normal Epithelial": 0.71,
+   "Plasmablasts": 0.76,
+   "Cancer Epithelial": 0.91
+  },
+  "softmax t=0.5": {
+   "Endothelial": 0.63,
+   "CAFs": 0.75,
+   "PVL": 0.58,
+   "B-cells": 0.68,
+   "T-cells": 0.82,
+   "Myeloid": 0.74,
+   "Normal Epithelial": 0.51,
+   "Plasmablasts": 0.57,
+   "Cancer Epithelial": 0.8
+  },
+  "softmax t=1": {
+   "Endothelial": 0.42,
+   "CAFs": 0.51,
+   "PVL": 0.36,
+   "B-cells": 0.47,
+   "T-cells": 0.61,
+   "Myeloid": 0.53,
+   "Normal Epithelial": 0.32,
+   "Plasmablasts": 0.36,
+   "Cancer Epithelial": 0.6
+  },
+  "membership": {
+   "Endothelial": 0.3,
+   "CAFs": 0.36,
+   "PVL": 0.21,
+   "B-cells": 0.41,
+   "T-cells": 0.56,
+   "Myeloid": 0.43,
+   "Normal Epithelial": 0.23,
+   "Plasmablasts": 0.24,
+   "Cancer Epithelial": 0.53
+  }
+ },
+ "runs": {
+  "hard|unbounded": {
+   "thresholds": {
+    "Cancer Epithelial": "s79 (p45)",
+    "CAFs": "u71 (p34)",
+    "Myeloid": "u83 (p50)",
+    "T-cells": "s154 (p88)",
+    "B-cells": "s132 (p81)",
+    "Endothelial": "u129 (p80); s189 (p95)",
+    "CE path ceiling": "86-171"
+   },
+   "fates": {
+    "collapse": 0.9525,
+    "runaway": 0.0,
+    "still moving": 0.0,
+    "attractors": [
+     {
+      "share": 0.025,
+      "n": 161.9282757693379,
+      "types present": 4,
+      "X": {
+       "Endothelial": 47.21,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 45.26,
+       "Normal Epithelial": 18.81,
+       "Plasmablasts": 50.65,
+       "Cancer Epithelial": 0.0
+      }
+     },
+     {
+      "share": 0.0175,
+      "n": 247.52098719147324,
+      "types present": 4,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 42.78,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 139.12,
+       "Normal Epithelial": 9.95,
+       "Plasmablasts": 55.66,
+       "Cancer Epithelial": 0.0
+      }
+     },
+     {
+      "share": 0.005,
+      "n": 246.82160231054812,
+      "types present": 3,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 148.81,
+       "Normal Epithelial": 17.24,
+       "Plasmablasts": 80.77,
+       "Cancer Epithelial": 0.0
+      }
+     }
+    ]
+   }
+  },
+  "hard|OSDR p=8": {
+   "thresholds": {
+    "Cancer Epithelial": "s58 (p19)",
+    "CAFs": "shrinks",
+    "Myeloid": "shrinks",
+    "T-cells": "s126 (p79)",
+    "B-cells": "s105 (p68)",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "33-169"
+   },
+   "fates": {
+    "collapse": 0.3425,
+    "runaway": 0.0,
+    "still moving": 0.0,
+    "attractors": [
+     {
+      "share": 0.56,
+      "n": 184.97042808129078,
+      "types present": 9,
+      "X": {
+       "Endothelial": 14.25,
+       "CAFs": 17.4,
+       "PVL": 10.01,
+       "B-cells": 33.31,
+       "T-cells": 41.44,
+       "Myeloid": 18.51,
+       "Normal Epithelial": 14.63,
+       "Plasmablasts": 13.43,
+       "Cancer Epithelial": 22.0
+      }
+     },
+     {
+      "share": 0.03,
+      "n": 191.2551555606786,
+      "types present": 8,
+      "X": {
+       "Endothelial": 14.72,
+       "CAFs": 0.0,
+       "PVL": 11.83,
+       "B-cells": 35.94,
+       "T-cells": 50.89,
+       "Myeloid": 19.23,
+       "Normal Epithelial": 15.07,
+       "Plasmablasts": 14.27,
+       "Cancer Epithelial": 29.31
+      }
+     },
+     {
+      "share": 0.0275,
+      "n": 187.8755620258176,
+      "types present": 8,
+      "X": {
+       "Endothelial": 14.69,
+       "CAFs": 18.18,
+       "PVL": 10.88,
+       "B-cells": 0.0,
+       "T-cells": 56.87,
+       "Myeloid": 20.67,
+       "Normal Epithelial": 16.04,
+       "Plasmablasts": 14.37,
+       "Cancer Epithelial": 36.17
+      }
+     }
+    ]
+   }
+  },
+  "softmax t=0.25|unbounded": {
+   "thresholds": {
+    "Cancer Epithelial": "s80 (p46)",
+    "CAFs": "u79 (p45); s98 (p63); u132 (p81)",
+    "Myeloid": "u93 (p59); s283 (p100)",
+    "T-cells": "s154 (p88)",
+    "B-cells": "s115 (p74)",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "86-172"
+   },
+   "fates": {
+    "collapse": 0.955,
+    "runaway": 0.0,
+    "still moving": 0.0025,
+    "attractors": [
+     {
+      "share": 0.0225,
+      "n": 169.1088893861487,
+      "types present": 4,
+      "X": {
+       "Endothelial": 40.88,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 56.17,
+       "Normal Epithelial": 15.31,
+       "Plasmablasts": 56.76,
+       "Cancer Epithelial": 0.0
+      }
+     },
+     {
+      "share": 0.015,
+      "n": 238.28124586287385,
+      "types present": 4,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 27.64,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 136.42,
+       "Normal Epithelial": 7.84,
+       "Plasmablasts": 66.39,
+       "Cancer Epithelial": 0.0
+      }
+     },
+     {
+      "share": 0.005,
+      "n": 237.81142540580947,
+      "types present": 3,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 142.67,
+       "Normal Epithelial": 12.55,
+       "Plasmablasts": 82.59,
+       "Cancer Epithelial": 0.0
+      }
+     }
+    ]
+   }
+  },
+  "softmax t=0.25|OSDR p=8": {
+   "thresholds": {
+    "Cancer Epithelial": "s58 (p20)",
+    "CAFs": "shrinks",
+    "Myeloid": "shrinks",
+    "T-cells": "s126 (p79)",
+    "B-cells": "s97 (p62)",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "33-170"
+   },
+   "fates": {
+    "collapse": 0.3175,
+    "runaway": 0.0,
+    "still moving": 0.0025,
+    "attractors": [
+     {
+      "share": 0.5825,
+      "n": 186.86124466909664,
+      "types present": 9,
+      "X": {
+       "Endothelial": 14.09,
+       "CAFs": 17.39,
+       "PVL": 8.12,
+       "B-cells": 33.18,
+       "T-cells": 43.82,
+       "Myeloid": 18.37,
+       "Normal Epithelial": 13.23,
+       "Plasmablasts": 13.11,
+       "Cancer Epithelial": 25.54
+      }
+     },
+     {
+      "share": 0.03,
+      "n": 191.04486071563403,
+      "types present": 8,
+      "X": {
+       "Endothelial": 14.54,
+       "CAFs": 0.0,
+       "PVL": 11.27,
+       "B-cells": 35.8,
+       "T-cells": 51.44,
+       "Myeloid": 19.07,
+       "Normal Epithelial": 14.13,
+       "Plasmablasts": 14.08,
+       "Cancer Epithelial": 30.72
+      }
+     },
+     {
+      "share": 0.0275,
+      "n": 186.41276399522496,
+      "types present": 8,
+      "X": {
+       "Endothelial": 14.53,
+       "CAFs": 18.1,
+       "PVL": 9.53,
+       "B-cells": 0.0,
+       "T-cells": 57.19,
+       "Myeloid": 20.56,
+       "Normal Epithelial": 15.61,
+       "Plasmablasts": 14.24,
+       "Cancer Epithelial": 36.65
+      }
+     }
+    ]
+   }
+  },
+  "softmax t=0.5|unbounded": {
+   "thresholds": {
+    "Cancer Epithelial": "s93 (p59); u143 (p85); s167 (p91)",
+    "CAFs": "shrinks",
+    "Myeloid": "u133 (p81); s187 (p95)",
+    "T-cells": "s157 (p89)",
+    "B-cells": "shrinks",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "98-184"
+   },
+   "fates": {
+    "collapse": 0.13,
+    "runaway": 0.0,
+    "still moving": 0.4725,
+    "attractors": [
+     {
+      "share": 0.315,
+      "n": 188.07891610870098,
+      "types present": 5,
+      "X": {
+       "Endothelial": 9.17,
+       "CAFs": 61.98,
+       "PVL": 0.0,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 59.55,
+       "Normal Epithelial": 0.0,
+       "Plasmablasts": 19.83,
+       "Cancer Epithelial": 37.55
+      }
+     },
+     {
+      "share": 0.0375,
+      "n": 236.63147816042414,
+      "types present": 4,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 19.31,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 131.68,
+       "Normal Epithelial": 0.0,
+       "Plasmablasts": 72.25,
+       "Cancer Epithelial": 13.39
+      }
+     },
+     {
+      "share": 0.0275,
+      "n": 71.63171962409972,
+      "types present": 3,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 16.27,
+       "B-cells": 48.65,
+       "T-cells": 0.0,
+       "Myeloid": 0.0,
+       "Normal Epithelial": 0.0,
+       "Plasmablasts": 0.0,
+       "Cancer Epithelial": 6.71
+      }
+     }
+    ]
+   }
+  },
+  "softmax t=0.5|OSDR p=8": {
+   "thresholds": {
+    "Cancer Epithelial": "s66 (p28)",
+    "CAFs": "shrinks",
+    "Myeloid": "shrinks",
+    "T-cells": "s129 (p80)",
+    "B-cells": "shrinks",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "36-182"
+   },
+   "fates": {
+    "collapse": 0.085,
+    "runaway": 0.0,
+    "still moving": 0.0225,
+    "attractors": [
+     {
+      "share": 0.7375,
+      "n": 189.92607524929562,
+      "types present": 9,
+      "X": {
+       "Endothelial": 13.84,
+       "CAFs": 16.64,
+       "PVL": 3.13,
+       "B-cells": 33.13,
+       "T-cells": 48.67,
+       "Myeloid": 17.86,
+       "Normal Epithelial": 9.74,
+       "Plasmablasts": 13.3,
+       "Cancer Epithelial": 33.62
+      }
+     },
+     {
+      "share": 0.035,
+      "n": 192.4071523694834,
+      "types present": 8,
+      "X": {
+       "Endothelial": 14.04,
+       "CAFs": 0.0,
+       "PVL": 10.13,
+       "B-cells": 35.59,
+       "T-cells": 52.93,
+       "Myeloid": 18.6,
+       "Normal Epithelial": 12.48,
+       "Plasmablasts": 14.03,
+       "Cancer Epithelial": 34.62
+      }
+     },
+     {
+      "share": 0.0275,
+      "n": 181.65208022115195,
+      "types present": 8,
+      "X": {
+       "Endothelial": 14.43,
+       "CAFs": 17.52,
+       "PVL": 2.76,
+       "B-cells": 0.0,
+       "T-cells": 58.43,
+       "Myeloid": 20.18,
+       "Normal Epithelial": 15.31,
+       "Plasmablasts": 14.51,
+       "Cancer Epithelial": 38.51
+      }
+     }
+    ]
+   }
+  },
+  "softmax t=1|unbounded": {
+   "thresholds": {
+    "Cancer Epithelial": "s198 (p97)",
+    "CAFs": "shrinks",
+    "Myeloid": "shrinks",
+    "T-cells": "s161 (p90)",
+    "B-cells": "shrinks",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "202-208"
+   },
+   "fates": {
+    "collapse": 0.0325,
+    "runaway": 0.0,
+    "still moving": 0.435,
+    "attractors": [
+     {
+      "share": 0.4175,
+      "n": 210.69708531129152,
+      "types present": 5,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 26.71,
+       "B-cells": 105.23,
+       "T-cells": 28.3,
+       "Myeloid": 0.0,
+       "Normal Epithelial": 0.0,
+       "Plasmablasts": 5.72,
+       "Cancer Epithelial": 44.74
+      }
+     },
+     {
+      "share": 0.0525,
+      "n": 246.98598067237646,
+      "types present": 4,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 24.15,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 113.02,
+       "Normal Epithelial": 0.0,
+       "Plasmablasts": 59.43,
+       "Cancer Epithelial": 50.38
+      }
+     },
+     {
+      "share": 0.015,
+      "n": 156.823318387121,
+      "types present": 4,
+      "X": {
+       "Endothelial": 28.01,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 68.48,
+       "T-cells": 0.0,
+       "Myeloid": 0.0,
+       "Normal Epithelial": 0.0,
+       "Plasmablasts": 23.97,
+       "Cancer Epithelial": 36.36
+      }
+     }
+    ]
+   }
+  },
+  "softmax t=1|OSDR p=8": {
+   "thresholds": {
+    "Cancer Epithelial": "s74 (p38)",
+    "CAFs": "shrinks",
+    "Myeloid": "shrinks",
+    "T-cells": "s133 (p81)",
+    "B-cells": "shrinks",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "39-202"
+   },
+   "fates": {
+    "collapse": 0.0325,
+    "runaway": 0.0,
+    "still moving": 0.0025,
+    "attractors": [
+     {
+      "share": 0.785,
+      "n": 189.7138806320529,
+      "types present": 8,
+      "X": {
+       "Endothelial": 13.24,
+       "CAFs": 0.0,
+       "PVL": 4.27,
+       "B-cells": 35.81,
+       "T-cells": 55.73,
+       "Myeloid": 15.04,
+       "Normal Epithelial": 12.57,
+       "Plasmablasts": 14.5,
+       "Cancer Epithelial": 38.55
+      }
+     },
+     {
+      "share": 0.04,
+      "n": 126.03674879802864,
+      "types present": 5,
+      "X": {
+       "Endothelial": 8.52,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 33.2,
+       "T-cells": 53.82,
+       "Myeloid": 0.0,
+       "Normal Epithelial": 16.13,
+       "Plasmablasts": 14.36,
+       "Cancer Epithelial": 0.0
+      }
+     },
+     {
+      "share": 0.0325,
+      "n": 173.2763192542996,
+      "types present": 7,
+      "X": {
+       "Endothelial": 14.35,
+       "CAFs": 0.0,
+       "PVL": 3.57,
+       "B-cells": 0.0,
+       "T-cells": 62.3,
+       "Myeloid": 19.73,
+       "Normal Epithelial": 16.25,
+       "Plasmablasts": 15.59,
+       "Cancer Epithelial": 41.49
+      }
+     }
+    ]
+   }
+  },
+  "membership|unbounded": {
+   "thresholds": {
+    "Cancer Epithelial": "s203 (p97)",
+    "CAFs": "shrinks",
+    "Myeloid": "shrinks",
+    "T-cells": "s168 (p92)",
+    "B-cells": "shrinks",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "207-213"
+   },
+   "fates": {
+    "collapse": 0.025,
+    "runaway": 0.0025,
+    "still moving": 0.715,
+    "attractors": [
+     {
+      "share": 0.115,
+      "n": 216.20963083568927,
+      "types present": 5,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 21.65,
+       "B-cells": 108.31,
+       "T-cells": 29.77,
+       "Myeloid": 0.0,
+       "Normal Epithelial": 0.0,
+       "Plasmablasts": 10.08,
+       "Cancer Epithelial": 46.4
+      }
+     },
+     {
+      "share": 0.0525,
+      "n": 252.75387782890144,
+      "types present": 4,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 15.67,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 121.52,
+       "Normal Epithelial": 0.0,
+       "Plasmablasts": 68.22,
+       "Cancer Epithelial": 47.34
+      }
+     },
+     {
+      "share": 0.0425,
+      "n": 226.14110241896884,
+      "types present": 3,
+      "X": {
+       "Endothelial": 0.0,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 0.0,
+       "T-cells": 0.0,
+       "Myeloid": 112.87,
+       "Normal Epithelial": 18.07,
+       "Plasmablasts": 95.21,
+       "Cancer Epithelial": 0.0
+      }
+     }
+    ]
+   }
+  },
+  "membership|OSDR p=8": {
+   "thresholds": {
+    "Cancer Epithelial": "s74 (p39)",
+    "CAFs": "shrinks",
+    "Myeloid": "shrinks",
+    "T-cells": "s138 (p83)",
+    "B-cells": "shrinks",
+    "Endothelial": "shrinks",
+    "CE path ceiling": "39-206"
+   },
+   "fates": {
+    "collapse": 0.025,
+    "runaway": 0.0,
+    "still moving": 0.015,
+    "attractors": [
+     {
+      "share": 0.7975,
+      "n": 188.04763420214638,
+      "types present": 7,
+      "X": {
+       "Endothelial": 13.19,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 35.98,
+       "T-cells": 56.47,
+       "Myeloid": 16.06,
+       "Normal Epithelial": 12.46,
+       "Plasmablasts": 14.81,
+       "Cancer Epithelial": 39.08
+      }
+     },
+     {
+      "share": 0.04,
+      "n": 127.22417072125941,
+      "types present": 5,
+      "X": {
+       "Endothelial": 6.31,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 34.42,
+       "T-cells": 55.45,
+       "Myeloid": 0.0,
+       "Normal Epithelial": 16.38,
+       "Plasmablasts": 14.67,
+       "Cancer Epithelial": 0.0
+      }
+     },
+     {
+      "share": 0.0325,
+      "n": 170.81368802686464,
+      "types present": 6,
+      "X": {
+       "Endothelial": 14.36,
+       "CAFs": 0.0,
+       "PVL": 0.0,
+       "B-cells": 0.0,
+       "T-cells": 62.76,
+       "Myeloid": 19.92,
+       "Normal Epithelial": 16.27,
+       "Plasmablasts": 15.75,
+       "Cancer Epithelial": 41.75
+      }
+     }
+    ]
+   }
+  }
+ }
+}
