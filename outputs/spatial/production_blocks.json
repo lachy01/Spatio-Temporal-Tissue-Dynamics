@@ -1,0 +1,29 @@
+{
+ "n_blocks": 250,
+ "cells_per_block_median": 2265.0,
+ "side_um_median": 556.5967730063721,
+ "side_um_p5": 449.39938135271603,
+ "side_um_min": 260.0,
+ "side_um_p95": 634.9937224266694,
+ "residual_range_um": {
+  "pearson:mixture": {
+   "test14": 30.0,
+   "significance": Infinity
+  },
+  "midq:mixture": {
+   "test14": 30.0,
+   "significance": Infinity
+  },
+  "pearson:nbc": {
+   "test14": 7.5,
+   "significance": 900.0
+  },
+  "midq:nbc": {
+   "test14": 30.0,
+   "significance": 900.0
+  }
+ },
+ "5x_widest_test14_range_um": 150.0,
+ "blocks_with_side_ge_5x_test14_range": 1.0,
+ "raw_count_I_at_widest_band": 0.02848467047384277
+}
