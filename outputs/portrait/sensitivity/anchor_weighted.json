@@ -182,12 +182,12 @@
   },
   "hard|OSDR p=8": {
    "thresholds": {
-    "Cancer Epithelial": "s58 (p19)",
-    "CAFs": "shrinks",
-    "Myeloid": "shrinks",
-    "T-cells": "s126 (p79)",
-    "B-cells": "s105 (p68)",
-    "Endothelial": "shrinks",
+    "Cancer Epithelial": "s70 (p34)",
+    "CAFs": "u69 (p31); s87 (p54)",
+    "Myeloid": "u73 (p37); s107 (p69)",
+    "T-cells": "s154 (p88)",
+    "B-cells": "s144 (p85)",
+    "Endothelial": "s71 (p35)",
     "CE path ceiling": "33-169"
    },
    "fates": {
@@ -314,11 +314,11 @@
   },
   "softmax t=0.25|OSDR p=8": {
    "thresholds": {
-    "Cancer Epithelial": "s58 (p20)",
+    "Cancer Epithelial": "s71 (p35)",
     "CAFs": "shrinks",
-    "Myeloid": "shrinks",
-    "T-cells": "s126 (p79)",
-    "B-cells": "s97 (p62)",
+    "Myeloid": "u86 (p53); s99 (p64)",
+    "T-cells": "s154 (p88)",
+    "B-cells": "s141 (p84)",
     "Endothelial": "shrinks",
     "CE path ceiling": "33-170"
    },
@@ -446,11 +446,11 @@
   },
   "softmax t=0.5|OSDR p=8": {
    "thresholds": {
-    "Cancer Epithelial": "s66 (p28)",
+    "Cancer Epithelial": "s77 (p42)",
     "CAFs": "shrinks",
     "Myeloid": "shrinks",
-    "T-cells": "s129 (p80)",
-    "B-cells": "shrinks",
+    "T-cells": "s155 (p89)",
+    "B-cells": "s132 (p81)",
     "Endothelial": "shrinks",
     "CE path ceiling": "36-182"
    },
@@ -578,11 +578,11 @@
   },
   "softmax t=1|OSDR p=8": {
    "thresholds": {
-    "Cancer Epithelial": "s74 (p38)",
+    "Cancer Epithelial": "s84 (p51)",
     "CAFs": "shrinks",
     "Myeloid": "shrinks",
-    "T-cells": "s133 (p81)",
-    "B-cells": "shrinks",
+    "T-cells": "s157 (p89)",
+    "B-cells": "s116 (p74)",
     "Endothelial": "shrinks",
     "CE path ceiling": "39-202"
    },
@@ -710,11 +710,11 @@
   },
   "membership|OSDR p=8": {
    "thresholds": {
-    "Cancer Epithelial": "s74 (p39)",
+    "Cancer Epithelial": "s85 (p52)",
     "CAFs": "shrinks",
     "Myeloid": "shrinks",
-    "T-cells": "s138 (p83)",
-    "B-cells": "shrinks",
+    "T-cells": "s161 (p90)",
+    "B-cells": "s125 (p78)",
     "Endothelial": "shrinks",
     "CE path ceiling": "39-206"
    },

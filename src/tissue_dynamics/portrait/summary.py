@@ -179,8 +179,11 @@ def summarise(model, arch, ox, slices, dens, nbr_own, arche, bound=None, n_sweep
                           grid, ox)
             f = 1 / (1 + np.exp(-e)) - arch.pi_bar[k]
         else:
-            from .core import simplex_loadings
-            w = simplex_loadings(pb[None], arch.A)[0]
+            # the type's mean loadings in the portrait's own state (type fractions
+            # for counts), as run/portrait_dynamics_summary.py; barycentric
+            # loadings here put counts-state X_k on the wrong scale for the bound
+            Xk = arch.X_obs[arche == n]
+            w = (Xk / np.clip(Xk.sum(1, keepdims=True), 1e-12, None)).mean(0)
             f = net_rate(grid[:, None] * w[None, :], model, arch, ox, bound)[0][:, k]
         sweep[n] = {"crossings": _crossings(grid, f, dens), "sign": "grows" if f[0] > 0 else "shrinks"}
     out["own_sweep"] = sweep

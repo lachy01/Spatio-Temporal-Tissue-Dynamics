@@ -1081,7 +1081,7 @@ Notation: `s`/`u` is a stable/unstable crossing at density n (its percentile in 
 | B-cells | s132 (p81) | s115 (p74) | shrinks | shrinks | shrinks |
 | Endothelial | u129; s189 | shrinks | shrinks | shrinks | shrinks |
 | tumour composition-path ceiling | 86–171 | 86–172 | 98–184 | 202–208 | 207–213 |
-| under OSDR p = 8: Cancer Epithelial | s58 (p19) | s58 (p20) | s66 (p28) | s74 (p38) | s74 (p39) |
+| under OSDR p = 8: Cancer Epithelial | s70 (p34) | s71 (p35) | s77 (p42) | s84 (p51) | s85 (p52) |
 
 - **t = 0.25 leaves the tumour unchanged.** Its ceiling stays at n ≈ 80 and its composition
   path is unchanged. The structures near zero net rate do shift: CAFs gain a ceiling above
@@ -1092,7 +1092,10 @@ Notation: `s`/`u` is a stable/unstable crossing at density n (its percentile in 
   myeloid and B-cells shrink at every density, and the escape thresholds disappear.
 - **t = 0.5 is the crossover.** Under it the tumour is bistable at its own composition.
 - **Under the bound the tumour's ceiling stays inside the data throughout.** It moves from
-  the 19th to the 39th percentile of density.
+  the 34th to the 52nd percentile of density. (Corrected 2026-10-22: the first version of this
+  row swept the bounded thresholds with barycentric loadings on the counts state, a bug in
+  `portrait.summary.summarise`, and read 19th-39th. The hard-anchor row now matches
+  `counts/osdr_p8/dynamics_summary.txt` exactly; the trajectory results did not use it.)
 
 ### Where trajectories end (as §13)
 
