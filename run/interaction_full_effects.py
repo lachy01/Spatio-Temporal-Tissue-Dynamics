@@ -22,7 +22,8 @@ more of type l's signature in the neighbourhood at the expense of the others.
 95% intervals: percentile, over the 300 spatial block bootstrap replicates
 (outputs/hpc/bootstrap, each with its own c and B).
 
-Writes outputs/interaction/full_effect.{png,csv}, full_effect_decomposition.png.
+Writes outputs/interaction/full_effect.{png,csv}, full_effect_or.png (odds ratios, short
+title, for the thesis) and full_effect_decomposition.png.
 """
 import glob
 import json
@@ -133,6 +134,43 @@ def main():
                  "neighbour score\nbold: 95% spatial block bootstrap interval excludes 0 "
                  f"({int(sig.sum())} of {sig.size}); grey: it does not", x=0.01, ha="left", fontsize=10.5)
     fig.savefig(f"{OUT}/full_effect.png", dpi=170, facecolor=SURF)
+    plt.close(fig)
+
+    # the same matrices as odds ratios, for the thesis (the CI note goes in the caption).
+    # Colour on a log scale symmetric about OR = 1, so 0.5 and 2 are equally strong.
+    from matplotlib.colors import LogNorm
+    orm = np.exp(lim)
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6), layout="constrained")
+    for ax, (b, idx) in zip(axes, blk.items()):
+        M = np.exp(tot0[:, idx])
+        im = ax.imshow(M, cmap=CMAP, norm=LogNorm(vmin=1 / orm, vmax=orm), aspect="auto")
+        ax.set_xticks(range(len(ORDER)))
+        ax.set_xticklabels(ORDER, rotation=40, ha="right", fontsize=8.5)
+        ax.set_yticks(range(len(ORDER)))
+        ax.set_yticklabels(ORDER, fontsize=8.5)
+        ax.set_xticks(np.arange(-.5, len(ORDER)), minor=True)
+        ax.set_yticks(np.arange(-.5, len(ORDER)), minor=True)
+        ax.grid(which="minor", color=SURF, lw=2)
+        ax.tick_params(which="both", length=0)
+        for s in ax.spines.values():
+            s.set_visible(False)
+        for i in range(M.shape[0]):
+            for j in range(M.shape[1]):
+                strong = sig[i, idx[j]]
+                ax.text(j, i, f"{M[i, j]:.2f}", ha="center", va="center", fontsize=7.5,
+                        color=INK if strong else MUTED, fontweight="bold" if strong else "normal")
+        ax.set_title(f"{b.capitalize()} ({'0-15' if b == 'contact' else '15-80'} µm)", loc="left", fontsize=10)
+        ax.set_xlabel("neighbour type", fontsize=9)
+    axes[0].set_ylabel("own type", fontsize=9)
+    cb = fig.colorbar(im, ax=axes, shrink=0.8, pad=0.01)
+    ticks = [t for t in (0.5, 0.67, 0.8, 1, 1.25, 1.5, 2) if 1 / orm <= t <= orm]
+    cb.set_ticks(ticks)
+    cb.set_ticklabels([f"{t:g}" for t in ticks])
+    cb.minorticks_off()
+    cb.set_label("odds ratio per IQR", fontsize=9)
+    cb.outline.set_visible(False)
+    fig.suptitle("Neighbourhood effect on cycling: odds ratio per IQR", x=0.01, ha="left", fontsize=11)
+    fig.savefig(f"{OUT}/full_effect_or.png", dpi=170, facecolor=SURF)
     plt.close(fig)
 
     # decomposition: main effect (one row, every own type) + interaction = total
