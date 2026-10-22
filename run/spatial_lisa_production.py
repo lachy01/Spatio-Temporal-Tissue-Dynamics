@@ -11,7 +11,10 @@ with `spatial_analysis.lisa` unchanged: mean Pearson residual per 100 um bin (bi
 >= 20 cells), queen contiguity, row-standardised, 9,999 conditional permutations,
 Benjamini-Hochberg at 5%; global Moran's I on the same bins with a 199-permutation null.
 
-Writes outputs/spatial/lisa_maps_production.png, lisa_summary_production.csv and
+The observed Tirosh count's own LISA (bin-mean count) is the reference column of
+lisa_maps_production_with_counts.png.
+
+Writes outputs/spatial/lisa_maps_production{,_with_counts}.png, lisa_summary_production.csv and
 lisa_cluster_composition_production.csv.
 """
 import json
@@ -53,6 +56,53 @@ def pearson(y, comps):
     mean = sum(w * m for w, _f, m, _a in comps)
     second = sum(w * (m + (a * m ** 2 if f == "nb" else 0.0) + m ** 2) for w, f, m, a in comps)
     return (y - mean) / np.sqrt(np.maximum(second - mean ** 2, 1e-12))
+
+
+def plot_maps(L, keys, path):
+    """Top: the binned quantity; bottom: its LISA clusters. "raw" = the observed count."""
+    fig, axes = plt.subplots(2, len(keys), figsize=(5 * len(keys), 10.5))
+    res_keys = [k for k in keys if k != "raw"]
+    lim = max(np.nanpercentile(np.abs(L[m]["mean"]), 98) for m in res_keys)
+    codes = {"ns": 1, "HH": 2, "LL": 3, "HL": 4, "LH": 5, "island": 1}
+    cmap = ListedColormap(["#ffffff", "#e4e3df", "#e34948", "#2a78d6", "#f4b4b3", "#a9cbf2"])
+    im_res = None
+    for j, m in enumerate(keys):
+        Lm = L[m]
+        g = np.full((Lm["ny"], Lm["nx"]), np.nan)
+        g[Lm["by"], Lm["bx"]] = Lm["mean"]
+        ax = axes[0, j]
+        if m == "raw":
+            im = ax.imshow(g, origin="lower", cmap="Oranges", vmin=0,
+                           vmax=np.nanpercentile(Lm["mean"], 98), interpolation="nearest")
+            ax.set_title(f"Tirosh count (observed)\nmean count per {BIN_UM:.0f} µm bin", fontsize=10.5, loc="left")
+            fig.colorbar(im, ax=ax, shrink=0.6, label="mean count")
+        else:
+            im_res = ax.imshow(g, origin="lower", cmap="RdBu_r", vmin=-lim, vmax=lim, interpolation="nearest")
+            ax.set_title(f"{MODELS[m]}\nmean Pearson residual per {BIN_UM:.0f} µm bin", fontsize=10.5, loc="left")
+        c = np.zeros((Lm["ny"], Lm["nx"]))
+        c[Lm["by"], Lm["bx"]] = [codes[v] for v in Lm["cls"]]
+        ax2 = axes[1, j]
+        ax2.imshow(c, origin="lower", cmap=cmap, vmin=-0.5, vmax=5.5, interpolation="nearest")
+        ax2.set_title(f"local Moran's I clusters (FDR 5%)\nHH {int(np.sum(Lm['cls'] == 'HH'))}, "
+                      f"LL {int(np.sum(Lm['cls'] == 'LL'))} bins; global I = {Lm['I_global']:.3f}",
+                      fontsize=10.5, loc="left")
+        for a in (ax, ax2):
+            a.set_xticks([])
+            a.set_yticks([])
+            for sp in a.spines.values():
+                sp.set_visible(False)
+        if m == "raw":
+            fig.colorbar(im, ax=ax2, shrink=0.6).ax.set_visible(False)   # keep the columns aligned
+    fig.colorbar(im_res, ax=axes[:, len(keys) - 1].tolist() if "raw" in keys else axes.ravel().tolist(),
+                 shrink=0.35, anchor=(0, 0.92), label="mean residual (top row)")
+    fig.legend(handles=[Patch(color="#e34948", label="HH: high among high"),
+                        Patch(color="#2a78d6", label="LL: low among low"),
+                        Patch(color="#f4b4b3", label="HL: high among low"),
+                        Patch(color="#a9cbf2", label="LH: low among high"),
+                        Patch(color="#e4e3df", label="not significant")],
+               loc="lower center", ncol=5, frameon=False, fontsize=9.5)
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
 
 
 def main():
@@ -98,41 +148,16 @@ def main():
                                   mean_count=float(y[sel].mean()), median_density=float(np.median(dens[sel])),
                                   mean_residual=float(res[m][sel].mean()),
                                   **{f"share:{t}": float(comp.get(t, 0.0)) for t in names}))
-    pd.DataFrame(rows).to_csv(f"{OUT}/lisa_summary_production.csv", index=False)
     pd.DataFrame(chars).to_csv(f"{OUT}/lisa_cluster_composition_production.csv", index=False)
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10.5))
-    lim = max(np.nanpercentile(np.abs(L[m]["mean"]), 98) for m in MODELS)
-    codes = {"ns": 1, "HH": 2, "LL": 3, "HL": 4, "LH": 5, "island": 1}
-    cmap = ListedColormap(["#ffffff", "#e4e3df", "#e34948", "#2a78d6", "#f4b4b3", "#a9cbf2"])
-    for j, m in enumerate(MODELS):
-        Lm = L[m]
-        g = np.full((Lm["ny"], Lm["nx"]), np.nan)
-        g[Lm["by"], Lm["bx"]] = Lm["mean"]
-        ax = axes[0, j]
-        im = ax.imshow(g, origin="lower", cmap="RdBu_r", vmin=-lim, vmax=lim, interpolation="nearest")
-        ax.set_title(f"{MODELS[m]}\nmean Pearson residual per {BIN_UM:.0f} µm bin", fontsize=10.5, loc="left")
-        c = np.zeros((Lm["ny"], Lm["nx"]))
-        c[Lm["by"], Lm["bx"]] = [codes[v] for v in Lm["cls"]]
-        ax2 = axes[1, j]
-        ax2.imshow(c, origin="lower", cmap=cmap, vmin=-0.5, vmax=5.5, interpolation="nearest")
-        ax2.set_title(f"local Moran's I clusters (FDR 5%)\nHH {int(np.sum(Lm['cls'] == 'HH'))}, "
-                      f"LL {int(np.sum(Lm['cls'] == 'LL'))} bins; global I = {Lm['I_global']:.3f}",
-                      fontsize=10.5, loc="left")
-        for a in (ax, ax2):
-            a.set_xticks([])
-            a.set_yticks([])
-            for s in a.spines.values():
-                s.set_visible(False)
-    fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.35, anchor=(0, 0.92), label="mean residual (top row)")
-    fig.legend(handles=[Patch(color="#e34948", label="HH: high residual among high"),
-                        Patch(color="#2a78d6", label="LL: low among low"),
-                        Patch(color="#f4b4b3", label="HL: high among low"),
-                        Patch(color="#a9cbf2", label="LH: low among high"),
-                        Patch(color="#e4e3df", label="not significant")],
-               loc="lower center", ncol=5, frameon=False, fontsize=9.5)
-    fig.savefig(f"{OUT}/lisa_maps_production.png", dpi=150, bbox_inches="tight")
-    plt.close(fig)
+    L["raw"] = lisa(y, gx, gy, seed=1)                  # the observed count, for reference
+    cls = L["raw"]["cls"]
+    rows.append(dict(model="raw Tirosh count", bins=int(np.sum(cls != "island")), I_global=L["raw"]["I_global"],
+                     I_global_null_sd=L["raw"]["I_global_null_sd"], I_global_p=L["raw"]["I_global_p"],
+                     **{f"n_{c}": int(np.sum(cls == c)) for c in ("HH", "LL", "HL", "LH", "ns")}))
+    pd.DataFrame(rows).to_csv(f"{OUT}/lisa_summary_production.csv", index=False)
+    plot_maps(L, list(MODELS), f"{OUT}/lisa_maps_production.png")
+    plot_maps(L, ["raw"] + list(MODELS), f"{OUT}/lisa_maps_production_with_counts.png")
     with pd.option_context("display.width", 200):
         print(pd.DataFrame(rows).round(4).to_string(index=False))
 
