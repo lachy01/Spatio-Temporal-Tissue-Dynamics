@@ -22,7 +22,7 @@ more of type l's signature in the neighbourhood at the expense of the others.
 95% intervals: percentile, over the 300 spatial block bootstrap replicates
 (outputs/hpc/bootstrap, each with its own c and B).
 
-Writes outputs/interaction/full_effect.{png,csv}, full_effect_or.png (odds ratios, short
+Writes outputs/interaction/full_effect.{png,csv}, full_effect_log.png and full_effect_or.png (log odds / odds ratios, short
 title, for the thesis) and full_effect_decomposition.png.
 """
 import glob
@@ -134,6 +134,21 @@ def main():
                  "neighbour score\nbold: 95% spatial block bootstrap interval excludes 0 "
                  f"({int(sig.sum())} of {sig.size}); grey: it does not", x=0.01, ha="left", fontsize=10.5)
     fig.savefig(f"{OUT}/full_effect.png", dpi=170, facecolor=SURF)
+    plt.close(fig)
+
+    # log odds, short title, for the thesis (the CI note goes in the caption)
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6), layout="constrained")
+    for ax, (b, idx) in zip(axes, blk.items()):
+        im = heat(ax, tot0[:, idx], sig[:, idx],
+                  f"{b.capitalize()} ({'0-15' if b == 'contact' else '15-80'} µm)", lim, ORDER, ORDER)
+        ax.set_xlabel("neighbour type", fontsize=9)
+    axes[0].set_ylabel("own type", fontsize=9)
+    cb = fig.colorbar(im, ax=axes, shrink=0.8, pad=0.01)
+    cb.set_label("log odds ratio per IQR", fontsize=9)
+    cb.outline.set_visible(False)
+    fig.suptitle("Neighbour effect of cycling; log odds ratio per IQR of neighbour score",
+                 x=0.01, ha="left", fontsize=11)
+    fig.savefig(f"{OUT}/full_effect_log.png", dpi=170, facecolor=SURF)
     plt.close(fig)
 
     # the same matrices as odds ratios, for the thesis (the CI note goes in the caption).
