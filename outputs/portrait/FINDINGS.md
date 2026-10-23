@@ -1140,6 +1140,152 @@ the 400 starts are a different sample.
   cell's type. t = 0.25, which keeps 71–92% of each anchor's weight on its own cells,
   changes nothing that §12–§13 report about the tumour or the bounded stable state.
 
+## 15. Where to hold the other types in a slice, and OSDR's two-type portraits (2026-10-23)
+
+### How OSDR slices
+
+From OSDR's code (`tdm`, github.com/JonathanSomer/osdr @ 7d04970):
+
+- **There is no default slice.** `compute_change_in_each_direction` builds each grid state
+  from the two axis types plus an optional `fixed_cell_counts`. `Model.delta_cells` then
+  asserts that every fitted type has a value, so nothing defaults to zero or to the median.
+- **The main portraits (Fig. 3, fibroblasts × macrophages) are not slices.** `fm_analysis`
+  fits a model of the two types alone:
+  - `cell_types_to_model = [F, M]`;
+  - `allowed_neighbor_types = [F, M, Tu, Endo]`, which drops every cell with any other
+    neighbour;
+  - tumour and endothelial columns are dropped, so those types are averaged over as they
+    occur.
+- **The one many-type portrait shows two slices.** In Fig. 3g (`fm_tu_analysis`: F, M, Tu),
+  tumour is held at 0 ("No Tumor Neighbors") and at 64 ("With Tumor Neighbors (Mean)"). The
+  typical level is the mean raw count, not the median.
+
+The production slices here (§5, §12) hold each off-axis type at its own median over all
+neighbourhoods. Taken type by type, those medians need not form any neighbourhood that
+occurs. They also ignore that the other types are distributed differently where the pair
+is present.
+
+### Two conditional references (`run/portrait_conditional_slices.py`)
+
+These use the full production model in the counts state, on the four priority pairs. Three
+references are compared side by side
+(`conditional_slices/portraits_{unbounded,osdr_p8}.png`):
+
+| reference | the seven off-axis types are held at |
+|---|---|
+| q50 (production) | their medians over all neighbourhoods |
+| co-present | their medians over neighbourhoods where both axis types have at least 5 cells in the 80 µm disc |
+| conditional | their kernel-weighted mean over observed neighbourhoods near (log₂ X₁, log₂ X₂) |
+
+For the co-present reference, the conditioning set holds 287,143–415,940 neighbourhoods,
+depending on the pair.
+
+The conditional reference uses a Gaussian kernel with bandwidth 0.25 in log₂ units. It is a
+mean, not a median, so that the field stays smooth enough for root finding. The slice
+becomes a curved surface through the data, E[X_others | X₁, X₂], instead of a plane through
+one point.
+
+Fixed points are found by root finding in log X. Stability comes from the 2 × 2 Jacobian by
+central differences, which includes how the conditional reference moves with the grid.
+
+Support is defined as in §5. For q50 and co-present, it counts only cells whose held
+densities lie within half an IQR of the reference. For the conditional reference it counts
+every cell, since that reference is local.
+
+Fixed points, with X in cells per (100 µm)²:
+
+| pair | reference | unbounded | OSDR p = 8 |
+|---|---|---|---|
+| CAFs × Myeloid | q50 | none | stable (14.5, 13.4), in support |
+| | co-present | none | stable (14.7, 11.0), in support |
+| | conditional | stable (93.7, 11.3), beyond the grid | stable (15.1, 16.1), in support |
+| Cancer Epithelial × CAFs | q50 | stable (6.3, 32.3), outside support | stable (25.2, 16.8), outside support |
+| | co-present | stable (4.7, 32.4), outside support | stable (23.9, 16.6), outside support |
+| | conditional | none | **stable (24.6, 16.1), in support** |
+| Cancer Epithelial × Myeloid | q50 | none | stable (29.8, 19.5), in support |
+| | co-present | none | stable (29.2, 19.7), in support |
+| | conditional | **saddle (5.5, 4.1), in support** | the same saddle; stable (26.2, 19.7), in support |
+| Cancer Epithelial × T-cells | q50 | saddle (0.5, 2.9), outside support | the same |
+| | co-present | saddle (1.2, 2.5), outside support | the same |
+| | conditional | **saddle (4.5, 6.0), in support** | the same |
+
+**Reading.**
+
+- **The co-present median changes almost nothing.** For these pairs, the other types'
+  medians move little when the pair is required to be present. The portraits match q50's,
+  and both are supported only on a small patch.
+- **The conditional reference changes the picture.**
+  - Most of the observed cloud is supported, because the held densities are always typical
+    for that (X₁, X₂).
+  - The nullclines take new shapes.
+  - Two saddles appear inside support where q50 has none in these slices: Cancer
+    Epithelial × Myeloid at n ≈ 54 and Cancer Epithelial × T-cells at n ≈ 67.
+- **Under the bound,** all four pairs have a stable point at high density of both types,
+  and the conditional reference puts Cancer Epithelial × CAFs inside support.
+
+**Caveats.**
+
+- A conditional-surface fixed point is a rest point of the pair when the other seven sit at
+  their typical co-occurring levels. It is not an equilibrium of the full system (§13),
+  because the other seven need not be at rest there.
+- At low density, few neighbourhoods inform the local mean, and the nullclines become
+  noisy.
+
+### OSDR-style two-type portraits fitted on our data (`run/portrait_two_type_osdr.py`)
+
+This follows OSDR's method:
+
+- for each target type, an unpenalised logistic regression on a degree-2 polynomial of the
+  two raw neighbour counts within 80 µm, with the cell counting itself;
+- death = the type's mean rate;
+- the division rate capped at its in-sample maximum;
+- dXₖ/dt = Xₖ(p_div − p_death + corrₖ), shown unbounded and with OSDR's bound at p = 8.
+
+Departures from OSDR:
+
+- The response is our posterior P(cycling | y), fitted as a quasi-binomial, since we have
+  no binary division calls.
+- There is no edge extrapolation.
+- OSDR's neighbour restriction is not usable as the main fit. Only 0.2% of cells have discs
+  with nothing outside {CAFs, Myeloid, Cancer Epithelial, Endothelial}, because lymphoid
+  cells are nearly everywhere and discs hold a median of 148 cells. The main fit therefore
+  uses every cell of the two types, with the other types averaged over. CAFs × Myeloid is
+  repeated on the 2.4% of cells with at most 5 neighbours outside that set.
+
+X here is a count of cells in the disc (`two_type_osdr/portraits.png`,
+`restricted_CAFs_Myeloid.png`, `fixed_points.csv`):
+
+| pair, cells | unbounded | OSDR p = 8 |
+|---|---|---|
+| CAFs × Myeloid, all | unstable spiral (9, 14); saddles (37, 18) and (0, 56); stable (42, 56) | unstable spiral (9, 14); saddle (0, 44); no stable state (see below) |
+| Cancer Epithelial × CAFs, all | stable (98, 19); saddle (24, 62) | stable (91, 22); saddle (27, 28) |
+| Cancer Epithelial × Myeloid, all | stable (114, 30); saddle (40, 50) | stable (96, 31); saddle (27, 31) |
+| Cancer Epithelial × T-cells, all | stable (180, 131); saddle (28, 212) | stable (100, 135); saddle (18, 100) |
+| CAFs × Myeloid, restricted (4,807 CAFs, 2,436 Myeloid) | **stable (6.1, 2.2)**; saddle (4.6, 0) | **stable (6.1, 2.2)**; saddles (4.6, 0), (0, 7.0) |
+
+**What the bound does to CAFs × Myeloid.** In the bounded, all-cells panel the nullclines
+come within |r| ≈ 4 × 10⁻⁴ near (33, 30) without crossing (checked by direct root finding).
+Flow slows there but no state is reached. OSDR's two fibrosis states, "cold" (fibroblasts
+alone) and "hot" (fibroblasts and macrophages), do not appear in the all-cells fit.
+
+**The restricted fit comes closest to OSDR's Fig. 3.** It has a stable mixed state at about
+6 CAFs and 2 Myeloid cells in the disc, with saddles on both axes. Read it cautiously:
+
+- it rests on 2.4% of cells, in atypical neighbourhoods;
+- its death rates fall to 0.004 (CAFs) and 0.011 (Myeloid), the mean cycling of those cells,
+  against 0.022 and 0.042 over all cells;
+- its quadratic coefficients are large, so it extrapolates quickly away from the data.
+
+**Two-type fits against the full model.**
+
+- The two-type fits mix the other types into the regression as they co-occur with the pair.
+  The full model's slices instead set them explicitly (q50, co-present) or by their typical
+  co-occurrence (conditional).
+- The tumour pairs agree in kind with the full model under the bound: a stable high-tumour
+  state with a saddle threshold below it. CAFs × Myeloid does not agree: its structure
+  depends on which cells enter the fit.
+- None of this changes the production portrait (§12) or the full-system stable state (§13).
+
 ## Files
 
 ```
@@ -1162,6 +1308,8 @@ outputs/portrait/
   sensitivity/grid.csv, grid.json              spec 9 (portrait_sensitivity.py)
   sensitivity/anchor_sweep.csv/.txt            anchor multiplier 0.7-1.3 (portrait_anchor_sweep.py)
   sensitivity/anchor_weighted.csv/.txt/.json   section 14: score-weighted anchor (portrait_anchor_weighted.py)
+  conditional_slices/                          section 15: q50 / co-present / conditional references (portrait_conditional_slices.py)
+  two_type_osdr/                               section 15: OSDR-style two-type fits (portrait_two_type_osdr.py)
   equilibria/<state>_<bound>.csv/.txt         section 13: full-system stationary points (portrait_full_equilibria.py)
   equilibria/stable_state_*.png, *_summary.json section 13: the stable state's figures (portrait_stable_state_figure.py)
 ```
