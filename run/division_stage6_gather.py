@@ -51,6 +51,7 @@ MIN_TRUE = 0.1
 COL = {"MIX pi": "#2a78d6", "MIX, BASE-T": "#7fb0e8", "MIX, BASE-O": "#a9c8ee",
        "NB-c, BASE-T": "#52514e", "NB-c, BASE-O": "#8a8984", "LOG-T": "#f5a87e",
        "LOG-O": "#eb6834", "LOG-S": "#1baf7a"}
+SHOW = ["MIX pi", "NB-c, BASE-O", "MIX, BASE-O", "LOG-T", "LOG-O", "LOG-S"]
 MK = {"MIX pi": "o", "MIX, BASE-T": "o", "MIX, BASE-O": "o", "NB-c, BASE-T": "s",
       "NB-c, BASE-O": "s", "LOG-T": "^", "LOG-O": "^", "LOG-S": "D"}
 
@@ -79,6 +80,10 @@ def main():
     ap.add_argument("--dir", default=f"{DP.hpc_dir()}/division_sim"
                     + (f"_{DP.variant()}" if DP.variant() else ""))
     ap.add_argument("--no-report", action="store_true")
+    ap.add_argument("--show", nargs="+", default=SHOW,
+                    help="arms in the neighbourhood-effect panels (default: %(default)s)")
+    ap.add_argument("--fig", default="sim_recovery.png",
+                    help="figure name; any other name writes only that figure (no csv, no report)")
     a = ap.parse_args()
     res = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(a.dir, "0*.json")))]
     if not res:
@@ -127,7 +132,9 @@ def main():
                 long.append({"generator": g, "rep": rep, "metric": "fraction error", "prediction": k,
                              "stratum": t, "value": abs(r["fractions"][k][t] - r["true_fraction"][t])})
     L = pd.DataFrame(long)
-    L.to_csv(f"{OUT}/sim_recovery.csv", index=False)
+    variant_fig = a.fig != "sim_recovery.png"
+    if not variant_fig:
+        L.to_csv(f"{OUT}/sim_recovery.csv", index=False)
 
     def q(metric, gen, pred=None, stratum=None):
         s = L[(L["metric"] == metric) & (L["generator"] == gen)]
@@ -202,7 +209,7 @@ def main():
     label_tab = pd.DataFrame(label_tab)
 
     # ---- figure: the headline neighbourhood-effect ratio, by arm and generator ----
-    show = ["MIX pi", "NB-c, BASE-O", "MIX, BASE-O", "LOG-T", "LOG-O", "LOG-S"]
+    show = list(a.show)
     fig, axes = plt.subplots(1, len(state_gens) + 1, figsize=(6.2 * (len(state_gens) + 1), 5.6),
                              gridspec_kw={"width_ratios": [1.2] * len(state_gens) + [1]})
     axes = np.atleast_1d(axes)
@@ -233,7 +240,7 @@ def main():
     ax.set_title("rank agreement (open: G1, filled: G2)")
     ax.grid(True, color="#e4e3df", lw=0.6)
     fig.tight_layout()
-    fig.savefig(f"{OUT}/sim_recovery.png", dpi=140, bbox_inches="tight")
+    fig.savefig(f"{OUT}/{a.fig}", dpi=140, bbox_inches="tight")
     plt.close(fig)
 
     say(conv.round(3).to_string(index=False))
@@ -243,7 +250,7 @@ def main():
     for g, rt in ratio_tabs.items():
         say(f"{g} ratios:\n{rt.round(3).to_string()}")
     say("X8: " + x8_txt)
-    if a.no_report:
+    if a.no_report or variant_fig:
         return
 
     n_conv = {k: int(conv[f"{k} converged"].sum()) for k in ("NB-c", "MIX", "LOG-T", "LOG-O", "LOG-S")}
