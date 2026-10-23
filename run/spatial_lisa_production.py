@@ -87,6 +87,8 @@ def plot_maps(L, keys, path):
                       f"LL {int(np.sum(Lm['cls'] == 'LL'))} bins; global I = {Lm['I_global']:.3f}",
                       fontsize=10.5, loc="left")
         for a in (ax, ax2):
+            a.invert_xaxis()                 # rotated 180 degrees, to match the other section maps
+            a.invert_yaxis()
             a.set_xticks([])
             a.set_yticks([])
             for sp in a.spines.values():
