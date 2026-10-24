@@ -57,9 +57,10 @@ case "$JOB" in
       [ -f "$f" ] || { echo "error: $f not found. Nothing submitted." >&2; exit 1; }
     done
     for d in portrait_param_boot portrait_block_boot; do
-      n=$(ls "$MIX_OUT/$d"/*.json 2>/dev/null | wc -l)
+      # find, not ls: under pipefail an ls with no matches ends the script silently
+      n=$(find "$MIX_OUT/$d" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l || true)
       if [ "$n" -lt 50 ]; then
-        echo "error: $MIX_OUT/$d has $n of 50 results; the conditional bootstrap replays them." >&2
+        echo "error: $MIX_OUT/$d has $((n)) of 50 results; the conditional bootstrap replays them." >&2
         echo "       Nothing submitted." >&2
         exit 1
       fi
