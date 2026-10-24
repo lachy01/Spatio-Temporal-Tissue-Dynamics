@@ -125,7 +125,22 @@ def md_table(df, floatfmt="{:.4g}"):
 
 
 # --------------------------------------------------------------------------
+def replot():
+    """Redraw stage1_labels.png from the frozen labels (no refit)."""
+    out = pd.read_parquet(f"{OUT}/labels.parquet")
+    thr = json.load(open(f"{OUT}/labels_meta.json"))["score"]
+    N = out["N"].to_numpy(float)
+    dec = pd.qcut(N, 10, labels=False, duplicates="drop")
+    disc = pd.DataFrame([{"N decile": int(d) + 1,
+                          **{f"mean alpha_i @{ab:g}": float(out.loc[dec == d, f"alphai_{L.ab_tag(ab)}"].mean())
+                             for ab in L.ALPHA_B_GRID}} for d in np.unique(dec)])
+    plot_stage1(out, thr, disc)
+    say(f"wrote {OUT}/stage1_labels.png")
+
+
 def main():
+    if "--replot" in sys.argv:
+        return replot()
     t0 = time.time()
     os.makedirs(OUT, exist_ok=True)
     cfg = load_config()
@@ -504,17 +519,27 @@ def plot_stage1(out, thr, disc):
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.4))
     ax = axes[0]
     s = out["score"].to_numpy()
-    z0 = out["y"].to_numpy() == 0
+    yv = out["y"].to_numpy()
+    called = s > thr["threshold"]
     bins = np.linspace(np.percentile(s, 0.1), np.percentile(s, 99.9), 160)
-    ax.hist(s[~z0], bins=bins, color="#2a78d6", alpha=0.75, label="y >= 1")
-    ax.hist(s[z0], bins=bins, color="#8a8985", alpha=0.6, label="y = 0")
+    # stacked, so the bars are every cell and the part right of the threshold is SCORE's calls
+    groups = [(yv >= 2, "#1c5cab", "y >= 2"), (yv == 1, "#86b6ef", "y = 1"), (yv == 0, "#b9b8b3", "y = 0")]
+    ax.hist([s[m] for m, _, _ in groups], bins=bins, stacked=True, color=[c for _, c, _ in groups],
+            label=[f"{lab} ({m.sum():,} cells)" for m, _, lab in groups], edgecolor="none")
     ax.axvline(thr["mode"], color=INK, lw=1, ls=":")
     ax.axvline(thr["threshold"], color="#e34948", lw=1.5,
-               label=f"threshold {thr['threshold']:.3f}")
+               label=f"threshold {thr['threshold']:.4f}")
+    nc = int(called.sum())
+    share = [float(np.mean(yv[called] == 1)), float(np.mean(yv[called] == 2)), float(np.mean(yv[called] >= 3))]
+    ax.text(0.98, 0.55, f"SCORE calls: {nc:,} cells\n  y = 0: {np.mean(yv[called] == 0):.1%}\n"
+            f"  y = 1: {share[0]:.1%}\n  y = 2: {share[1]:.1%}\n  y >= 3: {share[2]:.1%}\n"
+            f"called among y = 1 cells: {np.mean(called[yv == 1]):.1%}",
+            transform=ax.transAxes, ha="right", va="top", fontsize=8.5, color=INK2, family="monospace")
     ax.set_xlabel("module score")
-    ax.set_ylabel("cells")
-    ax.set_title("SCORE: cells with no Tirosh counts still spread", loc="left", fontsize=10.5)
-    ax.legend(frameon=False, fontsize=9)
+    ax.set_ylabel("cells (stacked)")
+    ax.set_title("SCORE: zero-count cells spread but are never called; half of all calls rest on one count",
+                 loc="left", fontsize=10)
+    ax.legend(frameon=False, fontsize=8.5, loc="upper right")
     ax = axes[1]
     for ab, c in zip(L.ALPHA_B_GRID, ("#86b6ef", "#3987e5", "#1c5cab", "#0d366b")):
         ax.plot(disc["N decile"], disc[f"mean alpha_i @{ab:g}"], marker="o", color=c, lw=2,
