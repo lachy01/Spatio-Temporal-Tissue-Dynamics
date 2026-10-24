@@ -135,7 +135,7 @@ def replot():
                           **{f"mean alpha_i @{ab:g}": float(out.loc[dec == d, f"alphai_{L.ab_tag(ab)}"].mean())
                              for ab in L.ALPHA_B_GRID}} for d in np.unique(dec)])
     plot_stage1(out, thr, disc)
-    say(f"wrote {OUT}/stage1_labels.png")
+    say(f"wrote {OUT}/stage1_labels.png and stage1_score.png")
 
 
 def main():
@@ -515,9 +515,8 @@ Stage 1 complete in {(time.time() - t0) / 60:.1f} min. **Review point** (stages 
     say(f"\nStage 1 done in {(time.time() - t0) / 60:.1f} min; wrote {OUT}/")
 
 
-def plot_stage1(out, thr, disc):
-    fig, axes = plt.subplots(1, 2, figsize=(13, 4.4))
-    ax = axes[0]
+def score_panel(ax, out, thr):
+    """SCORE's distribution, stacked by Tirosh count, with the composition of its calls."""
     s = out["score"].to_numpy()
     yv = out["y"].to_numpy()
     called = s > thr["threshold"]
@@ -537,9 +536,13 @@ def plot_stage1(out, thr, disc):
             transform=ax.transAxes, ha="right", va="top", fontsize=8.5, color=INK2, family="monospace")
     ax.set_xlabel("module score")
     ax.set_ylabel("cells (stacked)")
-    ax.set_title("SCORE: zero-count cells spread but are never called; half of all calls rest on one count",
-                 loc="left", fontsize=10)
+    ax.set_title("SCORE by Tirosh count", loc="left", fontsize=10.5)
     ax.legend(frameon=False, fontsize=8.5, loc="upper right")
+
+
+def plot_stage1(out, thr, disc):
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.4))
+    score_panel(axes[0], out, thr)
     ax = axes[1]
     for ab, c in zip(L.ALPHA_B_GRID, ("#86b6ef", "#3987e5", "#1c5cab", "#0d366b")):
         ax.plot(disc["N decile"], disc[f"mean alpha_i @{ab:g}"], marker="o", color=c, lw=2,
@@ -557,6 +560,14 @@ def plot_stage1(out, thr, disc):
         a.grid(axis="y", color=GRID, lw=0.7)
     fig.tight_layout()
     fig.savefig(f"{OUT}/stage1_labels.png", dpi=150)
+    plt.close(fig)
+    fig, ax = plt.subplots(figsize=(8, 4.6))
+    score_panel(ax, out, thr)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    ax.grid(axis="y", color=GRID, lw=0.7)
+    fig.tight_layout()
+    fig.savefig(f"{OUT}/stage1_score.png", dpi=150)
     plt.close(fig)
 
 
