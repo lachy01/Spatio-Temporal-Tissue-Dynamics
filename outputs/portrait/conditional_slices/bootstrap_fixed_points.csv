@@ -1,0 +1,25 @@
+source,bound,pair,class,X_a,X_b,in support (point),share recovered,share recovered in support,X_a 95%,X_b 95%
+param,none,CAFs x Myeloid,stable,93.67960169956474,11.26376012136012,False,0.426,0.0,48.1 to 135.4,9.8 to 14.9
+param,none,Cancer Epithelial x Myeloid,saddle,5.538741916391053,4.056942632551981,True,0.972,0.972,4.1 to 6.7,2.5 to 5.5
+param,none,Cancer Epithelial x T-cells,saddle,4.487673333868031,6.015034044365799,True,0.954,0.954,3.0 to 5.8,3.8 to 9.5
+block,none,CAFs x Myeloid,stable,93.67960169956474,11.26376012136012,False,0.24,0.0,52.7 to 126.5,9.7 to 20.4
+block,none,Cancer Epithelial x Myeloid,saddle,5.538741916391053,4.056942632551981,True,0.96,0.96,4.4 to 6.8,2.9 to 5.7
+block,none,Cancer Epithelial x T-cells,saddle,4.487673333868031,6.015034044365799,True,0.96,0.96,3.3 to 6.2,4.3 to 9.6
+ref,none,CAFs x Myeloid,stable,93.67960169956474,11.26376012136012,False,0.605,0.0,60.6 to 140.1,6.2 to 20.8
+ref,none,Cancer Epithelial x Myeloid,saddle,5.538741916391053,4.056942632551981,True,1.0,1.0,4.7 to 6.2,3.2 to 5.0
+ref,none,Cancer Epithelial x T-cells,saddle,4.487673333868031,6.015034044365799,True,1.0,1.0,3.8 to 5.1,4.9 to 7.6
+param,osdr,CAFs x Myeloid,stable,15.072991231541836,16.140338845108893,True,1.0,1.0,12.9 to 15.9,13.6 to 17.4
+param,osdr,Cancer Epithelial x CAFs,stable,24.60491259602221,16.094007190839324,True,0.924,0.924,16.0 to 31.6,14.7 to 16.9
+param,osdr,Cancer Epithelial x Myeloid,saddle,5.538767032995651,4.0569409244961525,True,0.972,0.972,4.1 to 6.7,2.5 to 5.5
+param,osdr,Cancer Epithelial x Myeloid,stable,26.177810277697294,19.73315813265152,True,0.978,0.978,17.0 to 31.9,18.2 to 20.5
+param,osdr,Cancer Epithelial x T-cells,saddle,4.487673459161485,6.015034272065739,True,0.954,0.954,3.0 to 5.8,3.8 to 9.5
+block,osdr,CAFs x Myeloid,stable,15.072991231541836,16.140338845108893,True,1.0,1.0,13.4 to 16.0,12.2 to 17.5
+block,osdr,Cancer Epithelial x CAFs,stable,24.60491259602221,16.094007190839324,True,0.84,0.84,16.5 to 33.0,15.1 to 16.8
+block,osdr,Cancer Epithelial x Myeloid,saddle,5.538767032995651,4.0569409244961525,True,0.96,0.96,4.4 to 6.8,2.9 to 5.7
+block,osdr,Cancer Epithelial x Myeloid,stable,26.177810277697294,19.73315813265152,True,0.94,0.94,15.2 to 32.5,17.9 to 20.5
+block,osdr,Cancer Epithelial x T-cells,saddle,4.487673459161485,6.015034272065739,True,0.96,0.96,3.3 to 6.2,4.3 to 9.6
+ref,osdr,CAFs x Myeloid,stable,15.072991231541836,16.140338845108893,True,1.0,1.0,14.5 to 15.6,15.5 to 16.7
+ref,osdr,Cancer Epithelial x CAFs,stable,24.60491259602221,16.094007190839324,True,1.0,1.0,19.4 to 27.5,15.7 to 16.3
+ref,osdr,Cancer Epithelial x Myeloid,saddle,5.538767032995651,4.0569409244961525,True,1.0,1.0,4.7 to 6.2,3.2 to 5.0
+ref,osdr,Cancer Epithelial x Myeloid,stable,26.177810277697294,19.73315813265152,True,1.0,1.0,23.9 to 28.2,19.4 to 20.0
+ref,osdr,Cancer Epithelial x T-cells,saddle,4.487673459161485,6.015034272065739,True,1.0,1.0,3.8 to 5.1,4.9 to 7.6
