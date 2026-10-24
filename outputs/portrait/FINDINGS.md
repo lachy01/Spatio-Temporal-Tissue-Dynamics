@@ -1286,6 +1286,139 @@ alone) and "hot" (fibroblasts and macrophages), do not appear in the all-cells f
   depends on which cells enter the fit.
 - None of this changes the production portrait (§12) or the full-system stable state (§13).
 
+## 16. Conditional slices: sensitivity and bootstrap (2026-10-24)
+
+The conditional reference of §15 was tested on Spartan
+(`src/tissue_dynamics/portrait/conditional.py`, jobs `portrait_cond_sens` and
+`portrait_cond_boot`; gathered by `run/portrait_conditional_gather.py`). Everything uses
+the counts state, the four priority pairs and both bounds (none, OSDR p = 8), except the
+all-pairs scan.
+
+**What was varied.**
+
+- **Sensitivity:** one setting changed from the base at a time. The base is bandwidth 0.25
+  log₂, 160 bins, neighbourhoods with both axis types present, the own-type anchor and the
+  80 µm radius.
+  - bandwidth 0.10, 0.15, 0.40, 0.60;
+  - 320 bins (a numerical check);
+  - conditioning on neighbourhoods with both axis types at ≥ 2 cells;
+  - zeros kept: conditioning on log₂(X + 1 cell) over every neighbourhood;
+  - anchor ×0.95 and ×1.05;
+  - the 60 and 100 µm refits (`outputs/hpc_r{60,100}`).
+- **Bootstrap:** nothing refitted; existing replicates replayed. The slice grids, axis
+  limits and support masks stay at their full-data values throughout.
+  - *parametric:* the 500 `portrait_param_boot` sandwich draws (§12), regenerated from
+    their seeds and checked against the stored anchors, with the reference at the full
+    data;
+  - *block:* the 50 `portrait_block_boot` refits, with the conditional reference rebuilt
+    from the same resampled blocks, so the model and the data surface vary together;
+  - *surface only:* the point-estimate model, with the reference rebuilt from 200 fresh
+    block resamples.
+- **Matching:** a replicate or variant recovers a fixed point when it has one of the same
+  class within 1 log₂ unit (a factor of 2 in density). In-support status is counted
+  separately.
+
+**The 60 µm tasks were rerun locally.** Spartan's results for them used a 60 µm point
+estimate other than the committed one: the Cancer Epithelial anchor was 0.2031 against
+0.2053, while every other variant matched local runs exactly. They were rerun against
+`outputs/hpc_r60/point_estimate.json`, the estimate §12 uses. Spartan's versions are kept,
+unused, in `outputs/hpc/portrait_cond_sens/spartan_r60_unverified/`.
+
+### Sensitivity (`conditional_slices/sensitivity.csv`, `sensitivity_{none,osdr}.png`)
+
+| point (bound) | survives | moves most under |
+|---|---|---|
+| CE × Myeloid saddle (5.5, 4.1) | every variant, both bounds | anchor: (4.8, 3.0) at ×0.95, (6.4, 5.3) at ×1.05; bandwidth 0.60: (4.6, 2.6); 60 µm: (4.9, 4.0) |
+| CE × T-cells saddle (4.5, 6.0) | every variant, both bounds | anchor: (3.3, 4.5) at ×0.95, (5.7, 8.2) at ×1.05; 60 µm: (6.1, 6.0) |
+| CAFs × Myeloid stable (15.1, 16.1), OSDR | every variant | 60 µm: (15.6, 13.2) |
+| CE × CAFs stable (24.6, 16.1), OSDR | every variant | anchor ×1.05: (14.8, 15.1); 60 µm: (35.6, 17.4) |
+| CE × Myeloid stable (26.2, 19.7), OSDR | every variant | 60 µm: (35.3, 22.2); anchor ×1.05: (19.4, 18.6) |
+| CAFs × Myeloid stable (93.7, 11.3), unbounded | never in support | wanders from CAFs density 48 (bandwidth 0.10) to 123 (bandwidth 0.60); absent at 60 µm |
+
+- **The numerical and conditioning-set variants change almost nothing.** The 320-bin,
+  ≥ 2-cell and zeros-kept variants reproduce the base's in-support fixed points within
+  0.05 log₂. Only the out-of-support unbounded CAFs × Myeloid point moves, by up to 0.25
+  log₂.
+- **The bandwidth matters at the extremes.**
+  - At 0.10 and 0.15, the nullclines turn ragged at low density. CE × CAFs gains spurious
+    fixed points there: up to five in support at 0.10, where the base has none.
+  - At 0.60, the CE × Myeloid saddle slides about 0.7 log₂ down the Myeloid axis.
+  - The 0.25 base sits between these.
+- **The anchor moves things most, as for the production portrait (§12).** At ×1.05,
+  CE × T-cells gains a second saddle and an unstable point, and CE × CAFs gains an
+  unbounded saddle and stable pair. The saddles' presence does not depend on the anchor;
+  their location does.
+- **At 60 and 100 µm, the in-support fixed points are the same as at 80 µm.**
+
+### Bootstrap (`bootstrap_fixed_points.csv`, `bootstrap_topology.csv`, `bootstrap_{none,osdr}.png`)
+
+Share of replicates recovering each fixed point (all recovered points are in support,
+except the unbounded CAFs × Myeloid stable point, which never is):
+
+| point (bound) | parametric (500) | block (50) | surface only (200) | 95% range, block |
+|---|---|---|---|---|
+| CE × Myeloid saddle | 97% | 96% | 100% | 4.4–6.8 × 2.9–5.7 |
+| CE × T-cells saddle | 95% | 96% | 100% | 3.3–6.2 × 4.3–9.6 |
+| CAFs × Myeloid stable, OSDR | 100% | 100% | 100% | 13.4–16.0 × 12.2–17.5 |
+| CE × Myeloid stable, OSDR | 98% | 94% | 100% | 15.2–32.5 × 17.9–20.5 |
+| CE × CAFs stable, OSDR | 92% | 84% | 100% | 16.5–33.0 × 15.1–16.8 |
+| CAFs × Myeloid stable, unbounded | 43% | 24% | 60% | 52.7–126.5 × 9.7–20.4 |
+
+- **The model, not the surface, carries the uncertainty.** The median circular SD of
+  arrow direction inside support is 3–4° when only the reference surface is resampled,
+  against 10–14° (parametric) and 12–17° (block).
+- **Exact topology is less stable than the individual points.** The share of replicates
+  with exactly the point estimate's in-support classes is:
+  - CE × Myeloid: 93% / 88% / 100% (parametric / block / surface);
+  - CE × T-cells: 62% / 58% / 74%. The main saddle recurs in every replicate. The
+    remainder add a saddle–unstable pair (or a saddle–stable pair) near T-cell density
+    20–30. There, a closed loop of the Cancer Epithelial nullcline sits beside the T-cell
+    nullcline and crosses it in those replicates.
+  - CE × CAFs under the bound: 79% / 56% / 90%. Every replicate keeps an in-support
+    stable point. An extra in-support saddle appears in 19% / 42% / 9%.
+
+### All 36 pairs at the base settings (`all_pairs.csv`, `all_pairs_{none,osdr}.png`)
+
+These have no sensitivity or bootstrap runs.
+
+- **Unbounded: 14 of 36 pairs have a fixed point in support.**
+  - Stable points:
+    - Endothelial × PVL (16.7, 5.0)
+    - Endothelial × T-cells (13.6, 13.2)
+    - Endothelial × Myeloid (17.7, 8.5)
+    - PVL × B-cells (12.5, 35.9)
+    - PVL × T-cells (11.5, 35.8)
+    - PVL × Cancer Epithelial (14.1, 12.5)
+    - T-cells × Myeloid (25.3, 20.3)
+  - Saddles, besides the two above:
+    - B-cells × Myeloid (46.2, 6.2)
+    - B-cells × Cancer Epithelial (2.2, 1.1)
+    - T-cells × Normal Epithelial (0.9, 1.8)
+    - Myeloid × Plasmablasts (1.7, 0.7)
+    - Endothelial × Cancer Epithelial (14.2, 0.7), beside an unstable point
+  - The last four saddles sit at a density of 2 or below on at least one axis, where few
+    neighbourhoods inform the reference. Read them as tentative.
+- **OSDR p = 8: 35 of 36 pairs have an in-support stable point** (all but B-cells ×
+  T-cells). Most sit near the top of the observed range of both types, where OSDR's
+  correction caps growth (§10). A stable point under the bound is therefore weak evidence
+  on its own.
+
+**Reading.**
+
+- **The two conditional saddles are the robust result.** Cancer Epithelial × Myeloid
+  (n ≈ 54) and Cancer Epithelial × T-cells (n ≈ 67) persist under:
+  - every reference-surface setting tried;
+  - ±5% on the anchor;
+  - 60 and 100 µm;
+  - 95–100% of bootstrap replicates.
+  
+  Their location is uncertain by about a factor of 1.5 on each axis.
+- **The bounded stable points are also robust,** but much of their position comes from
+  the bound itself.
+- **The unbounded CAFs × Myeloid stable point is not a finding.**
+- **The §15 caveat still applies.** These are rest points of the pair with the other seven
+  at their typical co-occurring levels, not equilibria of the full system (§13).
+
 ## Files
 
 ```
@@ -1309,6 +1442,7 @@ outputs/portrait/
   sensitivity/anchor_sweep.csv/.txt            anchor multiplier 0.7-1.3 (portrait_anchor_sweep.py)
   sensitivity/anchor_weighted.csv/.txt/.json   section 14: score-weighted anchor (portrait_anchor_weighted.py)
   conditional_slices/                          section 15: q50 / co-present / conditional references (portrait_conditional_slices.py)
+  conditional_slices/sensitivity*, bootstrap*, all_pairs*   section 16 (Spartan portrait_cond_*; portrait_conditional_gather.py)
   two_type_osdr/                               section 15: OSDR-style two-type fits (portrait_two_type_osdr.py)
   equilibria/<state>_<bound>.csv/.txt         section 13: full-system stationary points (portrait_full_equilibria.py)
   equilibria/stable_state_*.png, *_summary.json section 13: the stable state's figures (portrait_stable_state_figure.py)
