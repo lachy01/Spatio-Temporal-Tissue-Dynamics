@@ -47,7 +47,8 @@ wu_rate_ratio.csv and report sections, in outputs/division_classifier/.
   mixture w       unchanged
 and an MCC panel beside AUROC. E1 runs (the gene-specific thinning needs its
 sensitivities) but writes nothing; V15, V16 and E3 are skipped; nothing goes to the
-report. Writes thinning_ladder_v2.csv and thinning_ladder_v2.png.
+report. Writes thinning_ladder_v2.csv, thinning_ladder_v2.png and thinning_ladder_v2_no_naive.png
+(the same without SCORE (> 0)).
 """
 import argparse
 import json
@@ -279,8 +280,8 @@ def summ_v2(lad):
            "call rate": ("call rate", "mean")}).reset_index()
 
 
-def plot_ladder_v2(lad, path):
-    """AUROC and MCC against median depth, every v2 method; (ii) dashed, (i) dotted."""
+def plot_ladder_v2(lad, path, drop=()):
+    """AUROC and MCC against median depth, every v2 method not in `drop`; (ii) dashed, (i) dotted."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -289,7 +290,7 @@ def plot_ladder_v2(lad, path):
     for ax, metric in zip(axes, ("AUROC", "MCC")):
         ax.set_facecolor(SURF)
         for meth, colr in COL_V2.items():
-            if metric == "AUROC" and meth == "SCORE (> 0)":
+            if meth in drop or (metric == "AUROC" and meth == "SCORE (> 0)"):
                 continue                     # the same statistic as SCORE: identical AUROC
             q = A[(A["method"] == meth) & (A["thinning"] == "quantile-matched")].groupby("factor").agg(
                 depth=("median depth", "mean"), v=(metric, "mean"), lo=(metric, "min"), hi=(metric, "max"))
@@ -309,12 +310,13 @@ def plot_ladder_v2(lad, path):
         for f, d in xt.items():
             ax.annotate(f"x{int(f)}", (d, 0), xycoords=("data", "axes fraction"), xytext=(0, 4),
                         textcoords="offset points", ha="center", fontsize=8, color=MUTED)
-    axes[0].set_title("Ranking: AUROC (SCORE (> 0) shares SCORE's statistic, so its AUROC is SCORE's)",
+    naive = "SCORE (> 0)" not in drop
+    axes[0].set_title("Ranking: AUROC" + (" (SCORE (> 0) shares SCORE's statistic, so its AUROC is SCORE's)"
+                                          if naive else ""), fontsize=9.5, loc="left")
+    axes[1].set_title("Calls: MCC (SCORE: KDE threshold; " + ("SCORE (> 0): score above 0;" if naive else "")
+                      + f"\nBASE-T: truncated null {V2_TRUNC:g}, alpha_B {V2_ALPHA_B:g}; mixture: w > 0.5)",
                       fontsize=9.5, loc="left")
-    axes[1].set_title(f"Calls: MCC (SCORE: KDE threshold; SCORE (> 0): score above 0;\n"
-                      f"BASE-T: truncated null {V2_TRUNC:g}, alpha_B {V2_ALPHA_B:g}; mixture: w > 0.5)",
-                      fontsize=9.5, loc="left")
-    axes[1].legend(frameon=False, fontsize=8.5, loc="upper left")
+    axes[1].legend(frameon=False, fontsize=8.5, loc="upper left", bbox_to_anchor=(0.0, 0.84))
     fig.suptitle("Wu cells thinned to this section's depth (x1) and multiples of it, 5 seeds per level; "
                  "dashed: panel genes at full depth; dotted: whole transcriptome", x=0.01, ha="left", fontsize=10.5)
     fig.tight_layout()
@@ -619,6 +621,7 @@ def main():
     if V2:
         lad.to_csv(f"{OUT}/thinning_ladder_v2.csv", index=False)
         plot_ladder_v2(lad, f"{OUT}/thinning_ladder_v2.png")
+        plot_ladder_v2(lad, f"{OUT}/thinning_ladder_v2_no_naive.png", drop=("SCORE (> 0)",))
         say(summ_v2(lad).round(3).to_string(index=False))
         say(f"done in {(time.time() - t0) / 60:.1f} min")
         return
