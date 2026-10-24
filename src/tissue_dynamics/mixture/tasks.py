@@ -110,6 +110,11 @@ def enumerate_tasks(job, cfg):
     if job == "portrait_block_boot":
         # Phase portrait spec 8.2: spatial block bootstrap with refits.
         return [{"job": job, "rep": r} for r in range(int(cfg.get("portrait_block_reps", 50)))]
+    if job in ("portrait_cond_sens", "portrait_cond_boot"):
+        # Conditional slices (portrait FINDINGS §15): sensitivity variants and the
+        # all-pairs scan; bootstraps replaying the portrait_*_boot replicates.
+        from ..portrait.conditional import enumerate_cond_tasks
+        return enumerate_cond_tasks(job, cfg)
     if job in ("division_sim", "division_sim_addendum", "division_sim_t10", "division_sim_w30"):
         # Division classifier comparison, spec 7: the known-truth simulation.
         # One task per generator and replicate; the replicate's cells are
@@ -173,6 +178,11 @@ def run_task(task, cfg, verbose=False, out_dir=None):
         from ..portrait.uncertainty import run_block_rep, run_param_chunk
         say = (lambda *a: print(*a, flush=True)) if verbose else None
         fn = run_param_chunk if job == "portrait_param_boot" else run_block_rep
+        return {**task, **fn(task, cfg, say=say)}
+    if job in ("portrait_cond_sens", "portrait_cond_boot"):
+        from ..portrait.conditional import run_cond_boot, run_cond_sens
+        say = (lambda *a: print(*a, flush=True)) if verbose else None
+        fn = run_cond_sens if job == "portrait_cond_sens" else run_cond_boot
         return {**task, **fn(task, cfg, say=say)}
     if job in ("division_sim", "division_sim_addendum", "division_sim_t10", "division_sim_w30"):
         from ..division.simulation import run_replicate

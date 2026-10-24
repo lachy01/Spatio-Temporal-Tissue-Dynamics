@@ -43,6 +43,27 @@ case "$JOB" in
         exit 1
       fi
     done ;;
+  portrait_cond_sens)
+    for f in "$MIX_OUT/point_estimate.json" outputs/hpc_r60/point_estimate.json outputs/hpc_r100/point_estimate.json \
+             data/radius/mixture_cells_r60.parquet data/radius/mixture_cells_r100.parquet; do
+      if [ ! -f "$f" ]; then
+        echo "error: $f not found (the radius variants need the r60/r100 tables and point" >&2
+        echo "       estimates; see hpc/README.md). Nothing submitted." >&2
+        exit 1
+      fi
+    done ;;
+  portrait_cond_boot)
+    for f in "$MIX_OUT/point_estimate.json" outputs/portrait/uncertainty/param_cov.npz; do
+      [ -f "$f" ] || { echo "error: $f not found. Nothing submitted." >&2; exit 1; }
+    done
+    for d in portrait_param_boot portrait_block_boot; do
+      n=$(ls "$MIX_OUT/$d"/*.json 2>/dev/null | wc -l)
+      if [ "$n" -lt 50 ]; then
+        echo "error: $MIX_OUT/$d has $n of 50 results; the conditional bootstrap replays them." >&2
+        echo "       Nothing submitted." >&2
+        exit 1
+      fi
+    done ;;
 esac
 if [ ! -f "$(python - <<'PY'
 import sys; sys.path.insert(0,"src")

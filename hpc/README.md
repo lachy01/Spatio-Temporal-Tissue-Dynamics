@@ -25,6 +25,8 @@ is a no-op (the worker skips one whose output already exists).
 | `division_sim_addendum` | 30 | division addendum 1, stage A5: the same draws plus the extended BASE-T grid, TWO-P/TWO-PNB and the section 6 metrics |
 | `portrait_param_boot` | 50 | phase portrait spec 8.1: 50 x 10 draws from the mixture's block-cluster sandwich covariance, each portrait summarised |
 | `portrait_block_boot` | 50 | phase portrait spec 8.2: spatial block bootstrap refits (full parameters kept), each portrait summarised |
+| `portrait_cond_sens` | 88 | conditional slices (portrait FINDINGS §15), sensitivity: 12 variants (bandwidth, conditioning set, bins, anchor, radius) x 2 bounds on the 4 priority pairs, plus the other 32 pairs at the base settings x 2 bounds |
+| `portrait_cond_boot` | 120 | conditional slices, bootstrap: 50 x 10 parametric draws and the 50 block refits replayed from `portrait_param_boot` / `portrait_block_boot` (no refitting), plus 20 x 10 block resamples of the reference surface alone |
 | `division_sim_t10` | 30 | Stage 6 rerun on the t10 label variant (BASE-T from the alpha_trim 0.2 truncated null at alpha_B 0.1085) |
 | `division_sim_w30` | 30 | Stage 6 rerun on the w30 label variant (floored alpha_trim 0.3 truncated null at alpha_B 0.1547, the Wu v2 pick) |
 
@@ -228,3 +230,28 @@ budget generously:
 Peak memory is roughly 2-3 GB (the float64 design is ~380 MB, the rest JAX
 workspace), so 16000 MB is comfortable. Confirm both from the first array with
 `sacct -j <jobid> --format=JobID,Elapsed,MaxRSS,State` and trim.
+
+## Conditional slices: sensitivity and bootstrap
+
+```bash
+git pull                                              # portrait/conditional.py, tasks.py, submit.sh
+MIX_TIME=0-00:30:00 ./hpc/submit.sh portrait_cond_sens 50 0-0     # smoke test: the base task
+MIX_TIME=0-00:30:00 ./hpc/submit.sh portrait_cond_boot 50 50-50   # smoke test: block replicate 0
+```
+
+The block-replicate smoke test matters: those tasks rebuild each refit's resampled
+blocks (k-means on x, y) and check the resample's size against the stored refit,
+and the k-means labels differ between machines (they do not match on a laptop). If
+index 50 fails with "regenerated block resample does not match", stop there. Then:
+
+```bash
+MIX_TIME=0-00:30:00 ./hpc/submit.sh portrait_cond_sens 50     # 88 tasks, ~1 min each
+MIX_TIME=0-00:45:00 ./hpc/submit.sh portrait_cond_boot 50     # 120 tasks, ~3-4 min each (10 replicates)
+```
+
+Needs `$MIX_OUT/portrait_param_boot` and `portrait_block_boot` (50 each, already on
+Spartan), `outputs/hpc_r{60,100}/point_estimate.json` (committed) and
+`data/radius/mixture_cells_r{60,100}.parquet` (already on Spartan); `submit.sh`
+checks. Results are about 0.2 MB per sensitivity task and 4.5 MB per bootstrap
+task. Copy `outputs/hpc/portrait_cond_{sens,boot}/` back and run
+`python run/portrait_conditional_gather.py`.

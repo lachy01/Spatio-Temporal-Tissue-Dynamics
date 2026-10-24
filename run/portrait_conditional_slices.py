@@ -33,9 +33,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import gaussian_filter
-from scipy.optimize import root
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from portrait_sensitivity import context                              # noqa: E402
@@ -46,98 +43,14 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt                                       # noqa: E402
 
 from tissue_dynamics.mixture.data import load_config                  # noqa: E402
-from tissue_dynamics.portrait.core import build_archetypes, fit_osdr_bound, net_rate  # noqa: E402
+from tissue_dynamics.portrait.conditional import AREA, NGRID, Reference, fixed_points, rates  # noqa: E402
+from tissue_dynamics.portrait.core import build_archetypes, fit_osdr_bound  # noqa: E402
 from tissue_dynamics.portrait.summary import PAIRS, support_mask      # noqa: E402
 
 OUT = "outputs/portrait/conditional_slices"
-NGRID = 100
-AREA = np.pi * 80.0 ** 2 / 1e4                 # the disc in (100 um)^2: count = X * AREA
 MODES = ("q50", "co-present", "conditional")
 INK, MUTED = "#1f1f1e", "#8a8985"
 C_A, C_B, C_OBS = "#2a78d6", "#e34948", "#1baf7a"
-
-
-class Reference:
-    """Full state X(X_a, X_b) for one pair under one reference mode."""
-
-    def __init__(self, mode, Xo, ka, kb, min_x, bw, lo, hi):
-        self.mode, self.ka, self.kb = mode, ka, kb
-        both = (Xo[:, ka] > 0) & (Xo[:, kb] > 0)
-        if mode == "q50":
-            self.ref = np.median(Xo, axis=0)
-        elif mode == "co-present":
-            sel = (Xo[:, ka] >= min_x) & (Xo[:, kb] >= min_x)
-            self.ref = np.median(Xo[sel], axis=0)
-            self.n_sel = int(sel.sum())
-        else:
-            # binned sums of every density on a fine log2 grid, Gaussian-smoothed: a
-            # Nadaraya-Watson mean of X_others given (log2 X_a, log2 X_b)
-            nb = 160
-            ea = np.linspace(np.log2(lo[0]) - 1, np.log2(hi[0]) + 1, nb + 1)
-            eb = np.linspace(np.log2(lo[1]) - 1, np.log2(hi[1]) + 1, nb + 1)
-            La, Lb = np.log2(Xo[both, ka]), np.log2(Xo[both, kb])
-            ia = np.clip(np.digitize(La, ea) - 1, 0, nb - 1)
-            ib = np.clip(np.digitize(Lb, eb) - 1, 0, nb - 1)
-            sig = bw / (ea[1] - ea[0]), bw / (eb[1] - eb[0])
-            cnt = gaussian_filter(np.bincount(ia * nb + ib, minlength=nb * nb).reshape(nb, nb).astype(float),
-                                  sig, mode="nearest")
-            ca, cb = 0.5 * (ea[1:] + ea[:-1]), 0.5 * (eb[1:] + eb[:-1])
-            self.interp = []
-            for k in range(Xo.shape[1]):
-                s = np.bincount(ia * nb + ib, weights=Xo[both, k], minlength=nb * nb).reshape(nb, nb)
-                m = gaussian_filter(s, sig, mode="nearest") / np.clip(cnt, 1e-9, None)
-                self.interp.append(RegularGridInterpolator((ca, cb), m, bounds_error=False, fill_value=None))
-
-    def state(self, xa, xb):
-        xa, xb = np.atleast_1d(xa).astype(float), np.atleast_1d(xb).astype(float)
-        if self.mode == "conditional":
-            pts = np.column_stack([np.log2(xa), np.log2(xb)])
-            X = np.column_stack([np.clip(f(pts), 0, None) for f in self.interp])
-        else:
-            X = np.repeat(self.ref[None], len(xa), axis=0)
-        X[:, self.ka], X[:, self.kb] = xa, xb
-        return X
-
-
-def rates(R, xa, xb, model, arch, ox, bound):
-    r, _ = net_rate(R.state(xa, xb), model, arch, ox, bound)
-    return r[:, R.ka], r[:, R.kb]
-
-
-def fixed_points(R, U, V, GA, GB, lo, hi, model, arch, ox, bound):
-    lb, ub = np.log([lo[0], lo[1]]) - 2.0, np.log([hi[0], hi[1]]) + 2.0
-
-    def resid(u):
-        u = np.clip(u, lb, ub)
-        ra, rb = rates(R, np.exp(u[0]), np.exp(u[1]), model, arch, ox, bound)
-        out = np.array([ra[0], rb[0]])
-        return np.where(np.isfinite(out), out, 1e3)
-
-    nrm = np.hypot(U, V)
-    thr = np.nanpercentile(nrm, 5)
-    sy, sx = np.where(nrm <= thr)
-    found = []
-    for i, j in list(zip(sy, sx))[::max(1, len(sy) // 60)]:
-        s = root(resid, np.log([GA[i, j], GB[i, j]]), method="hybr")
-        if not s.success or np.max(np.abs(resid(s.x))) > 1e-8:
-            continue
-        xf = np.exp(np.clip(s.x, lb, ub))
-        if np.any(s.x <= lb + 1e-6) or np.any(s.x >= ub - 1e-6):
-            continue
-        if not any(np.allclose(xf, f, rtol=1e-3) for f in found):
-            found.append(xf)
-    out = []
-    for xf in found:
-        u, h = np.log(xf), 1e-4
-        J = np.zeros((2, 2))
-        for c in range(2):
-            e = np.zeros(2)
-            e[c] = h
-            J[:, c] = (resid(u + e) - resid(u - e)) / (2 * h)
-        ev = np.linalg.eigvals(J)
-        cls = "stable" if np.all(ev.real < 0) else "unstable" if np.all(ev.real > 0) else "saddle"
-        out.append((xf, cls))
-    return out
 
 
 def main():
