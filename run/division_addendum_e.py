@@ -35,6 +35,19 @@ Two departures from the addendum's letter, recorded in the report:
 
 Writes depth_sensitivity.csv, thinning_ladder.csv, thinning_ladder.png,
 wu_rate_ratio.csv and report sections, in outputs/division_classifier/.
+
+--v2 (2026-10-24, user): the E2 ladder only, rerun with
+  SCORE           the module score with the robust half-normal (KDE) threshold, as before
+  SCORE (> 0)     the same score called cycling when above 0 -- scanpy/Seurat's naive
+                  convention, no KDE; same statistic, so the same AUROC, other calls
+  BASE-T (trunc)  BASE-T on the floored truncated null of label variant w30
+                  (alpha_trim 0.3, c_floor 2, from the untrimmed fit, param_tol 1e-3,
+                  inner cap 400, as the Wu v2 calibration fits it), depth-only design
+                  (intercept + log N offset; Wu has no MisTIC term), at w30's alpha_B 0.1547
+  mixture w       unchanged
+and an MCC panel beside AUROC. E1 runs (the gene-specific thinning needs its
+sensitivities) but writes nothing; V15, V16 and E3 are skipped; nothing goes to the
+report. Writes thinning_ladder_v2.csv and thinning_ladder_v2.png.
 """
 import argparse
 import json
@@ -63,6 +76,9 @@ N_MIN = 10                    # the analysis-cell filter used on this section
 N_BOOT = 1000
 MIX_E_DELTA, MIX_RATIO = 1.9020, float(np.exp(1.9020))     # production MIX on this section
 COL = {"SCORE": "#2a78d6", "BASE-T": "#eb6834", "mixture w": "#1baf7a"}
+V2 = False                    # --v2: see the module docstring
+V2_TRUNC, V2_C_FLOOR, V2_ALPHA_B = L.VARIANTS["w30"]["trunc"], L.VARIANTS["w30"]["c_floor"], L.VARIANTS["w30"]["alpha_b"]
+COL_V2 = {"SCORE": "#2a78d6", "SCORE (> 0)": "#9ec5f0", "BASE-T (trunc)": "#eb6834", "mixture w": "#1baf7a"}
 INK2, MUTED, SURF = "#52514e", "#898781", "#fcfcfb"
 
 
@@ -71,6 +87,8 @@ def say(*a):
 
 
 def report(text):
+    if V2:                        # the v2 ladder writes no report sections
+        return
     with open(REPORT, "a") as fh:
         fh.write("\n" + text.strip("\n") + "\n")
 
@@ -173,9 +191,22 @@ def methods(X, genes, tirosh, block, n_min=N_MIN, seed=0):
     yk, Nk = y[keep], N[keep]
     score, info = L.module_score(X[keep], genes, Nk, tir, blk, seed=seed)
     thr = L.score_threshold(score)
+    mix = const_pi_mixture(yk, Nk)
+    if V2:
+        X1, off, m0 = np.ones((len(yk), 1)), np.log(Nk), np.zeros(len(yk))
+        full = L.fit_nb_additive_null(yk, X1, off, m0)
+        null = L.truncated_null(yk, X1, off, m0, V2_TRUNC, full, param_tol=L.TRUNC_PARAM_TOL,
+                                fit_maxiter=400, c_floor=V2_C_FLOOR)
+        Lt, _c, _ai, p = L.base_t(yk, null["mu"], null["alpha"], V2_ALPHA_B)
+        return dict(keep=keep, y=yk, N=Nk, depth=np.asarray(X.sum(1)).ravel()[keep],
+                    stat={"SCORE": score, "SCORE (> 0)": score,
+                          "BASE-T (trunc)": -np.log(np.clip(p, 1e-300, None)), "mixture w": mix["w"]},
+                    call={"SCORE": score > thr["threshold"], "SCORE (> 0)": score > 0,
+                          "BASE-T (trunc)": Lt, "mixture w": mix["w"] > 0.5},
+                    mix=mix, null_alpha=float(null["alpha"]), score_threshold=float(thr["threshold"]),
+                    n_tirosh=len(tir), n_block=len(blk), n_pool=info["n_pool"])
     null = L.robust_null(yk, np.ones((len(yk), 1)), np.log(Nk))
     Lt, _c, _ai, p = L.base_t(yk, null["mu"], null["alpha"], 0.05)
-    mix = const_pi_mixture(yk, Nk)
     return dict(keep=keep, y=yk, N=Nk, depth=np.asarray(X.sum(1)).ravel()[keep],
                 stat={"SCORE": score, "BASE-T": -np.log(np.clip(p, 1e-300, None)), "mixture w": mix["w"]},
                 call={"SCORE": score > thr["threshold"], "BASE-T": Lt, "mixture w": mix["w"] > 0.5},
@@ -213,9 +244,13 @@ def score_rows(res, truths, wtype, types, tag):
                 m = ok & ((kt == strat) if strat != "all" else True)
                 tt, cc = tr[m] == 1, c[m]
                 kap = L.cohen_kappa(cc, tt) if m.sum() else np.nan
+                tp, fp = float(np.sum(cc & tt)), float(np.sum(cc & ~tt))
+                fn, tn = float(np.sum(~cc & tt)), float(np.sum(~cc & ~tt))
+                den = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+                mcc = (tp * tn - fp * fn) / den if den > 0 else np.nan
                 rows.append({**tag, "truth": tname, "method": meth, "stratum": strat,
                              "cells": int(m.sum()), "AUROC": auroc(s[m], tr[m]),
-                             "kappa": kap, "sensitivity": float(cc[tt].mean()) if tt.any() else np.nan,
+                             "kappa": kap, "MCC": mcc, "sensitivity": float(cc[tt].mean()) if tt.any() else np.nan,
                              "specificity": float(1 - cc[~tt].mean()) if (~tt).any() else np.nan,
                              "call rate": float(c[(kt == strat) if strat != "all" else slice(None)].mean()),
                              "calls with composite <= 1": float(np.mean(res["y"][c] <= 1)) if c.any() else np.nan,
@@ -236,13 +271,67 @@ def thin(X, p_cell, rng, p_gene=None):
     return out
 
 
+def summ_v2(lad):
+    A = lad[(lad["truth"] == "primary") & (lad["stratum"] == "all")]
+    return A.groupby(["condition", "thinning", "factor", "method"], dropna=False).agg(
+        **{"median depth": ("median depth", "mean"), "AUROC": ("AUROC", "mean"), "MCC": ("MCC", "mean"),
+           "sensitivity": ("sensitivity", "mean"), "specificity": ("specificity", "mean"),
+           "call rate": ("call rate", "mean")}).reset_index()
+
+
+def plot_ladder_v2(lad, path):
+    """AUROC and MCC against median depth, every v2 method; (ii) dashed, (i) dotted."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    A = lad[(lad["truth"] == "primary") & (lad["stratum"] == "all")]
+    fig, axes = plt.subplots(1, 2, figsize=(14, 4.9), facecolor=SURF)
+    for ax, metric in zip(axes, ("AUROC", "MCC")):
+        ax.set_facecolor(SURF)
+        for meth, colr in COL_V2.items():
+            if metric == "AUROC" and meth == "SCORE (> 0)":
+                continue                     # the same statistic as SCORE: identical AUROC
+            q = A[(A["method"] == meth) & (A["thinning"] == "quantile-matched")].groupby("factor").agg(
+                depth=("median depth", "mean"), v=(metric, "mean"), lo=(metric, "min"), hi=(metric, "max"))
+            ax.plot(q["depth"], q["v"], "-o", color=colr, lw=2, ms=7, mec=SURF, mew=2, zorder=3, label=meth)
+            ax.vlines(q["depth"], q["lo"], q["hi"], color=colr, lw=2, zorder=2)
+            for cond, ls in (("(ii) panel, full depth", "--"), ("(i) whole transcriptome", ":")):
+                v = A[(A["method"] == meth) & (A["condition"] == cond)][metric]
+                if len(v):
+                    ax.axhline(float(v.iloc[0]), color=colr, lw=1.1, ls=ls, alpha=.8, zorder=1)
+        ax.set_xscale("log")
+        ax.set_xlabel("median transcripts per cell over the shared panel genes (log scale)", color=INK2)
+        ax.set_ylabel(f"{metric} against Seurat S/G2M calls", color=INK2)
+        for sp_ in ("top", "right"):
+            ax.spines[sp_].set_visible(False)
+        ax.grid(axis="y", color="#e8e7e4", lw=0.8)
+        xt = A[A["thinning"] == "quantile-matched"].groupby("factor")["median depth"].mean()
+        for f, d in xt.items():
+            ax.annotate(f"x{int(f)}", (d, 0), xycoords=("data", "axes fraction"), xytext=(0, 4),
+                        textcoords="offset points", ha="center", fontsize=8, color=MUTED)
+    axes[0].set_title("Ranking: AUROC (SCORE (> 0) shares SCORE's statistic, so its AUROC is SCORE's)",
+                      fontsize=9.5, loc="left")
+    axes[1].set_title(f"Calls: MCC (SCORE: KDE threshold; SCORE (> 0): score above 0;\n"
+                      f"BASE-T: truncated null {V2_TRUNC:g}, alpha_B {V2_ALPHA_B:g}; mixture: w > 0.5)",
+                      fontsize=9.5, loc="left")
+    axes[1].legend(frameon=False, fontsize=8.5, loc="upper left")
+    fig.suptitle("Wu cells thinned to this section's depth (x1) and multiples of it, 5 seeds per level; "
+                 "dashed: panel genes at full depth; dotted: whole transcriptome", x=0.01, ha="left", fontsize=10.5)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150, facecolor=SURF)
+    plt.close(fig)
+
+
 # ------------------------------------------------------------------------------------
 def main():
     global OUT, REPORT
     ap = argparse.ArgumentParser()
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--smoke-dir", default="/tmp/division_e_smoke")
+    ap.add_argument("--v2", action="store_true", help="the E2 ladder only, with the v2 methods")
     a = ap.parse_args()
+    global V2
+    V2 = a.v2
     t0 = time.time()
     cfg = load_config()
     lab = pd.read_parquet(f"{OUT}/labels.parquet", columns=["cell_id", "cell_type", "y", "N", "LS"])
@@ -371,8 +460,9 @@ def main():
             e1_rows.append(row)
     e1 = pd.DataFrame(e1_rows)
     e1_genes = pd.DataFrame(e1_gene)
-    e1.to_csv(f"{OUT}/depth_sensitivity.csv", index=False)
-    e1_genes.to_csv(f"{OUT}/depth_sensitivity_genes.csv", index=False)
+    if not V2:
+        e1.to_csv(f"{OUT}/depth_sensitivity.csv", index=False)
+        e1_genes.to_csv(f"{OUT}/depth_sensitivity_genes.csv", index=False)
     # pooled technical-gene sensitivity (for the gene-specific thinning)
     s_pool = np.full(len(shared_x), np.nan)
     mx_all = np.asarray(XP.mean(0)).ravel()
@@ -422,57 +512,58 @@ def main():
         f"**{'holds' if x16a and x16b else 'partly holds' if x16a or x16b else 'does not hold'}**.\n"]))
     say(show.to_string(index=False))
 
-    # ================================ V15 ==================================================
-    say("V15 ...")
-    vr = np.random.default_rng(7)
-    sub = np.sort(vr.choice(WP.shape[0], min(20000, WP.shape[0]), replace=False))
-    T0 = np.asarray(WX[sub].sum(0)).ravel()
-    T1 = np.asarray(thin(WX[sub], np.full(len(sub), 0.1), vr).sum(0)).ravel()
-    big = T0 >= 1000
-    rel = np.abs(T1[big] / (0.1 * T0[big]) - 1)
-    z = (T1[big] - 0.1 * T0[big]) / np.sqrt(0.09 * T0[big])
-    huge = T0[big] >= 1.44e6
-    literal_ok = bool((rel <= 0.01).all())
-    huge_ok = bool((rel[huge] <= 0.01).all()) if huge.any() else True
-    z_ok = bool((np.abs(z) <= 4.5).all())
-    ident = thin(WP, np.ones(WP.shape[0]), vr)
-    exact = bool((ident != WP).nnz == 0)
-    v15_ok = huge_ok and z_ok and exact
-    report("\n".join([
-        "### V15 -- thinning\n",
-        f"Whole Wu transcriptome, 20,000 random cells, every entry thinned at p = 0.1. Of "
-        f"{int(big.sum()):,} genes with at least 1,000 counts: largest relative error "
-        f"{rel.max():.4f}, literal 1% criterion **{'met' if literal_ok else 'not met'}**. A correct "
-        "binomial thinning cannot meet it at 1,000 counts, where the thinned total's SD is 9.5% of "
-        f"its mean. Judged instead: on the {int(huge.sum())} genes with at least 1.44 million counts "
-        f"(where 1% is four SDs) the largest error is "
-        f"{(rel[huge].max() if huge.any() else float('nan')):.4f} (**{'pass' if huge_ok else 'FAIL'}**), "
-        f"and the largest |z| over every gene with >= 1,000 counts is {np.abs(z).max():.2f} against "
-        f"4.5 (**{'pass' if z_ok else 'FAIL'}**). With p = 1 for every cell the thinned panel matrix "
-        f"equals condition (ii) exactly: **{'pass' if exact else 'FAIL'}**. V15: "
-        f"**{'pass' if v15_ok else 'FAIL'}**.\n"]))
-    if not v15_ok:
-        stop("V15 (thinning)", f"huge-gene 1% {huge_ok}, z {z_ok}, exact at p = 1 {exact}")
+    if not V2:                     # V15 and V16 belong to the original A6 run
+        # ================================ V15 ==================================================
+        say("V15 ...")
+        vr = np.random.default_rng(7)
+        sub = np.sort(vr.choice(WP.shape[0], min(20000, WP.shape[0]), replace=False))
+        T0 = np.asarray(WX[sub].sum(0)).ravel()
+        T1 = np.asarray(thin(WX[sub], np.full(len(sub), 0.1), vr).sum(0)).ravel()
+        big = T0 >= 1000
+        rel = np.abs(T1[big] / (0.1 * T0[big]) - 1)
+        z = (T1[big] - 0.1 * T0[big]) / np.sqrt(0.09 * T0[big])
+        huge = T0[big] >= 1.44e6
+        literal_ok = bool((rel <= 0.01).all())
+        huge_ok = bool((rel[huge] <= 0.01).all()) if huge.any() else True
+        z_ok = bool((np.abs(z) <= 4.5).all())
+        ident = thin(WP, np.ones(WP.shape[0]), vr)
+        exact = bool((ident != WP).nnz == 0)
+        v15_ok = huge_ok and z_ok and exact
+        report("\n".join([
+            "### V15 -- thinning\n",
+            f"Whole Wu transcriptome, 20,000 random cells, every entry thinned at p = 0.1. Of "
+            f"{int(big.sum()):,} genes with at least 1,000 counts: largest relative error "
+            f"{rel.max():.4f}, literal 1% criterion **{'met' if literal_ok else 'not met'}**. A correct "
+            "binomial thinning cannot meet it at 1,000 counts, where the thinned total's SD is 9.5% of "
+            f"its mean. Judged instead: on the {int(huge.sum())} genes with at least 1.44 million counts "
+            f"(where 1% is four SDs) the largest error is "
+            f"{(rel[huge].max() if huge.any() else float('nan')):.4f} (**{'pass' if huge_ok else 'FAIL'}**), "
+            f"and the largest |z| over every gene with >= 1,000 counts is {np.abs(z).max():.2f} against "
+            f"4.5 (**{'pass' if z_ok else 'FAIL'}**). With p = 1 for every cell the thinned panel matrix "
+            f"equals condition (ii) exactly: **{'pass' if exact else 'FAIL'}**. V15: "
+            f"**{'pass' if v15_ok else 'FAIL'}**.\n"]))
+        if not v15_ok:
+            stop("V15 (thinning)", f"huge-gene 1% {huge_ok}, z {z_ok}, exact at p = 1 {exact}")
 
-    # ================================ V16 ==================================================
-    say("V16 ...")
-    rx = methods(XX, xgenes, tirosh_x, block_x)
-    yl, Nl = lab["y"].to_numpy(float), lab["N"].to_numpy(float)
-    same_yN = bool(rx["keep"].all() and np.array_equal(rx["y"], yl) and np.array_equal(rx["N"], Nl))
-    ls_same = bool(np.array_equal(rx["call"]["SCORE"], lab["LS"].to_numpy(bool))) if not a.smoke else None
-    nullp = L.robust_null(yl, np.ones((len(yl), 1)), np.log(Nl))
-    LTp = L.base_t(yl, nullp["mu"], nullp["alpha"], 0.05)[0]
-    bt_same = bool(np.array_equal(rx["call"]["BASE-T"], LTp))
-    v16_ok = same_yN and bt_same and (ls_same if ls_same is not None else True)
-    report("\n".join([
-        "### V16 -- pipeline parity on this section's own counts\n",
-        f"The code path run on thinned Wu, run instead on this section's raw counts (every panel gene): "
-        f"y and N equal Stage 1's for every cell: **{same_yN}**; SCORE label equals Stage 1's LS: "
-        f"**{ls_same if ls_same is not None else 'not checked (smoke run on a subsample)'}**; BASE-T at "
-        f"alpha_B 0.05 equals a plain-N rebuild (robust null with a log N offset, no MisTIC term): "
-        f"**{bt_same}**. V16: **{'pass' if v16_ok else 'FAIL'}**.\n"]))
-    if not v16_ok:
-        stop("V16 (pipeline parity)", f"y,N {same_yN}; SCORE {ls_same}; BASE-T {bt_same}")
+        # ================================ V16 ==================================================
+        say("V16 ...")
+        rx = methods(XX, xgenes, tirosh_x, block_x)
+        yl, Nl = lab["y"].to_numpy(float), lab["N"].to_numpy(float)
+        same_yN = bool(rx["keep"].all() and np.array_equal(rx["y"], yl) and np.array_equal(rx["N"], Nl))
+        ls_same = bool(np.array_equal(rx["call"]["SCORE"], lab["LS"].to_numpy(bool))) if not a.smoke else None
+        nullp = L.robust_null(yl, np.ones((len(yl), 1)), np.log(Nl))
+        LTp = L.base_t(yl, nullp["mu"], nullp["alpha"], 0.05)[0]
+        bt_same = bool(np.array_equal(rx["call"]["BASE-T"], LTp))
+        v16_ok = same_yN and bt_same and (ls_same if ls_same is not None else True)
+        report("\n".join([
+            "### V16 -- pipeline parity on this section's own counts\n",
+            f"The code path run on thinned Wu, run instead on this section's raw counts (every panel gene): "
+            f"y and N equal Stage 1's for every cell: **{same_yN}**; SCORE label equals Stage 1's LS: "
+            f"**{ls_same if ls_same is not None else 'not checked (smoke run on a subsample)'}**; BASE-T at "
+            f"alpha_B 0.05 equals a plain-N rebuild (robust null with a log N offset, no MisTIC term): "
+            f"**{bt_same}**. V16: **{'pass' if v16_ok else 'FAIL'}**.\n"]))
+        if not v16_ok:
+            stop("V16 (pipeline parity)", f"y,N {same_yN}; SCORE {ls_same}; BASE-T {bt_same}")
 
     # ================================ E2 ==================================================
     truths = {}
@@ -525,6 +616,12 @@ def main():
         res = methods(Wt, shared_x, tir_sh, block_x)
         rows += score_rows(res, truths, wtype, types, {"condition": "(iii) panel, thinned", "factor": 1, "seed": sd, "thinning": "gene-specific"})
     lad = pd.DataFrame(rows)
+    if V2:
+        lad.to_csv(f"{OUT}/thinning_ladder_v2.csv", index=False)
+        plot_ladder_v2(lad, f"{OUT}/thinning_ladder_v2.png")
+        say(summ_v2(lad).round(3).to_string(index=False))
+        say(f"done in {(time.time() - t0) / 60:.1f} min")
+        return
     lad.to_csv(f"{OUT}/thinning_ladder.csv", index=False)
 
     # ---- figure: AUROC against median depth ------------------------------------------------
