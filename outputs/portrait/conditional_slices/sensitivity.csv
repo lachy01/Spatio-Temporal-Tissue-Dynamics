@@ -39,10 +39,10 @@ anchor x1.05,none,CAFs x Myeloid,521343,"stable (73.3, 11.1) out",none,True,"sta
 anchor x1.05,none,Cancer Epithelial x CAFs,480509,"stable (9.9, 0.6); saddle (9.7, 0.7)","saddle, stable",False,-
 anchor x1.05,none,Cancer Epithelial x Myeloid,506533,"saddle (6.4, 5.3); stable (14.5, 36.6) out",saddle,True,"saddle (5.5, 4.1): (6.4, 5.3)"
 anchor x1.05,none,Cancer Epithelial x T-cells,483158,"saddle (5.7, 8.2); unstable (7.4, 18.8); saddle (7.8, 29.3)","saddle, saddle, unstable",False,"saddle (4.5, 6.0): (5.7, 8.2)"
-radius 60 um,none,CAFs x Myeloid,483425,none,none,True,"stable (93.7, 11.3): no"
-radius 60 um,none,Cancer Epithelial x CAFs,416193,none,none,True,-
-radius 60 um,none,Cancer Epithelial x Myeloid,455255,"saddle (4.9, 4.0)",saddle,True,"saddle (5.5, 4.1): (4.9, 4.0)"
-radius 60 um,none,Cancer Epithelial x T-cells,417857,"saddle (6.1, 5.9)",saddle,True,"saddle (4.5, 6.0): (6.1, 5.9)"
+radius 60 um,none,CAFs x Myeloid,483425,"stable (78.2, 12.2) out",none,True,"stable (93.7, 11.3): (78.2, 12.2) out"
+radius 60 um,none,Cancer Epithelial x CAFs,416193,"saddle (13.5, 86.1) out; stable (5.9, 66.5) out; stable (1.6, 63.2) out",none,True,-
+radius 60 um,none,Cancer Epithelial x Myeloid,455255,"saddle (3.8, 1.8); stable (2.6, 0.6) out; stable (11.8, 46.0) out",saddle,True,"saddle (5.5, 4.1): no"
+radius 60 um,none,Cancer Epithelial x T-cells,417857,"saddle (4.8, 5.7); unstable (5.3, 19.2); saddle (5.5, 27.2)","saddle, saddle, unstable",False,"saddle (4.5, 6.0): (4.8, 5.7)"
 radius 100 um,none,CAFs x Myeloid,539836,"stable (78.0, 14.7) out",none,True,"stable (93.7, 11.3): (78.0, 14.7) out"
 radius 100 um,none,Cancer Epithelial x CAFs,512424,"stable (0.5, 18.7) out; saddle (0.3, 21.4) out; saddle (8.4, 85.4) out; stable (11.2, 87.4) out",none,True,-
 radius 100 um,none,Cancer Epithelial x Myeloid,528606,"saddle (5.5, 5.3)",saddle,True,"saddle (5.5, 4.1): (5.5, 5.3)"
@@ -87,10 +87,10 @@ anchor x1.05,osdr,CAFs x Myeloid,521343,"stable (14.5, 15.2)",stable,True,"stabl
 anchor x1.05,osdr,Cancer Epithelial x CAFs,480509,"stable (9.9, 0.6); saddle (9.7, 0.7); stable (14.8, 15.1)","saddle, stable, stable",False,"stable (24.6, 16.1): (14.8, 15.1)"
 anchor x1.05,osdr,Cancer Epithelial x Myeloid,506533,"saddle (6.4, 5.3); stable (19.4, 18.6)","saddle, stable",True,"saddle (5.5, 4.1): (6.4, 5.3); stable (26.2, 19.7): (19.4, 18.6)"
 anchor x1.05,osdr,Cancer Epithelial x T-cells,483158,"saddle (5.7, 8.2); unstable (7.4, 18.8); saddle (7.9, 29.2)","saddle, saddle, unstable",False,"saddle (4.5, 6.0): (5.7, 8.2)"
-radius 60 um,osdr,CAFs x Myeloid,483425,"stable (15.5, 13.2)",stable,True,"stable (15.1, 16.1): (15.5, 13.2)"
-radius 60 um,osdr,Cancer Epithelial x CAFs,416193,"stable (35.6, 17.4)",stable,True,"stable (24.6, 16.1): (35.6, 17.4)"
-radius 60 um,osdr,Cancer Epithelial x Myeloid,455255,"saddle (4.9, 4.0); stable (35.3, 22.2)","saddle, stable",True,"saddle (5.5, 4.1): (4.9, 4.0); stable (26.2, 19.7): (35.3, 22.2)"
-radius 60 um,osdr,Cancer Epithelial x T-cells,417857,"saddle (6.1, 5.9)",saddle,True,"saddle (4.5, 6.0): (6.1, 5.9)"
+radius 60 um,osdr,CAFs x Myeloid,483425,"stable (16.3, 17.3)",stable,True,"stable (15.1, 16.1): (16.3, 17.3)"
+radius 60 um,osdr,Cancer Epithelial x CAFs,416193,"stable (22.1, 17.1)",stable,True,"stable (24.6, 16.1): (22.1, 17.1)"
+radius 60 um,osdr,Cancer Epithelial x Myeloid,455255,"saddle (3.8, 1.8); stable (2.6, 0.6) out; stable (22.1, 20.8)","saddle, stable",True,"saddle (5.5, 4.1): no; stable (26.2, 19.7): (22.1, 20.8)"
+radius 60 um,osdr,Cancer Epithelial x T-cells,417857,"saddle (4.8, 5.7); unstable (5.3, 19.2); saddle (5.5, 27.1)","saddle, saddle, unstable",False,"saddle (4.5, 6.0): (4.8, 5.7)"
 radius 100 um,osdr,CAFs x Myeloid,539836,"stable (14.8, 15.7)",stable,True,"stable (15.1, 16.1): (14.8, 15.7)"
 radius 100 um,osdr,Cancer Epithelial x CAFs,512424,"stable (26.0, 15.5)",stable,True,"stable (24.6, 16.1): (26.0, 15.5)"
 radius 100 um,osdr,Cancer Epithelial x Myeloid,528606,"saddle (5.5, 5.3); stable (29.4, 19.1)","saddle, stable",True,"saddle (5.5, 4.1): (5.5, 5.3); stable (26.2, 19.7): (29.4, 19.1)"

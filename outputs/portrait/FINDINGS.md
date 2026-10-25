@@ -781,6 +781,13 @@ as fragile as the tumour.
 | **80 µm** | **unstable 71** | **unstable 83** | **stable 79** | **86–174** | **CAFs × Myeloid saddle (q50)** |
 | 100 µm | unstable 69 | unstable 81 | unstable 14, stable 74 | 93–99 | none |
 
+**The 60 µm row is suspect (found 2026-10-25, §16).** It was computed locally on a copy of
+`data/radius/mixture_cells_r60.parquet` that differs from the one the 60 µm model was fitted
+on (Spartan's). On the local copy, the point estimate's log-likelihood is 260 below its
+stored value; the 100 µm table reproduces its stored value exactly. The 60 µm row needs
+rerunning on Spartan's table before it can be read. Until then, the radius
+conclusions below rest on 100 µm alone.
+
 At 100 µm the thresholds reproduce production's within 5 cells, but the CAF × Myeloid saddle
 is gone. At 60 µm the picture changes:
 
@@ -1318,22 +1325,29 @@ all-pairs scan.
   class within 1 log₂ unit (a factor of 2 in density). In-support status is counted
   separately.
 
-**The 60 µm tasks were rerun locally.** Spartan's results for them used a 60 µm point
-estimate other than the committed one: the Cancer Epithelial anchor was 0.2031 against
-0.2053, while every other variant matched local runs exactly. They were rerun against
-`outputs/hpc_r60/point_estimate.json`, the estimate §12 uses. Spartan's versions are kept,
-unused, in `outputs/hpc/portrait_cond_sens/spartan_r60_unverified/`.
+**The 60 µm rows come from Spartan, and they disagree with a local run.** The local
+run gives a Cancer Epithelial anchor of 0.2053 against Spartan's 0.2031. Every other
+variant matches local runs exactly.
+
+- The point estimate is the same file on both machines (same checksum).
+- The table `data/radius/mixture_cells_r60.parquet` is not in git, and the two copies
+  differ. On the local copy, the 60 µm point estimate's log-likelihood is −600,628.2
+  against the stored −600,368.6. The 100 µm table reproduces its stored value exactly.
+- The 60 µm fit was therefore made on Spartan's copy, so Spartan's results are the
+  consistent ones and are used here.
+- The local results are kept in `outputs/hpc/portrait_cond_sens/local_r60_wrong_table/`.
+  §12's 60 µm row was computed on the local table: see the note there.
 
 ### Sensitivity (`conditional_slices/sensitivity.csv`, `sensitivity_{none,osdr}.png`)
 
 | point (bound) | survives | moves most under |
 |---|---|---|
-| CE × Myeloid saddle (5.5, 4.1) | every variant, both bounds | anchor: (4.8, 3.0) at ×0.95, (6.4, 5.3) at ×1.05; bandwidth 0.60: (4.6, 2.6); 60 µm: (4.9, 4.0) |
-| CE × T-cells saddle (4.5, 6.0) | every variant, both bounds | anchor: (3.3, 4.5) at ×0.95, (5.7, 8.2) at ×1.05; 60 µm: (6.1, 6.0) |
-| CAFs × Myeloid stable (15.1, 16.1), OSDR | every variant | 60 µm: (15.6, 13.2) |
-| CE × CAFs stable (24.6, 16.1), OSDR | every variant | anchor ×1.05: (14.8, 15.1); 60 µm: (35.6, 17.4) |
-| CE × Myeloid stable (26.2, 19.7), OSDR | every variant | 60 µm: (35.3, 22.2); anchor ×1.05: (19.4, 18.6) |
-| CAFs × Myeloid stable (93.7, 11.3), unbounded | never in support | wanders from CAFs density 48 (bandwidth 0.10) to 123 (bandwidth 0.60); absent at 60 µm |
+| CE × Myeloid saddle (5.5, 4.1) | a saddle in support under every variant, both bounds | 60 µm: (3.8, 1.8), 1.3 log₂ away, so outside the matching rule; anchor: (4.8, 3.0) at ×0.95, (6.4, 5.3) at ×1.05; bandwidth 0.60: (4.6, 2.6) |
+| CE × T-cells saddle (4.5, 6.0) | every variant, both bounds | anchor: (3.3, 4.5) at ×0.95, (5.7, 8.2) at ×1.05; 60 µm: (4.8, 5.7) |
+| CAFs × Myeloid stable (15.1, 16.1), OSDR | every variant | 60 µm: (16.3, 17.3) |
+| CE × CAFs stable (24.6, 16.1), OSDR | every variant | anchor ×1.05: (14.8, 15.1); 60 µm: (22.1, 17.1) |
+| CE × Myeloid stable (26.2, 19.7), OSDR | every variant | 60 µm: (22.1, 20.8); anchor ×1.05: (19.4, 18.6) |
+| CAFs × Myeloid stable (93.7, 11.3), unbounded | never in support | wanders from CAFs density 48 (bandwidth 0.10) to 123 (bandwidth 0.60) |
 
 - **The numerical and conditioning-set variants change almost nothing.** The 320-bin,
   ≥ 2-cell and zeros-kept variants reproduce the base's in-support fixed points within
@@ -1344,11 +1358,16 @@ unused, in `outputs/hpc/portrait_cond_sens/spartan_r60_unverified/`.
     fixed points there: up to five in support at 0.10, where the base has none.
   - At 0.60, the CE × Myeloid saddle slides about 0.7 log₂ down the Myeloid axis.
   - The 0.25 base sits between these.
-- **The anchor moves things most, as for the production portrait (§12).** At ×1.05,
-  CE × T-cells gains a second saddle and an unstable point, and CE × CAFs gains an
-  unbounded saddle and stable pair. The saddles' presence does not depend on the anchor;
-  their location does.
-- **At 60 and 100 µm, the in-support fixed points are the same as at 80 µm.**
+- **The anchor and the radius move things most.** The anchor does so for the production
+  portrait too (§12).
+  - At anchor ×1.05, CE × T-cells gains a second saddle and an unstable point, and
+    CE × CAFs gains an unbounded saddle and stable pair.
+  - At 60 µm, the CE × Myeloid saddle drops to (3.8, 1.8), and CE × T-cells gains the
+    same extra saddle and unstable point as at ×1.05, near T-cell density 19–27.
+  - At 100 µm, the in-support fixed points are those at 80 µm. The saddles move to
+    (5.5, 5.3) and (5.4, 6.4).
+  - The saddles' presence does not depend on the anchor or the radius; their location
+    does.
 
 ### Bootstrap (`bootstrap_fixed_points.csv`, `bootstrap_topology.csv`, `bootstrap_{none,osdr}.png`)
 
@@ -1412,7 +1431,8 @@ These have no sensitivity or bootstrap runs.
   - 60 and 100 µm;
   - 95–100% of bootstrap replicates.
   
-  Their location is uncertain by about a factor of 1.5 on each axis.
+  Their location is uncertain by about a factor of 1.5 on each axis within the
+  bootstrap, and by up to a factor of 2.2 across the radius.
 - **The bounded stable points are also robust,** but much of their position comes from
   the bound itself.
 - **The unbounded CAFs × Myeloid stable point is not a finding.**
