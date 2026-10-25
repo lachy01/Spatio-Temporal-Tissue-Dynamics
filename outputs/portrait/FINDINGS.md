@@ -777,27 +777,33 @@ as fragile as the tumour.
 
 | radius | CAFs | Myeloid | tumour (own composition) | tumour path ceiling | in-support fixed points (barycentric) |
 |---|---|---|---|---|---|
-| 60 µm | stable 40, unstable 108, stable 145, unstable 198 | unstable 106 | unstable 70, stable 126 | 130–153 | CAFs × Myeloid stable; CE × CAFs and CE × Myeloid saddles (q50) |
+| 60 µm | unstable 74 | unstable 94 | unstable 32, stable 78, unstable 169 | 82–96 | CE × CAFs saddle (q25); CE × Myeloid saddle and stable (q50) |
 | **80 µm** | **unstable 71** | **unstable 83** | **stable 79** | **86–174** | **CAFs × Myeloid saddle (q50)** |
 | 100 µm | unstable 69 | unstable 81 | unstable 14, stable 74 | 93–99 | none |
 
-**The 60 µm row is suspect (found 2026-10-25, §16).** It was computed locally on a copy of
-`data/radius/mixture_cells_r60.parquet` that differs from the one the 60 µm model was fitted
-on (Spartan's). On the local copy, the point estimate's log-likelihood is 260 below its
-stored value; the 100 µm table reproduces its stored value exactly. The 60 µm row needs
-rerunning on Spartan's table before it can be read. Until then, the radius
-conclusions below rest on 100 µm alone.
+**The 60 µm row was corrected on 2026-10-25 (§16).** It was first computed with the wrong
+density-spline basis, because the Mac drops a different redundant column from the one the
+60 µm fit was made with on Spartan. That version had:
 
-At 100 µm the thresholds reproduce production's within 5 cells, but the CAF × Myeloid saddle
-is gone. At 60 µm the picture changes:
+- a low-density CAF stable state at n = 40;
+- a tumour escape threshold at n = 70, with the ceiling at 126;
+- a stable CAF × Myeloid point.
 
-- the CAFs gain a low-density stable state at n = 40;
-- the tumour gains an escape threshold at n = 70, with its ceiling moving up to 126;
-- the CAF × Myeloid point becomes stable in its slice.
+None of these survives the correction. With the basis pinned
+(`frozen_basis.density_weight_drop_col`), the 60 µm fit's stored log-likelihood is
+reproduced. Every other row of the grid is unchanged by the rerun. In the counts state,
+60 µm has no in-support fixed point, as at 80 µm.
 
-So the 80 µm thresholds are stable to widening the disc but not to narrowing it. Across all
-three radii, two things hold: the tumour has a ceiling inside the data, and Myeloid has an
-escape threshold. The CAF × Myeloid fixed point is not robust to the radius.
+The thresholds are stable to the radius in both directions:
+
+- the CAF threshold is n = 69–74 and the tumour ceiling n = 74–79 across all three radii;
+- the Myeloid threshold is n = 81–94;
+- the tumour gains a low escape threshold at both 60 µm (n = 32) and 100 µm (n = 14), and an
+  upper unstable point at 60 µm (n = 169).
+
+The CAF × Myeloid saddle in the barycentric slice appears only at 80 µm, so the CAF ×
+Myeloid fixed point is not robust to the radius. Instead, 60 µm has Cancer Epithelial saddles
+in support in the barycentric slices.
 
 The parameter uncertainty in the anchor is small. One MVN draw and one block resample both
 gave a tumour anchor of 0.202–0.203. The Spartan runs will give its interval. The open risk
@@ -1329,14 +1335,25 @@ all-pairs scan.
 run gives a Cancer Epithelial anchor of 0.2053 against Spartan's 0.2031. Every other
 variant matches local runs exactly.
 
-- The point estimate is the same file on both machines (same checksum).
-- The table `data/radius/mixture_cells_r60.parquet` is not in git, and the two copies
-  differ. On the local copy, the 60 µm point estimate's log-likelihood is −600,628.2
-  against the stored −600,368.6. The 100 µm table reproduces its stored value exactly.
-- The 60 µm fit was therefore made on Spartan's copy, so Spartan's results are the
-  consistent ones and are used here.
-- The local results are kept in `outputs/hpc/portrait_cond_sens/local_r60_wrong_table/`.
-  §12's 60 µm row was computed on the local table: see the note there.
+- The point estimate and the table are the same on both machines (same checksums).
+- The difference is the density spline's frozen basis (`basis._Spline`). The centred
+  `cr` basis has one redundant column. Because the columns sum to 1, the first and last
+  columns tie exactly in pivoted QR's final step (residual norms equal to 14 digits), so
+  which one is dropped comes down to rounding.
+  - The Mac's LAPACK drops column 0 at 60 µm; Spartan's dropped column 5.
+  - At 80 and 100 µm the two machines happen to agree (0 and 5 respectively).
+  - With column 5 dropped, the local log-likelihood of the 60 µm fit is −600,368.56,
+    its stored value, and the anchor is 0.2031. With column 0 dropped they are
+    −600,628.21 and 0.2053.
+- Spartan's results are therefore the consistent ones and are used here. The local runs
+  are kept in `outputs/hpc/portrait_cond_sens/local_r60_wrong_basis/`.
+- **Fix (2026-10-25):** `frozen_basis.density_weight_drop_col` in the config pins the
+  column. It is outside the configuration fingerprint, so production's fingerprint is
+  unchanged.
+  - Breast production is pinned at 0, and the 60 and 100 µm refits at 5. Each is
+    checked to reproduce its stored log-likelihood (`run/check_density_spline_pin.py`).
+  - Ovarian is left unpinned until it is checked on Spartan.
+- §12's 60 µm row was computed locally with the wrong column; it is redone there.
 
 ### Sensitivity (`conditional_slices/sensitivity.csv`, `sensitivity_{none,osdr}.png`)
 

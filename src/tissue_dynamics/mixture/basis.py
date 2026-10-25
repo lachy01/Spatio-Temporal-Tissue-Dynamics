@@ -51,7 +51,7 @@ class _Spline:
     the training `x` and reused, as spec 3.1 requires.
     """
 
-    def __init__(self, x, df, tol=1e-8, knot_quantiles=None, scale=False):
+    def __init__(self, x, df, tol=1e-8, knot_quantiles=None, scale=False, drop=None):
         """`knot_quantiles` places interior knots explicitly, e.g. [25, 50, 75, 90].
 
         Worth doing deliberately rather than relying on `df`. `cr` is a NATURAL
@@ -95,6 +95,15 @@ class _Spline:
         _q, r, piv = qr(Bc, mode="economic", pivoting=True)
         rank = int((np.abs(np.diag(r)) > tol * abs(r[0, 0])).sum())
         self._keep = np.sort(piv[:rank])
+        # `drop` pins the dropped column. The cr columns sum to 1, so after centring
+        # the first and last are tied exactly in the pivoting's final step, and
+        # which one goes is decided by rounding -- it differs between LAPACK builds
+        # (the 60 um refit dropped column 5 on Spartan, 0 on a Mac; 2026-10-25).
+        # A fit is only readable on another machine with the same column dropped.
+        if drop is not None:
+            if rank != B.shape[1] - 1:
+                raise ValueError(f"drop= assumes exactly one redundant column; rank {rank} of {B.shape[1]}")
+            self._keep = np.array([j for j in range(B.shape[1]) if j != int(drop)])
         self.n_cols = int(rank)
         # `scale`: divide each kept column by its training SD, so a ridge on the
         # coefficients is a ridge on effects per SD of each basis column -- the
@@ -365,9 +374,12 @@ def build_basis(df, cfg, verbose=True):
             "so deliberately not implemented -- add it if a new sample needs it.")
 
     adata_density = df["density"].to_numpy(float)
+    # frozen_basis is outside the configuration fingerprint (hpc/worker.py): it
+    # records which basis a fit was made with, it does not change the model
+    pin = (cfg.get("frozen_basis") or {}).get("density_weight_drop_col")
     dw = _Spline(np.log(df["density"].to_numpy(float)), mc["weight_density_spline_df"],
                  knot_quantiles=mc.get("weight_density_knot_quantiles"),
-                 scale=bool(mc.get("scale_weight_splines", False)))
+                 scale=bool(mc.get("scale_weight_splines", False)), drop=pin)
     dg = _Spline(np.log(df["density"].to_numpy(float)), mc["background_spline_df"])
 
     technical = str(mc.get("technical", "area"))

@@ -397,3 +397,10 @@ mistic:
   halo_um: 50.0
   n_epochs: 50                     # early stopping applies
   seed: 0
+
+# Which centred cr column the density spline drops (basis._Spline). The first and
+# last columns tie exactly and LAPACK builds break the tie differently, so each
+# fit's choice is pinned here: the one that reproduces its stored log-likelihood.
+# Outside the configuration fingerprint (hpc/worker.py).
+frozen_basis:
+  density_weight_drop_col: 0

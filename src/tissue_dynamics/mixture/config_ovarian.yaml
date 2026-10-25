@@ -45,3 +45,9 @@ mistic:
 # Cancer Epithelial, Plasmablasts). Tumour holds most cycling cells here; T & NK
 # Cells has the highest cycling fraction outside it.
 division_focus_types: [Tumour, T & NK Cells]
+
+# Unpinned (QR's own choice, as the ovarian fits were made) until it is checked on
+# Spartan which column reproduces outputs/hpc_ovarian/point_estimate.json
+# (run/check_density_spline_pin.py); see config.yaml.
+frozen_basis:
+  density_weight_drop_col: null
