@@ -1112,6 +1112,11 @@ Notation: `s`/`u` is a stable/unstable crossing at density n (its percentile in 
 
 ### Where trajectories end (as §13)
 
+Figures (2026-10-25, `run/plot_anchor_weighted.py`, drawn from the stored results):
+`sensitivity/anchor_weighted_anchors.png` shows the anchors,
+`anchor_weighted_fates.png` the trajectory fates, and `anchor_weighted_states.png` the
+composition of each run's leading end state.
+
 Trajectories start from 400 observed states and run to t = 3000, as in §13.
 
 Classification rules:
@@ -1478,6 +1483,7 @@ outputs/portrait/
   sensitivity/grid.csv, grid.json              spec 9 (portrait_sensitivity.py)
   sensitivity/anchor_sweep.csv/.txt            anchor multiplier 0.7-1.3 (portrait_anchor_sweep.py)
   sensitivity/anchor_weighted.csv/.txt/.json   section 14: score-weighted anchor (portrait_anchor_weighted.py)
+  sensitivity/anchor_weighted_*.png           section 14: its figures (plot_anchor_weighted.py)
   conditional_slices/                          section 15: q50 / co-present / conditional references (portrait_conditional_slices.py)
   conditional_slices/sensitivity*, bootstrap*, all_pairs*   section 16 (Spartan portrait_cond_*; portrait_conditional_gather.py)
   two_type_osdr/                               section 15: OSDR-style two-type fits (portrait_two_type_osdr.py)
