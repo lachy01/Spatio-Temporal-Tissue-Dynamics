@@ -15,7 +15,8 @@ Writes outputs/portrait/conditional_slices/
   sensitivity.csv                every variant x bound x priority pair: fixed points,
                                  and whether each point-estimate fixed point recurs
   sensitivity_<bound>.png        nullclines per pair under the bandwidth, conditioning
-                                 set, anchor and radius variants
+                                 set, anchor and radius variants (--simple-sensitivity:
+                                 sensitivity_<bound>_simple.png, short title, bandwidth as h)
   all_pairs.csv                  every one of the 36 pairs at the base settings
   all_pairs_<bound>.png          the 36 conditional slices as an upper-triangle sheet
   bootstrap_fixed_points.csv     per source x bound x point-estimate fixed point:
@@ -56,6 +57,13 @@ GROUPS = {"bandwidth (log2)": ["bw 0.10", "bw 0.15", "base", "bw 0.40", "bw 0.60
           "death anchor": ["anchor x0.95", "base", "anchor x1.05"],
           "radius": ["radius 60 um", "base", "radius 100 um"]}
 LABEL = {"base": "base (bw 0.25, both > 0, 160 bins, 80 um)"}
+
+
+def label_h(v):
+    """--simple legend labels: the bandwidth written as h."""
+    if v == "base":
+        return "base (h = 0.25, both > 0, 160 bins, 80 µm)"
+    return f"h = {v[3:]}" if v.startswith("bw ") else v.replace(" um", " µm")
 
 
 def say(*a):
@@ -148,7 +156,7 @@ def sensitivity(sens):
     return by
 
 
-def plot_sensitivity(by, bd):
+def plot_sensitivity(by, bd, simple=False):
     base = by[("base", bd)]
     pairs = list(base["slices"])
     fig, axes = plt.subplots(len(pairs), len(GROUPS), figsize=(5.0 * len(GROUPS), 4.6 * len(pairs)),
@@ -171,11 +179,18 @@ def plot_sensitivity(by, bd):
             a, b = pair.split(" x ")
             ax.set_xlabel(f"log2 {a} density")
             ax.set_ylabel(f"log2 {b} density")
-            ax.set_title(f"{pair}: {gname}", fontsize=10, loc="left")
+            gtitle = gname.replace("bandwidth (log2)", "bandwidth h (log2)") if simple else gname
+            ax.set_title(f"{pair}: {gtitle}", fontsize=10, loc="left")
             style(ax)
         axes[0, c].legend(handles=[Line2D([], [], color=col, lw=2.6 if v == "base" else 1.4,
-                                          label=LABEL.get(v, v)) for v, col in zip(vs, cols)],
+                                          label=label_h(v) if simple else LABEL.get(v, v))
+                                   for v, col in zip(vs, cols)],
                           fontsize=7.5, frameon=False, loc="upper left")
+    if simple:
+        fig.suptitle(f"Sensitivity of the conditional slices, {TAG[bd]}", x=0.01, ha="left", fontsize=12)
+        fig.savefig(f"{OUT}/sensitivity_{bd}_simple.png", dpi=120)
+        plt.close(fig)
+        return
     fig.suptitle(f"Conditional slices, {TAG[bd]}: each variant's nullclines in its colour (one setting "
                  "changed from the base; base in black)\nsolid = x-nullcline, dashed = y-nullcline; circle stable, square saddle, triangle unstable; faded = outside "
                  "support; grey = outside the base support", x=0.01, ha="left", fontsize=11)
@@ -326,10 +341,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--hpc", default="outputs/hpc")
     ap.add_argument("--out", default=OUT)
+    ap.add_argument("--simple-sensitivity", action="store_true",
+                    help="only redraw sensitivity_<bound>_simple.png (short title, bandwidth as h)")
     a = ap.parse_args()
     OUT = a.out
     os.makedirs(OUT, exist_ok=True)
     sens = load(a.hpc, "portrait_cond_sens")
+    if a.simple_sensitivity:
+        by = {(r["variant"], r["bound"]): r for r in sens if r["variant"] != "all pairs"}
+        for bd in BOUNDS:
+            plot_sensitivity(by, bd, simple=True)
+        return
     by = sensitivity(sens)
     all_pairs(sens, by)
     boot = load(a.hpc, "portrait_cond_boot")
