@@ -1,6 +1,9 @@
 """Pairwise slices with the other seven densities held where the data put them.
 
-    python run/portrait_conditional_slices.py [--bound none|osdr] [--min-cells 5] [--bw 0.25]
+    python run/portrait_conditional_slices.py [--bound none|osdr] [--min-cells 5] [--bw 0.25] [--simple]
+
+--simple draws q50 and conditional only, with short titles, to portraits_<bound>_simple.png
+(the fixed-point table is not rewritten).
 
 The production slices (portrait_preliminary.py) hold every off-axis archetype at its own
 median over all neighbourhoods. Those medians are taken type by type, so together they
@@ -58,7 +61,9 @@ def main():
     ap.add_argument("--bound", choices=("none", "osdr"), default="none")
     ap.add_argument("--min-cells", type=float, default=5)
     ap.add_argument("--bw", type=float, default=0.25)
+    ap.add_argument("--simple", action="store_true")
     a = ap.parse_args()
+    modes = ("q50", "conditional") if a.simple else MODES
     os.makedirs(OUT, exist_ok=True)
     ctx = context(load_config())
     arch, _W = build_archetypes(ctx["df"], ctx["basis"], pi_hat=ctx["w"], state="counts", radius_um=ctx["radius"])
@@ -69,7 +74,7 @@ def main():
     min_x = a.min_cells / AREA
     tag = "unbounded" if bound is None else "osdr_p8"
 
-    fig, axes = plt.subplots(len(PAIRS), len(MODES), figsize=(5.2 * len(MODES), 4.9 * len(PAIRS)))
+    fig, axes = plt.subplots(len(PAIRS), len(modes), figsize=(5.2 * len(modes), 4.9 * len(PAIRS)))
     rows = []
     for p, (na, nb) in enumerate(PAIRS):
         ka, kb = names.index(na), names.index(nb)
@@ -81,7 +86,7 @@ def main():
         GA, GB = np.meshgrid(ga, gb)
         held = [m for m in range(len(names)) if m not in (ka, kb)]
         tol = np.array([0.5 * np.subtract(*np.percentile(Xo[:, m], [75, 25])) for m in held])
-        for c, mode in enumerate(MODES):
+        for c, mode in enumerate(modes):
             R = Reference(mode, Xo, ka, kb, min_x, a.bw, lo, hi)
             if mode == "conditional":
                 held_ok = np.ones(both.sum(), bool)
@@ -120,12 +125,22 @@ def main():
                     "co-present": (f"others at medians where both >= {a.min_cells:g} cells\n"
                                    f"({R.n_sel:,} neighbourhoods)" if mode == "co-present" else ""),
                     "conditional": f"others at local mean given (X_a, X_b)\n(bandwidth {a.bw:g} log2)"}[mode]
-            ax.set_title(f"{na} x {nb}: {mode}\n{note}\n{len(fps)} fixed points, {n_in} in support",
+            if a.simple:
+                note = None
+            ax.set_title(f"{na} x {nb}: {mode}\n" + (f"{note}\n" if note else "")
+                         + f"{len(fps)} fixed point{'' if len(fps) == 1 else 's'}, {n_in} in support",
                          fontsize=9, loc="left")
             ax.set_xlabel(f"log2 {na} density")
             ax.set_ylabel(f"log2 {nb} density")
             for s in ("top", "right"):
                 ax.spines[s].set_visible(False)
+    if a.simple:
+        fig.suptitle("Pairwise phase-portrait slices, " + ("unbounded" if bound is None else "OSDR bound (p = 8)"),
+                     x=0.01, ha="left", fontsize=12)
+        fig.tight_layout(rect=[0, 0, 1, 0.985])
+        fig.savefig(f"{OUT}/portraits_{tag}_simple.png", dpi=130)
+        plt.close(fig)
+        return
     fig.suptitle(f"Pairwise slices of the full portrait, count-based state, {tag}: three ways to hold the "
                  "other seven types\nblue = x-nullcline, red = y-nullcline; filled circle stable, square "
                  "saddle, triangle unstable (faded = outside support); grey = outside support",
