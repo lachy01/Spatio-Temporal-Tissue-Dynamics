@@ -3,7 +3,8 @@
     python run/portrait_conditional_slices.py [--bound none|osdr] [--min-cells 5] [--bw 0.25] [--simple]
 
 --simple draws q50 and conditional only, with short titles, to portraits_<bound>_simple.png
-(the fixed-point table is not rewritten).
+(the fixed-point table is not rewritten); with --rows the references are rows and the pairs
+columns, to portraits_<bound>_simple_rows.png.
 
 The production slices (portrait_preliminary.py) hold every off-axis archetype at its own
 median over all neighbourhoods. Those medians are taken type by type, so together they
@@ -62,6 +63,7 @@ def main():
     ap.add_argument("--min-cells", type=float, default=5)
     ap.add_argument("--bw", type=float, default=0.25)
     ap.add_argument("--simple", action="store_true")
+    ap.add_argument("--rows", action="store_true", help="with --simple: references as rows, pairs as columns")
     a = ap.parse_args()
     modes = ("q50", "conditional") if a.simple else MODES
     os.makedirs(OUT, exist_ok=True)
@@ -74,7 +76,11 @@ def main():
     min_x = a.min_cells / AREA
     tag = "unbounded" if bound is None else "osdr_p8"
 
-    fig, axes = plt.subplots(len(PAIRS), len(modes), figsize=(5.2 * len(modes), 4.9 * len(PAIRS)))
+    if a.rows:
+        fig, axes = plt.subplots(len(modes), len(PAIRS), figsize=(5.2 * len(PAIRS), 4.9 * len(modes)))
+        axes = axes.T                                     # still indexed [pair, reference]
+    else:
+        fig, axes = plt.subplots(len(PAIRS), len(modes), figsize=(5.2 * len(modes), 4.9 * len(PAIRS)))
     rows = []
     for p, (na, nb) in enumerate(PAIRS):
         ka, kb = names.index(na), names.index(nb)
@@ -138,7 +144,7 @@ def main():
         fig.suptitle("Pairwise phase-portrait slices, " + ("unbounded" if bound is None else "OSDR bound (p = 8)"),
                      x=0.01, ha="left", fontsize=12)
         fig.tight_layout(rect=[0, 0, 1, 0.985])
-        fig.savefig(f"{OUT}/portraits_{tag}_simple.png", dpi=130)
+        fig.savefig(f"{OUT}/portraits_{tag}_simple{'_rows' if a.rows else ''}.png", dpi=130)
         plt.close(fig)
         return
     fig.suptitle(f"Pairwise slices of the full portrait, count-based state, {tag}: three ways to hold the "
