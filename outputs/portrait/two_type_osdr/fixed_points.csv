@@ -4,33 +4,33 @@ CAFs x Myeloid,all,unbounded,0.0,56.37844720467889,saddle
 CAFs x Myeloid,all,unbounded,36.94839578297646,18.072311385716098,saddle
 CAFs x Myeloid,all,unbounded,42.421852382260056,55.62780358662246,stable
 CAFs x Myeloid,all,unbounded,108.00971443389642,0.0,unstable
-CAFs x Myeloid,all,OSDR bound (p = 8),9.371210472256244,14.168920574979838,unstable
-CAFs x Myeloid,all,OSDR bound (p = 8),0.0,43.56578214622136,saddle
+CAFs x Myeloid,all,OSDR bound (q = 8),9.371210472256244,14.168920574979838,unstable
+CAFs x Myeloid,all,OSDR bound (q = 8),0.0,43.56578214622136,saddle
 Cancer Epithelial x CAFs,all,unbounded,38.38308694502561,0.0,unstable
 Cancer Epithelial x CAFs,all,unbounded,0.0,40.397480005078314,saddle
 Cancer Epithelial x CAFs,all,unbounded,23.784402517194405,61.81399251442014,saddle
 Cancer Epithelial x CAFs,all,unbounded,86.42956817880419,0.0,saddle
 Cancer Epithelial x CAFs,all,unbounded,98.4473178372782,19.04915949753828,stable
-Cancer Epithelial x CAFs,all,OSDR bound (p = 8),38.39423814291844,0.0,unstable
-Cancer Epithelial x CAFs,all,OSDR bound (p = 8),26.899393133444466,28.06002431098556,saddle
-Cancer Epithelial x CAFs,all,OSDR bound (p = 8),91.36264646238354,22.26444787744416,stable
-Cancer Epithelial x CAFs,all,OSDR bound (p = 8),81.39430845359841,0.0,saddle
+Cancer Epithelial x CAFs,all,OSDR bound (q = 8),38.39423814291844,0.0,unstable
+Cancer Epithelial x CAFs,all,OSDR bound (q = 8),26.899393133444466,28.06002431098556,saddle
+Cancer Epithelial x CAFs,all,OSDR bound (q = 8),91.36264646238354,22.26444787744416,stable
+Cancer Epithelial x CAFs,all,OSDR bound (q = 8),81.39430845359841,0.0,saddle
 Cancer Epithelial x Myeloid,all,unbounded,40.40897916626764,50.46001472150845,saddle
 Cancer Epithelial x Myeloid,all,unbounded,113.85065629882044,29.56067549105963,stable
-Cancer Epithelial x Myeloid,all,OSDR bound (p = 8),26.615971179450504,31.196363276143515,saddle
-Cancer Epithelial x Myeloid,all,OSDR bound (p = 8),96.44505469793141,31.473786315230612,stable
+Cancer Epithelial x Myeloid,all,OSDR bound (q = 8),26.615971179450504,31.196363276143515,saddle
+Cancer Epithelial x Myeloid,all,OSDR bound (q = 8),96.44505469793141,31.473786315230612,stable
 Cancer Epithelial x T-cells,all,unbounded,28.304393081186614,212.00842680774892,saddle
 Cancer Epithelial x T-cells,all,unbounded,43.029140792285716,0.0,unstable
 Cancer Epithelial x T-cells,all,unbounded,82.50022617089358,0.0,saddle
 Cancer Epithelial x T-cells,all,unbounded,180.2170843155484,130.89141658170254,stable
-Cancer Epithelial x T-cells,all,OSDR bound (p = 8),18.290896138817406,100.48009155856928,saddle
-Cancer Epithelial x T-cells,all,OSDR bound (p = 8),43.222977030684056,0.0,unstable
-Cancer Epithelial x T-cells,all,OSDR bound (p = 8),69.66123008144454,0.0,saddle
-Cancer Epithelial x T-cells,all,OSDR bound (p = 8),100.00000000000173,134.69583790527196,stable
+Cancer Epithelial x T-cells,all,OSDR bound (q = 8),18.290896138817406,100.48009155856928,saddle
+Cancer Epithelial x T-cells,all,OSDR bound (q = 8),43.222977030684056,0.0,unstable
+Cancer Epithelial x T-cells,all,OSDR bound (q = 8),69.66123008144454,0.0,saddle
+Cancer Epithelial x T-cells,all,OSDR bound (q = 8),100.00000000000173,134.69583790527196,stable
 CAFs x Myeloid,restricted,unbounded,6.11083993733892,2.1484645149216397,stable
 CAFs x Myeloid,restricted,unbounded,4.6099067226544665,0.0,saddle
 CAFs x Myeloid,restricted,unbounded,6.328744277084526,14.27532985422142,saddle
 CAFs x Myeloid,restricted,unbounded,18.57172500043642,0.0,unstable
-CAFs x Myeloid,restricted,OSDR bound (p = 8),6.10497998261222,2.149642265982838,stable
-CAFs x Myeloid,restricted,OSDR bound (p = 8),4.609112271800944,0.0,saddle
-CAFs x Myeloid,restricted,OSDR bound (p = 8),0.0,7.000339949266645,saddle
+CAFs x Myeloid,restricted,OSDR bound (q = 8),6.10497998261222,2.149642265982838,stable
+CAFs x Myeloid,restricted,OSDR bound (q = 8),4.609112271800944,0.0,saddle
+CAFs x Myeloid,restricted,OSDR bound (q = 8),0.0,7.000339949266645,saddle

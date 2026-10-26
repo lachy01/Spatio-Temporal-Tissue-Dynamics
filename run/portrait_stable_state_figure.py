@@ -128,8 +128,8 @@ def main():
     ax.plot(bound.x_max[order], y, marker="|", ls="none", color=INK, ms=16, mew=2.2,
             label="the bound's maximal density x_max (95th pct)")
     if X4 is not None:
-        ax.plot(X4[order], y, "o", mfc="white", mec=C_STABLE, mew=1.6, ms=7, label="stable point, p = 4")
-    ax.plot(Xs[order], y, "o", color=C_STABLE, ms=8, label=f"stable point, p = {a.power}")
+        ax.plot(X4[order], y, "o", mfc="white", mec=C_STABLE, mew=1.6, ms=7, label="stable point, q = 4")
+    ax.plot(Xs[order], y, "o", color=C_STABLE, ms=8, label=f"stable point, q = {a.power}")
     ax.set_yticks(y)
     ax.set_yticklabels([names[i] for i in order])
     ax.set_xlabel("density X_k (type-k cells per (100 µm)²)")
@@ -167,7 +167,7 @@ def main():
     nmax = float(np.percentile(ctx["dens"], 99.9))
     outcomes, fates = {}, {}
     fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.6), layout="constrained", sharex=True, sharey=True)
-    for ax, (lab, bd) in zip(axes, (("unbounded", None), (f"OSDR bound, p = {a.power}", bound))):
+    for ax, (lab, bd) in zip(axes, (("unbounded", None), (f"OSDR bound, q = {a.power}", bound))):
         path, Xend, speed = integrate(X0, model, arch, ox, bd)
         nend, nprev = Xend.sum(1), path[-20].sum(1)
         runaway = ~np.isfinite(Xend).all(1) | ((nend > nmax) & (nend > nprev))

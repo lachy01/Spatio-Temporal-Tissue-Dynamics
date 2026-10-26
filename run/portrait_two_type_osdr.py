@@ -190,7 +190,7 @@ def main():
         keep = np.ones(len(df), bool)
         for c, bd in enumerate((False, True)):
             m = TwoType(cnt, lab, pi_hat, na, nb, keep, bound=bd)
-            tag = "OSDR bound (p = 8)" if bd else "unbounded"
+            tag = "OSDR bound (q = 8)" if bd else "unbounded"
             fps = panel(axes[p, c], m, obs, f"{na} x {nb}, {tag}\nfit on all {m.n[na]:,} {na} and "
                         f"{m.n[nb]:,} {nb} cells", na, nb)
             for a, b, cls in fps:
@@ -216,7 +216,7 @@ def main():
     for c, bd in enumerate((False, True)):
         m = TwoType(cnt, lab, pi_hat, na, nb, restricted, bound=bd)
         obs = cnt[restricted & np.isin(lab, [na, nb])]
-        tag = "OSDR bound (p = 8)" if bd else "unbounded"
+        tag = "OSDR bound (q = 8)" if bd else "unbounded"
         fps = panel(axes[c], m, obs, f"{na} x {nb}, {tag}, restricted\n{m.n[na]:,} CAFs and {m.n[nb]:,} Myeloid cells with <= 5\n"
                     "neighbours outside {CAFs, Myeloid, Tumour, Endothelial}", na, nb)
         for a, b, cls in fps:

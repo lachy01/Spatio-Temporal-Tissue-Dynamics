@@ -141,7 +141,7 @@ def main():
             for s in ("top", "right"):
                 ax.spines[s].set_visible(False)
     if a.simple:
-        fig.suptitle("Pairwise phase-portrait slices, " + ("unbounded" if bound is None else "OSDR bound (p = 8)"),
+        fig.suptitle("Pairwise phase-portrait slices, " + ("unbounded" if bound is None else "OSDR bound (q = 8)"),
                      x=0.01, ha="left", fontsize=12)
         fig.tight_layout(rect=[0, 0, 1, 0.985])
         fig.savefig(f"{OUT}/portraits_{tag}_simple{'_rows' if a.rows else ''}.png", dpi=130)

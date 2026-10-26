@@ -46,7 +46,7 @@ from matplotlib.lines import Line2D                                   # noqa: E4
 
 OUT = "outputs/portrait/conditional_slices"
 BOUNDS = ("none", "osdr")
-TAG = {"none": "unbounded", "osdr": "OSDR bound, p = 8"}
+TAG = {"none": "unbounded", "osdr": "OSDR bound, q = 8"}
 SOURCES = {"param": "parametric (sandwich draws)", "block": "spatial block (refit + surface)",
            "ref": "surface only (block-resampled reference)"}
 MARK = {"stable": "o", "saddle": "s", "unstable": "^"}

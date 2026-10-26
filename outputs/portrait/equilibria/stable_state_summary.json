@@ -70,7 +70,7 @@
    "median n at the end of 'other'": 246.82160231147864,
    "start with every type present": 0.785
   },
-  "OSDR bound, p = 8": {
+  "OSDR bound, q = 8": {
    "starts": 400,
    "reach the stable state": 0.6225,
    "collapse (n < 1 cell per (100 um)^2)": 0.2975,

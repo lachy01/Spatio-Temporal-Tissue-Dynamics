@@ -6,7 +6,7 @@ results of run/portrait_anchor_weighted.py (no rerun).
 Writes outputs/portrait/sensitivity/
   anchor_weighted_anchors.png      each archetype's anchor under each weighting
   anchor_weighted_fates.png        where the 400 trajectories end, unbounded and under
-                                   OSDR p = 8, per weighting
+                                   OSDR q = 8, per weighting
   anchor_weighted_states.png       the composition of each run's leading settled state
 """
 import json
@@ -24,7 +24,7 @@ SHORT = {"hard": "hard", "softmax t=0.25": "t = 0.25", "softmax t=0.5": "t = 0.5
          "membership": "membership"}
 LABEL = {"hard": "hard labels (§12)", "softmax t=0.25": "softmax t = 0.25", "softmax t=0.5": "softmax t = 0.5",
          "softmax t=1": "softmax t = 1", "membership": "membership (s + 1)/2"}
-BOUNDS = {"unbounded": "unbounded", "OSDR p=8": "OSDR bound, p = 8"}
+BOUNDS = {"unbounded": "unbounded", "OSDR p=8": "OSDR bound, q = 8"}
 FATE = [("leading state", "#2a78d6"), ("other settled states", "#a9cbf2"), ("collapse (n < 1)", "#e34948"),
         ("still moving at t = 3000", "#eb6834"), ("other", "#e4e3df")]
 
